@@ -255,7 +255,11 @@
     state.simIdx = lastIdx();
     ptLoad();
     drawLoad();
-    if (paper.sim != null) state.simIdx = Math.max(0, Math.min(lastIdx(), Math.round(paper.sim)));
+    if (paper.simDate) {
+      var sdi = M.dates.indexOf(paper.simDate);
+      if (sdi >= 0) state.simIdx = sdi;                  /* 저장된 리플레이 날짜 복원 (인덱스 이동 보정) */
+      else if (paper.sim != null) state.simIdx = Math.max(0, Math.min(lastIdx(), Math.round(paper.sim)));
+    } else if (paper.sim != null) state.simIdx = Math.max(0, Math.min(lastIdx(), Math.round(paper.sim)));
     $('#asOf').textContent = M.asOf;
     $('#footAsOf').textContent = M.asOf;
     $('#footAsOf2').textContent = M.asOf;
@@ -2189,7 +2193,7 @@
      가상투자 (Paper Trading) — localStorage 영구 저장
      ============================================================ */
   var PT_KEY = 'apex.paper.v1';
-  var paper = { seed: 10000, fills: [], sim: null };
+  var paper = { seed: 10000, fills: [], sim: null, simDate: null };
   var ptSide = 'buy';
   var ptPending = null, ptTimer = null;
 
@@ -2210,6 +2214,7 @@
       if (typeof o.seed === 'number' && o.seed > 0) paper.seed = o.seed;
       paper.fills = Array.isArray(o.fills) ? o.fills.filter(function (f) { return f && f.t && f.d && f.side && f.qty > 0; }) : [];
       paper.sim = (typeof o.sim === 'number' && isFinite(o.sim)) ? o.sim : null;
+      paper.simDate = (typeof o.simDate === 'string' && o.simDate) ? o.simDate : null;
     } catch (e) { /* 저장소 차단된 환경에서는 메모리 상태로만 동작 */ }
   }
   function ptSave() {
@@ -2419,6 +2424,8 @@
     if (idx === state.simIdx) { ptRender(); return; }
     state.simIdx = idx;
     paper.sim = idx >= last ? null : idx;
+    /* 날짜로도 저장 — data.js 는 매일 앞쪽이 잘려 봉 인덱스가 하루씩 밀린다 */
+    paper.simDate = idx >= last ? null : M.dates[idx];
     ptSave();
     viewCache.clear();
     ptMsg('');
