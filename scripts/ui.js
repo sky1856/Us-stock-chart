@@ -1877,8 +1877,8 @@
     /* last price tag */
     this.drawWBottom(ctx, a, L, Y, i0, i1, bw, 'line');
     if (state.show.ew) this.drawWave(ctx, a, L, Y, i0, i1, bw);
-    this.drawWBottom(ctx, a, L, Y, i0, i1, bw, 'label');
     this.drawUser(ctx, a, L, Y, i0, i1);
+    this.drawWBottom(ctx, a, L, Y, i0, i1, bw, 'label');   /* W 라벨은 맨 위 — 다른 라벨을 피해서 마지막에 */
     ctx.restore();
     var lastC = c[i1], lastY = Y(lastC);
     ctx.fillStyle = c[i1] >= oo[i1] ? '#10B981' : '#F43F5E';
@@ -2194,7 +2194,7 @@
     var hit = function (r) {
       for (var k = 0; k < boxes.length; k++) {
         var b = boxes[k];
-        if (!(r.x + r.w < b.x - 1 || r.x > b.x + b.w + 1 || r.y + r.h < b.y - 1 || r.y > b.y + b.h + 1)) return true;
+        if (!(r.x + r.w < b.x - 2 || r.x > b.x + b.w + 2 || r.y + r.h < b.y - 2 || r.y > b.y + b.h + 2)) return true;
       }
       return false;
     };
