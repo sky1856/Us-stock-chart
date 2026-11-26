@@ -91,19 +91,44 @@
 
   <main class="workspace">
     <section class="macro-strip" id="macroStrip" aria-label="거시 지표">
-      <div class="mchip" id="mchipVix" title="VIX · CBOE 변동성지수 — 20 이상이면 주의, 30 이상이면 공포 구간">
-        <span class="mc-k">VIX<em>변동성지수</em></span>
-        <b class="mc-v" id="vixVal">—</b>
-        <span class="mc-c" id="vixChg">—</span>
-        <canvas class="mc-spark" id="vixSpark" width="76" height="26"></canvas>
+      <div class="macro-row">
+        <div class="mchip" id="mchipVix" title="VIX · CBOE 변동성지수 — 20 이상이면 주의, 30 이상이면 공포 구간">
+          <span class="mc-k">VIX<em>변동성지수</em></span>
+          <b class="mc-v" id="vixVal">—</b>
+          <span class="mc-c" id="vixChg">—</span>
+          <canvas class="mc-spark" id="vixSpark" width="76" height="26"></canvas>
+        </div>
+        <div class="mchip" id="mchipTnx" title="US 10Y · 미국 10년물 국채금리 (금리 상승은 성장주 밸류에이션에 부담)">
+          <span class="mc-k">US 10Y<em>미 10년물 금리</em></span>
+          <b class="mc-v" id="tnxVal">—</b>
+          <span class="mc-c" id="tnxChg">—</span>
+          <canvas class="mc-spark" id="tnxSpark" width="76" height="26"></canvas>
+        </div>
+        <div class="mchip" id="mchipDxy" title="DXY · 달러 인덱스 — 유로·엔 등 주요 6개 통화 대비 달러 가치. 상승(달러 강세)은 원자재·신흥국·미국 수출주에 부담">
+          <span class="mc-k">DXY<em>달러 인덱스</em></span>
+          <b class="mc-v" id="dxyVal">—</b>
+          <span class="mc-c" id="dxyChg">—</span>
+          <canvas class="mc-spark" id="dxySpark" width="76" height="26"></canvas>
+        </div>
+        <div class="mchip" id="mchipU2" title="US 2Y · 미국 2년물 국채금리(美 재무부 일별 수익률) — 연준 금리 기대에 가장 민감한 구간">
+          <span class="mc-k">US 2Y<em>미 2년물 금리</em></span>
+          <b class="mc-v" id="u2Val">—</b>
+          <span class="mc-c" id="u2Chg">—</span>
+          <canvas class="mc-spark" id="u2Spark" width="76" height="26"></canvas>
+        </div>
+        <div class="mchip mchip-slim" id="mchipSpr" title="장단기 금리차 = 미 10년물 − 미 2년물. 마이너스(역전)는 경기 둔화의 선행 신호로 봅니다">
+          <span class="mc-k">10Y−2Y<em>장단기 금리차</em></span>
+          <b class="mc-v" id="sprVal">—</b>
+          <span class="mc-c" id="sprChg">—</span>
+        </div>
+        <div class="mchip mchip-slim" id="mchipFed" title="연준 기준금리 목표 범위와 실효 연방기금금리(EFFR) — 미국 뉴욕연은 기준">
+          <span class="mc-k">FED<em>연준 기준금리</em></span>
+          <b class="mc-v" id="fedVal">—</b>
+          <span class="mc-c" id="fedChg">—</span>
+        </div>
+        <div class="mfoot"><span id="macroDate">—</span> 종가 기준 · Yahoo / 美 재무부 / NY Fed</div>
       </div>
-      <div class="mchip" id="mchipTnx" title="US 10Y · 미국 10년물 국채금리 (금리 상승은 성장주 밸류에이션에 부담)">
-        <span class="mc-k">US 10Y<em>미 10년물 금리</em></span>
-        <b class="mc-v" id="tnxVal">—</b>
-        <span class="mc-c" id="tnxChg">—</span>
-        <canvas class="mc-spark" id="tnxSpark" width="76" height="26"></canvas>
-      </div>
-      <div class="mfoot"><span id="macroDate">—</span> 종가 기준 · Yahoo Finance</div>
+      <div class="macro-events" id="macroEvents" aria-label="주요 경제지표 발표 일정"></div>
     </section>
 
     <section class="fg-card card" id="fgCard" aria-label="CNN 공포·탐욕 지수">
@@ -187,6 +212,8 @@
           <button class="tg on" data-t="sig"><i></i><span class="lb">매수·매도 마커</span><span class="lbs">신호</span></button>
           <button class="tg on" data-t="rsi"><i></i><span class="lb">RSI 14</span><span class="lbs">RSI</span></button>
           <button class="tg on" data-t="macd"><i></i><span class="lb">MACD</span><span class="lbs">MACD</span></button>
+          <button class="tg" data-t="sar" title="파라볼릭 SAR (0.02 · 0.20) — 추세 전환점을 캔들 위/아래 점으로 표시 · 기본 OFF"><i></i><span class="lb">파라볼릭 SAR</span><span class="lbs">SAR</span></button>
+          <button class="tg" data-t="env" title="엔벨로프 — 20일 이동평균 ±20% 상단·하단 밴드(점선) · 상단은 과열 참고 · 기본 OFF"><i></i><span class="lb">엔벨로프 ±20%</span><span class="lbs">엔벨</span></button>
         </div>
       </div>
       <div class="draw-bar">
@@ -251,6 +278,33 @@
         </div>
       </div>
       <p class="nx-foot">본 화면의 백테스트·모의매매 결과는 과거 데이터 기반 참고용 시뮬레이션이며, 특정 종목의 매수·매도 권유가 아닙니다.</p>
+    </section>
+
+    <section class="card edu-card" id="eduCard" aria-label="오늘의 주식 공부 & 검색기 팁">
+      <div class="edu-head">
+        <span class="edu-ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6.2h6.1c1.3 0 2.4 1 2.4 2.4v11.2c0-1.4-1.1-2.4-2.4-2.4H3.5z"/><path d="M20.5 6.2h-6.1c-1.3 0-2.4 1-2.4 2.4v11.2c0-1.4 1.1-2.4 2.4-2.4h6.1z"/></svg>
+        </span>
+        <h3 class="edu-title">오늘의 주식 공부<em>&amp; 검색기 팁</em></h3>
+        <span class="edu-day" id="eduDay">Day 1</span>
+        <span class="edu-cat" id="eduCat">차트·기법</span>
+        <div class="edu-nav">
+          <button id="eduPrev" type="button" title="이전 팁 보기" aria-label="이전 팁">‹</button>
+          <button id="eduToday" type="button" title="오늘의 팁으로 돌아가기">오늘</button>
+          <button id="eduNext" type="button" title="다음 팁 보기" aria-label="다음 팁">›</button>
+        </div>
+        <button class="edu-toggle" id="eduToggle" type="button" aria-expanded="true" aria-controls="eduBody">
+          <span class="edu-tx">접기</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+      </div>
+      <div class="edu-body" id="eduBody">
+        <div class="edu-inner">
+          <div class="edu-lead"><b id="eduTopic">—</b><span id="eduMeta">—</span></div>
+          <div class="edu-txt" id="eduTxt"></div>
+          <div class="edu-foot"><span class="edu-tip" id="eduTip"></span><span class="edu-prog" id="eduProg">—</span></div>
+        </div>
+      </div>
     </section>
 
     <section class="strat-bar" id="stratBar" aria-label="전략 모드 전환">

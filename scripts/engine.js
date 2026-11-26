@@ -112,6 +112,44 @@
     return { mid: mid, up: up, lo: lo, sd: sd };
   }
 
+  /* 파라볼릭 SAR — Wilder 표준(가속계수 step 0.02 · 최대 max 0.20).
+     상승 추세면 캔들 아래, 하락 추세면 캔들 위에 점이 찍힌다. dir > 0 = 상승 추세. */
+  function parabolicSAR(h, l, c, step, max) {
+    step = step || 0.02; max = max || 0.20;
+    var n = c.length, v = new Array(n), dir = new Array(n);
+    if (!n) return { v: v, dir: dir };
+    var up = n > 1 ? (c[1] >= c[0]) : true, af = step, ep, sar;
+    if (up) { ep = Math.max(h[0], n > 1 ? h[1] : h[0]); sar = Math.min(l[0], n > 1 ? l[1] : l[0]); }
+    else { ep = Math.min(l[0], n > 1 ? l[1] : l[0]); sar = Math.max(h[0], n > 1 ? h[1] : h[0]); }
+    v[0] = sar; dir[0] = up ? 1 : -1;
+    for (var i = 1; i < n; i++) {
+      sar = v[i - 1] + af * (ep - v[i - 1]);
+      if (up) {
+        /* 추세 전환 전에는 직전 두 봉의 저가보다 위로 올라갈 수 없다 */
+        sar = Math.min(sar, l[i - 1], i > 1 ? l[i - 2] : l[i - 1]);
+        if (l[i] < sar) { up = false; sar = ep; ep = l[i]; af = step; }
+        else if (h[i] > ep) { ep = h[i]; af = Math.min(af + step, max); }
+      } else {
+        sar = Math.max(sar, h[i - 1], i > 1 ? h[i - 2] : h[i - 1]);
+        if (h[i] > sar) { up = true; sar = ep; ep = h[i]; af = step; }
+        else if (l[i] < ep) { ep = l[i]; af = Math.min(af + step, max); }
+      }
+      v[i] = sar; dir[i] = up ? 1 : -1;
+    }
+    return { v: v, dir: dir };
+  }
+
+  /* 엔벨로프 — N일 단순이동평균 ±pct% 상단/하단 밴드 */
+  function envelope(c, p, pct) {
+    p = p || 20; pct = (pct == null) ? 20 : pct;
+    var mid = sma(c, p), k = pct / 100, up = new Array(c.length), lo = new Array(c.length);
+    for (var i = 0; i < c.length; i++) {
+      up[i] = (mid[i] == null) ? null : mid[i] * (1 + k);
+      lo[i] = (mid[i] == null) ? null : mid[i] * (1 - k);
+    }
+    return { mid: mid, up: up, lo: lo, pct: pct };
+  }
+
   function obv(c, v) {
     var out = new Array(c.length); out[0] = 0;
     for (var i = 1; i < c.length; i++) {
@@ -183,6 +221,9 @@
       ind.spanB[q] = (s >= 0 && spanBraw[s] != null) ? spanBraw[s] : null;
     }
     ind.bb = bollinger(c, 20, 2);
+    /* 보조 지표 — 파라볼릭 SAR(0.02·0.20), 엔벨로프(20일선 ±20%) : 차트 토글에서 켜고 끈다(기본 OFF) */
+    ind.sar = parabolicSAR(h, l, c, 0.02, 0.20);
+    ind.env = envelope(c, 20, 20);
     ind.rsi = rsi(c, 14);
     ind.macd = macd(c, 12, 26, 9);
     ind.atr = atr(h, l, c, 14);
@@ -2249,7 +2290,7 @@
 
   var api = {
     sma: sma, ema: ema, rsi: rsi, macd: macd, atr: atr, stdev: stdev,
-    bollinger: bollinger, obv: obv,
+    bollinger: bollinger, obv: obv, parabolicSAR: parabolicSAR, envelope: envelope,
     computeIndicators: computeIndicators, scoreSeries: scoreSeries,
     backtest: backtestRun, analyze: analyze, labelOf: labelOf, LABELS: LABELS, explain: explain,
     swingBacktest: swingBacktest, swingStatus: swingStatus, swingParams: SWING_P,

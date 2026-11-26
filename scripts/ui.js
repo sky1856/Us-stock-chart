@@ -81,7 +81,7 @@
   var cache = new Map();
   var state = {
     cur: 'NVDA', range: 128, filter: 'all', sort: 'mc', q: '', listQ: '',
-    show: { ma: true, ichi: true, bb: true, sig: true, rsi: true, macd: true, ew: true, w: true },
+    show: { ma: true, ichi: true, bb: true, sig: true, rsi: true, macd: true, ew: true, w: true, sar: false, env: false },
     maOn: { 5: true, 20: true, 60: true, 120: true, 240: true },
     simIdx: 0, tool: 'cursor', ewMode: 0,
     ewShow: { sub: true, ch: true, clu: true },
@@ -106,6 +106,30 @@
     if (b) b.classList.toggle('on', !!state.show.w);
   }
   wRestore();
+
+  /* ---------------- 파라볼릭 SAR · 엔벨로프 토글 (둘 다 기본 OFF · 개인 브라우저 localStorage 저장) ---------------- */
+  var XTOG_KEY = 'apex.extra.v1';
+  (function xtogRestore() {
+    try {
+      var o = JSON.parse(localStorage.getItem(XTOG_KEY) || '{}');
+      if (o && typeof o === 'object') {
+        if (o.sar === 1 || o.sar === true) state.show.sar = true;
+        if (o.env === 1 || o.env === true) state.show.env = true;
+      }
+    } catch (e) { /* 저장소 차단 환경에서는 기본 OFF */ }
+  })();
+  function xtogPersist() {
+    try {
+      localStorage.setItem(XTOG_KEY, JSON.stringify({ sar: state.show.sar ? 1 : 0, env: state.show.env ? 1 : 0 }));
+    } catch (e) {}
+  }
+  function xtogSync() {
+    ['sar', 'env'].forEach(function (k) {
+      var b = $('.tg[data-t=' + k + ']');
+      if (b) b.classList.toggle('on', !!state.show[k]);
+    });
+  }
+  xtogSync();
 
   /* ---------------- 전략 전환 (추세형 ↔ 스윙형) ---------------- */
   var STRAT_KEY = 'apex.strategy.v1';
@@ -852,6 +876,90 @@
     chip.setAttribute('data-load', '1');
     sparkDraw($('#' + o.key + 'Spark'), series, diff >= 0 ? (o.invert ? '#FB7185' : '#FBBF24') : '#34D399');
   }
+  /* 지표 객체(현재·전일·스파크) 기반 칩 — US 2Y · 금리차처럼 시계열이 아닌 값용 */
+  function mchipFillData(id, o, d) {
+    var chip = $('#mchip' + id);
+    if (!chip) return;
+    var valEl = $('#' + o.key + 'Val'), chgEl = $('#' + o.key + 'Chg');
+    if (!d || d.v == null) {
+      if (valEl) valEl.textContent = '—';
+      if (chgEl) { chgEl.className = 'mc-c'; chgEl.textContent = '—'; chgEl.title = ''; }
+      return;
+    }
+    var last = d.v, prev = d.prev;
+    var diff = (prev == null) ? 0 : last - prev;
+    var chg = prev ? last / prev - 1 : 0;
+    if (valEl) valEl.textContent = o.fmt(last);
+    var arrow = diff > 0 ? '▲' : (diff < 0 ? '▼' : '–');
+    if (chgEl) {
+      chgEl.className = 'mc-c ' + (diff === 0 ? '' : (o.invert ? (diff > 0 ? 'neg' : 'pos') : (diff > 0 ? 'warn' : 'pos')));
+      chgEl.textContent = arrow + ' ' + o.chgFmt(Math.abs(diff)) +
+        (o.showPct === false ? '' : ' (' + (chg >= 0 ? '+' : '−') + Math.abs(chg * 100).toFixed(1) + '%)');
+      chgEl.title = '전일 대비 ' + o.deltaTitle(diff);
+    }
+    chip.setAttribute('data-load', '1');
+    if (d.asOf) chip.title = (chip.getAttribute('title') || '').split(' · 기준')[0] + ' · 기준 ' + d.asOf;
+    if (d.spark) sparkDraw($('#' + o.key + 'Spark'), d.spark, diff >= 0 ? (o.invert ? '#FB7185' : '#FBBF24') : '#34D399');
+  }
+  function bpTxt(d) { return Math.round(d * 100) + 'bp'; }
+  function bpTips(d) { return (d >= 0 ? '+' : '−') + Math.round(Math.abs(d) * 100) + 'bp'; }
+  function pct2(v) { return v.toFixed(2) + '%'; }
+  function spreadFmt(v) {
+    var s = Math.abs(v).toFixed(2) + '%p';
+    return (v > 0 ? '+' : (v < 0 ? '−' : '')) + s;
+  }
+  function fedRange(f) {
+    if (!f) return '—';
+    if (f.targetLow == null && f.targetHigh == null) return '—';
+    var lo = f.targetLow == null ? f.targetHigh : f.targetLow;
+    var hi = f.targetHigh == null ? f.targetLow : f.targetHigh;
+    return lo.toFixed(2) + '~' + hi.toFixed(2) + '%';
+  }
+  /* 주요 발표 일정 — D-day·직전 수치 */
+  var WD_KO = ['일', '월', '화', '수', '목', '금', '토'];
+  /* 거시 발표일 계산 전용 (기존 ymdNum/todayNum 은 일수(숫자) 반환 — 이름 충돌 방지) */
+  function macroDate(s) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || ''));
+    return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
+  }
+  function macroToday() { var n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); }
+  function evPrevText(k, mc) {
+    if (k === 'FOMC') return (mc.fed && mc.fed.targetHigh != null) ? '기준금리 ' + fedRange(mc.fed) : '';
+    if (k === 'CPI') return (mc.cpi && mc.cpi.yoy != null) ? '전년비 ' + mc.cpi.yoy.toFixed(1) + '%' : '';
+    if (k === 'PCE') return (mc.pce && mc.pce.core != null) ? '근원 ' + mc.pce.core.toFixed(1) + '%' :
+      ((mc.pce && mc.pce.yoy != null) ? '전년비 ' + mc.pce.yoy.toFixed(1) + '%' : '');
+    if (k === 'JOBS') return (mc.jobs && mc.jobs.unemp != null) ? '실업률 ' + mc.jobs.unemp.toFixed(1) + '%' : '';
+    return '';
+  }
+  function renderMacroEvents() {
+    var box = $('#macroEvents');
+    if (!box) return;
+    var mc = M.macro || {}, evs = mc.events || [];
+    var today = macroToday(), first = {};
+    evs.forEach(function (e) {
+      if (!e || !e.d) return;
+      var ed = macroDate(e.d);
+      if (!ed || ed < today) return;
+      if (!first[e.k]) first[e.k] = e;
+    });
+    var ORDER = ['FOMC', 'CPI', 'PCE', 'JOBS'];
+    var LAB = { FOMC: 'FOMC', CPI: 'CPI', PCE: 'PCE', JOBS: '고용' };
+    var list = ORDER.filter(function (k) { return first[k]; });
+    if (!list.length) { box.innerHTML = ''; return; }
+    box.innerHTML = '<span class="me-l">다음 발표</span>' + list.map(function (k) {
+      var e = first[k], d = macroDate(e.d);
+      var dd = Math.round((d - today) / 86400000);
+      var pv = evPrevText(k, mc);
+      var dateTx = (d.getMonth() + 1) + '.' + ('0' + d.getDate()).slice(-2) + '(' + WD_KO[d.getDay()] + ')';
+      return '<span class="mei' + (dd <= 3 ? ' soon' : '') + '" title="' + (e.n || LAB[k]) + ' · ' + e.d +
+        ' (미 동부 기준) · ' + (dd === 0 ? '오늘 발표' : dd + '일 남음') + '">' +
+        '<b>' + LAB[k] + '</b>' +
+        '<span class="mei-d">' + dateTx + '</span>' +
+        '<em class="mei-dd' + (dd === 0 ? ' today' : '') + '">' + (dd === 0 ? '오늘' : 'D-' + dd) + '</em>' +
+        (pv ? '<span class="mei-v">' + pv + '</span>' : '') +
+        '</span>';
+    }).join('');
+  }
   function renderMacro() {
     mchipFill('Vix', indexSeries('^VIX'), {
       key: 'vix', invert: true,
@@ -865,6 +973,33 @@
       chgFmt: function (d) { return Math.round(d * 100) + 'bp'; },
       deltaTitle: function (d) { return (d >= 0 ? '+' : '−') + Math.round(Math.abs(d) * 100) + 'bp'; }
     });
+    mchipFill('Dxy', indexSeries('DXY'), {
+      key: 'dxy',
+      fmt: function (v) { return v.toFixed(2); },
+      chgFmt: function (d) { return d.toFixed(2); },
+      deltaTitle: function (d) { return (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(2) + 'pt'; }
+    });
+    var mc = M.macro || {}, rt = mc.rates || {};
+    mchipFillData('U2', { key: 'u2', fmt: pct2, chgFmt: bpTxt, deltaTitle: bpTips, showPct: false }, rt.us2y);
+    mchipFillData('Spr', { key: 'spr', fmt: spreadFmt, chgFmt: bpTxt, deltaTitle: bpTips, showPct: false }, rt.spread);
+    var fed = mc.fed, fv = $('#fedVal'), fc = $('#fedChg');
+    if (fed && fed.targetHigh != null) {
+      if (fv) fv.textContent = fedRange(fed);
+      if (fc) {
+        fc.className = 'mc-c';
+        fc.textContent = fed.effr != null ? 'EFFR ' + fed.effr.toFixed(2) + '%' : '목표 범위';
+        fc.title = '실효 연방기금금리(EFFR)' + (fed.effr != null ? ' ' + fed.effr.toFixed(2) + '%' : '') +
+          (fed.asOf ? ' · ' + fed.asOf : '');
+      }
+      var fchip = $('#mchipFed');
+      if (fchip) {
+        fchip.setAttribute('data-load', '1');
+        fchip.title = '연준 기준금리 목표 범위 ' + fedRange(fed) +
+          (fed.effr != null ? ' · EFFR ' + fed.effr.toFixed(2) + '%' : '') +
+          (fed.asOf ? ' (' + fed.asOf + ' 기준)' : '') + ' — NY Fed / 연준';
+      }
+    }
+    renderMacroEvents();
     var md = $('#macroDate'); if (md) md.textContent = M.asOf;
   }
 
@@ -1946,6 +2081,10 @@
         if (ind.bb.up[i] > hi) hi = ind.bb.up[i];
         if (ind.bb.lo[i] < lo) lo = ind.bb.lo[i];
       }
+      if (state.show.env && ind.env) {
+        if (ind.env.up[i] != null && ind.env.up[i] > hi) hi = ind.env.up[i];
+        if (ind.env.lo[i] != null && ind.env.lo[i] < lo) lo = ind.env.lo[i];
+      }
     }
     var pad = (hi - lo) * 0.06;
     lo -= pad; hi += pad;
@@ -2001,6 +2140,25 @@
         ctx.fillStyle = (a1 >= b1) ? 'rgba(239,68,68,.15)' : 'rgba(59,130,246,.16)';
         ctx.fill();
       }
+    }
+
+    /* 엔벨로프 — 20일 이동평균 ±20% 상단/하단 밴드 (점선 · 상단은 과열 참고로 강조) */
+    if (state.show.env && ind.env) {
+      var envLine = function (arr, color, wd, dash) {
+        ctx.save();
+        if (dash) ctx.setLineDash(dash);
+        ctx.beginPath(); var st2 = false;
+        for (var j = i0; j <= i1; j++) {
+          if (arr[j] == null) continue;
+          var ex = this.x(j), ey = Y(arr[j]);
+          if (!st2) { ctx.moveTo(ex, ey); st2 = true; } else ctx.lineTo(ex, ey);
+        }
+        ctx.strokeStyle = color; ctx.lineWidth = wd; ctx.lineJoin = 'round'; ctx.stroke();
+        ctx.restore();
+      }.bind(this);
+      envLine(ind.env.up, 'rgba(251,146,60,.8)', 1.25, [6, 4]);
+      envLine(ind.env.lo, 'rgba(56,189,248,.55)', 1.05, [4, 4]);
+      envLine(ind.env.mid, 'rgba(251,191,36,.38)', 0.9, [2, 5]);
     }
 
     /* bollinger */
@@ -2075,6 +2233,20 @@
         ctx.restore();
       }.bind(this);
       ICHI.forEach(function (x) { ichiLine(ind[x.k], x.color, x.w, x.dash); });
+    }
+
+    /* 파라볼릭 SAR — 캔들 위/아래 작은 점 (상승 추세 = 아래 · 하락 추세 = 위) */
+    if (state.show.sar && ind.sar) {
+      var sv = ind.sar.v, sd = ind.sar.dir;
+      var dotR = bw > 4 ? 2.0 : (bw > 2.6 ? 1.6 : 1.2);
+      for (i = i0; i <= i1; i++) {
+        if (sv[i] == null) continue;
+        var sx = this.x(i), sy = Y(sv[i]);
+        if (sy < p.y - 2 || sy > p.y + p.h + 2) continue;
+        ctx.beginPath(); ctx.arc(sx, sy, dotR, 0, Math.PI * 2);
+        ctx.fillStyle = sd[i] > 0 ? 'rgba(45,212,191,.95)' : 'rgba(251,113,133,.95)';
+        ctx.fill();
+      }
     }
 
     /* last price tag */
@@ -3315,6 +3487,7 @@
       state.show[k] = !state.show[k];
       b.classList.toggle('on', state.show[k]);
       if (k === 'w') wPersist();
+      if (k === 'sar' || k === 'env') xtogPersist();
       chart.resize(); chart.draw();
     };
     var gs = $('#globalSearch');
@@ -3475,12 +3648,237 @@
     });
   }
 
+  /* ============================================================
+     오늘의 주식 공부 & 검색기 팁 — 날짜로 매일 자동 변경 (32편 순환)
+     ============================================================ */
+  var EDU_KEY = 'apex.edu.closed.v1';
+  var EDU_PREV = '‹', EDU_NEXT = '›';
+  var EDU = [
+    { c: '차트·기법', t: 'W 쌍바닥과 넥라인 돌파', s: '비슷한 두 저점 + 넥라인 돌파 + 거래량',
+      b: '<p>W 쌍바닥(이중바닥)은 <b>두 번 바닥을 확인한 뒤</b> 하락 추세를 끝내는 대표적인 반전 패턴입니다. 두 저점의 가격대가 비슷하고, 그 사이에 솟은 고점을 <em>넥라인</em>이라고 부릅니다.</p>' +
+         '<p>매수 신호는 <b>넥라인을 종가로 돌파할 때</b>입니다. 돌파 봉의 거래량이 20일 평균의 1.5~2배 이상 늘어나면 신뢰도가 크게 올라갑니다. 넥라인을 되돌려 이탈하면 실패한 W로 보고 손절합니다.</p>' +
+         '<p>이 검색기의 <b>W 쌍바닥</b> 오버레이는 넥라인(점선)과 두 바닥을 차트에 그려 줍니다. 쌍바닥 프리셋은 돌파·임박·진행 단계로 후보를 좁혀 줍니다.</p>',
+      tip: '넥라인까지의 상승 여력보다, 돌파 후 지지로 바뀌는지가 실제 승부처입니다.' },
+    { c: '차트·기법', t: 'RSI(2) 과매도 스윙', s: '아주 짧은 과매도만 골라 반등을 먹는 단기 기법',
+      b: '<p>RSI(2)는 <b>최근 2일</b>만으로 과매수·과매도를 계산합니다. 14일 RSI보다 훨씬 민감해서, 정상적인 상승 추세에서도 잠깐씩 15 아래로 떨어지는 자리가 자주 생깁니다.</p>' +
+         '<p>이 검색기의 스윙형 전략은 <em>RSI(2) &lt; 15 + QQQ가 100일선 위</em>일 때 다음 날 시가 매수, 이익이 난 상태에서 20일선을 이탈하면 청산하는 구조입니다. 100종목 5년 백테스트에서 승률 80%대가 나온 이유는 <b>상승장에서만 진입</b>하기 때문입니다.</p>' +
+         '<p>RSI(2)는 하락장에서 5 아래로도 계속 내려갑니다. 시장 필터 없이 쓰면 물타기가 됩니다.</p>',
+      tip: '지표가 낮다는 이유만으로 사지 말고, 시장이 100일선 위인지 먼저 봅니다.' },
+    { c: '차트·기법', t: '240일선, 장기 기준선 읽기', s: '연간 흐름을 정하는 가장 굵은 선',
+      b: '<p>240일 단순이동평균은 약 1년치 평균입니다. 차트에서 <b>가장 굵게</b> 그린 주황색 선이 그것입니다. 가격이 240일선 위에 있으면 장기 상승, 아래면 장기 하락으로 보는 가장 단순하고 강한 기준입니다.</p>' +
+         '<p>중요한 것은 선의 <b>기울기</b>입니다. 가격이 240일선 근처에 있는데 선이 우상향이면 지지 가능성이 크고, 선이 꺾여 내려오면 반등은 저항에 부딪히기 쉽습니다.</p>' +
+         '<p>단기 매매에서도 “240일선 아래에서는 비중을 줄인다”는 규칙 하나만 지켜도 큰 손실을 크게 줄일 수 있습니다.</p>',
+      tip: '240일선은 매매 신호라기보다 비중을 정하는 기준선으로 쓰면 좋습니다.' },
+    { c: '차트·기법', t: '일목균형표 구름대', s: '구름 위는 강세, 구름 두께가 지지의 두께',
+      b: '<p>구름대(운명대)는 9·26·52일의 중간값을 26봉 앞으로 당겨 그린 띠입니다. 가격이 구름 <b>위</b>에 있으면 상승 우위(양운), <b>아래</b>면 하락 우위(음운)로 해석합니다.</p>' +
+         '<p>구름이 두꺼울수록 그 가격대를 뚫기가 어렵습니다. 조정이 와도 구름 상단에서 멈추는 경우가 많아 손절·재진입 자리를 잡기에 좋습니다.</p>' +
+         '<p>이 검색기는 선행스팬 A·B와 구름대만 남기고 전환선·기준선·후행스팬은 차트에서 뺐습니다. 선이 많으면 캔들이 가려지기 때문입니다.</p>',
+      tip: '구름 안에서는 방향을 알기 어렵습니다. 구름 밖으로 나온 뒤에 판단하세요.' },
+    { c: '차트·기법', t: '엘리어트 파동의 3대 규칙', s: '1-2-3-4-5 상승과 A-B-C 조정',
+      b: '<p>추세는 <b>5개의 충격파</b>와 <b>3개의 조정파</b>로 움직인다는 이론입니다. 규칙은 세 가지로 요약됩니다. ① 2파는 1파의 출발점을 되돌리지 않는다 ② 3파는 1파보다 짧을 수 없다 ③ 4파는 1파의 영역을 침범하지 않는다.</p>' +
+         '<p>하락 추세는 이 그림의 거울상입니다. 2026-11-26에 배운 마이크로소프트 하락 1-5파동이 그 예입니다.</p>' +
+         '<p>파동은 <b>사후에 확정</b>되는 경우가 많습니다. 그래서 이 검색기는 대안 시나리오와 무효화 가격을 함께 보여 줍니다. 파동 라벨이 틀릴 수 있다는 전제로 읽어야 합니다.</p>',
+      tip: '파동 카운트는 매매 근거가 아니라 “지금 어느 구간인지”를 정리하는 지도로 쓰세요.' },
+    { c: '차트·기법', t: '파라볼릭 SAR 사용법', s: '추세 전환점을 점으로 표시하는 지표',
+      b: '<p>SAR은 가속계수(0.02, 최대 0.20)로 가격을 따라가며 <b>캔들 아래(상승) 또는 위(하락)</b>에 점을 찍습니다. 점이 캔들 반대편으로 넘어가면 추세가 바뀌었다는 신호입니다.</p>' +
+         '<p>장점은 <b>손절선을 자동으로 그려 준다</b>는 것입니다. 상승 추세에서 점이 아래에서 따라 올라오므로, 점 아래로 종가가 내려가면 청산 기준으로 쓸 수 있습니다.</p>' +
+         '<p>단점은 횡보장에서 점이 위아래로 자주 뒤집혀 신호가 남발된다는 것입니다. 이동평균과 함께 써서 추세가 뚜렷한 종목에만 적용하세요.</p>',
+      tip: '지표 토글의 SAR을 켜면 점이 나타납니다. 기본은 꺼 둔 상태입니다.' },
+    { c: '차트·기법', t: '엔벨로프 상단 = 단기 과열', s: '20일선 ±20% 밴드의 의미',
+      b: '<p>엔벨로프는 20일 이동평균에서 <b>±20%</b> 떨어진 상·하단 밴드입니다. 통계적인 볼린저 밴드(±2 표준편차)와 달리 폭이 고정되어 있어, <b>얼마나 오래·많이 이격됐는지</b>를 보는 데 적합합니다.</p>' +
+         '<p>가격이 상단에 닿으면 단기 과열로 봅니다. 다만 강한 상승 초입에서는 상단에 붙어 오래 올라가는 경우가 많아, 상단 도달 자체를 매도 신호로 쓰면 안 됩니다.</p>' +
+         '<p>실전에서는 <b>상단 이탈 후 20일선으로 복귀하는지</b>를 확인하는 편이 안전합니다. 하단은 낙폭과대 판단에 참고합니다.</p>',
+      tip: '엔벨로프 상단은 “팔 자리”보다 “추격 매수를 멈출 자리”로 쓰세요.' },
+    { c: '차트·기법', t: 'VCP 변동성 축소', s: '조정이 점점 얇아지면 매물이 사라진 것',
+      b: '<p>미너비니의 VCP(Volatility Contraction Pattern)는 상승 뒤 조정의 <b>폭과 기간이 점점 줄어드는</b> 모양입니다. 조정폭이 20% → 10% → 5%로 줄고 거래량도 마르면, 싸게 팔 사람이 없어졌다는 뜻입니다.</p>' +
+         '<p>이 검색기의 <b>VCP 프리셋</b>은 시총 Top 30·실적 우량주 중에서 정배열과 변동성 축소를 모두 만족하고, 피벗 돌파 또는 피벗 -5% 이내인 종목만 골라 줍니다.</p>' +
+         '<p>돌파 시 거래량이 평소보다 1.5배 이상 터지면 성공 확률이 올라갑니다. 실패하면 피벗 아래를 손절선으로 둡니다.</p>',
+      tip: 'VCP는 “살 때”를 알려 주지만, 시장이 약할 때는 돌파가 잘 실패합니다.' },
+    { c: '차트·기법', t: '달러(DXY)와 빅테크', s: '달러 강세는 해외 매출 큰 기업에 역풍',
+      b: '<p>DXY는 유로·엔 등 주요 6개 통화 대비 달러의 세기를 나타냅니다. 달러가 강해지면 미국 기업이 해외에서 번 돈을 달러로 바꿀 때 <b>원화·유로 기준 매출이 줄어</b> 실적에 부담이 됩니다.</p>' +
+         '<p>애플·마이크로소프트·엔비디아처럼 해외 매출 비중이 큰 빅테크는 DXY와 <b>반대로</b> 움직이는 경향이 있습니다. 반면 내수 중심 기업은 영향이 작습니다.</p>' +
+         '<p>DXY가 단기간에 급등하면 실적 발표를 앞둔 수출주에서 경계 신호로 볼 수 있습니다. 다만 상관관계는 시기마다 달라지므로 절대 규칙은 아닙니다.</p>',
+      tip: '거시 바의 DXY와 실적 D-day 배지를 함께 보면 위험 구간이 보입니다.' },
+    { c: '차트·기법', t: '장단기 금리차(10Y−2Y)', s: '역전은 경기 둔화의 선행 신호',
+      b: '<p>10년물 금리에서 2년물 금리를 뺀 값입니다. 정상은 플러스(장기가 더 높음)이고, 마이너스가 되면 <b>수익률 곡선 역전</b>이라고 부릅니다.</p>' +
+         '<p>역전은 과거 여러 차례 경기 침체에 선행했습니다. 다만 <b>몇 달~2년</b> 앞서 나오므로 주가 하락 신호로 바로 쓰기는 어렵습니다. 2년물은 연준 금리 기대에 민감해서, 인하 기대가 커지면 2년물이 먼저 내려와 차이가 벌어집니다.</p>' +
+         '<p>거시 바의 <b>10Y−2Y</b> 칩이 이 값을 보여 줍니다. 플러스로 벌어지는지, 다시 역전되는지 추세를 보세요.</p>',
+      tip: '역전보다 중요한 것은 역전이 풀린 뒤입니다. 침체는 역전 해소 국면에 오는 경우가 많았습니다.' },
+    { c: '차트·기법', t: '돌파에는 거래량이 필요하다', s: '가격만 오르는 돌파는 속임수가 많다',
+      b: '<p>저항을 뚫는 날 거래량이 평소보다 <b>1.5~2배</b> 늘어야 진짜 돌파로 봅니다. 거래량 없이 슬금슬금 넘어가면 세력이 아닌 소수 주문으로 만든 가짜 돌파일 수 있습니다.</p>' +
+         '<p>반대로 <b>하락에는 거래량이 적어도 됩니다</b>. 매도는 이유 없이도 나오지만, 큰 매수는 반드시 힘이 필요하기 때문입니다.</p>' +
+         '<p>스캐너의 등락률·거래량 배수(volRatio)를 함께 보면 돌파의 질을 가늠할 수 있습니다.</p>',
+      tip: '돌파 후 2~3일 안에 거래량이 줄고 가격이 넥라인 아래로 돌아오면 실패로 처리합니다.' },
+    { c: '차트·기법', t: 'ATR로 손절 거리 정하기', s: '종목 변동성에 맞춘 손절이 생존을 만든다',
+      b: '<p>ATR(평균 진폭)은 그 종목이 하루에 얼마나 움직이는지를 나타냅니다. 손절을 <b>가격이 아니라 ATR 배수</b>로 정하면 변동성이 큰 종목에서 억울하게 털리는 일을 줄일 수 있습니다.</p>' +
+         '<p>이 분석기의 추세형은 6 ATR 손절·10 ATR 트레일, 스윙형은 4.5 ATR 손절에 <b>최대 -10%</b> 상한을 두었습니다. 엔비디아처럼 ATR이 큰 종목에서 손절이 -20%까지 벌어지는 것을 막기 위해서입니다.</p>' +
+         '<p>손절 폭을 좁히면 승률은 떨어지고, 넓히면 한 번의 손실이 커집니다. 두 전략을 나눠 쓰는 이유입니다.</p>',
+      tip: '손절가는 진입 전에 정합니다. 사고 나서 정하면 대부분 못 지킵니다.' },
+    { c: '차트·기법', t: '볼린저 밴드와 스퀴즈', s: '20일선 ±2 표준편차의 압축과 확장',
+      b: '<p>볼린저 밴드는 20일 이동평균 ±2 표준편차입니다. 밴드 폭이 <b>좁아지면(스퀴즈)</b> 변동성이 줄었다는 뜻이고, 곧 큰 움직임이 나오는 경우가 많습니다.</p>' +
+         '<p>밴드 상단을 타고 올라가는 <b>밴드 워크</b>는 강한 추세의 표시입니다. 상단 터치를 과열로 보고 바로 매도하면 큰 상승을 놓칩니다.</p>' +
+         '<p>중심선(20일선)은 추세의 기준으로, 종가가 중심선 아래로 내려가면 단기 흐름이 꺾였다고 봅니다.</p>',
+      tip: '스퀴즈는 방향을 알려 주지 않습니다. 돌파 방향을 확인한 뒤 따라가세요.' },
+    { c: '차트·기법', t: 'MACD 다이버전스', s: '가격은 신고가, 모멘텀은 약해질 때',
+      b: '<p>가격은 더 높은 고점을 만드는데 MACD 히스토그램이나 선은 더 낮은 고점을 만들면 <b>약세 다이버전스</b>입니다. 상승의 힘이 빠지고 있다는 신호입니다.</p>' +
+         '<p>반대로 가격은 더 낮은 저점인데 MACD가 높아지면 <b>강세 다이버전스</b>로, 하락 반전의 실마리로 봅니다.</p>' +
+         '<p>다이버전스는 <b>타이밍 지표가 아닙니다</b>. 몇 달씩 유지되며 계속 신고가가 나오기도 합니다. 추세선 이탈이나 20일선 이탈 같은 확인 신호와 함께 쓰세요.</p>',
+      tip: '다이버전스만 보고 역추세 매매를 하면 추세장에서 크게 다칩니다.' },
+    { c: '차트·기법', t: '52주 신고가 근처가 더 강하다', s: '싸게 사는 것보다 강한 것을 사는 편이 낫다',
+      b: '<p>52주 신고가 부근의 종목은 위에 <b>물린 매물이 없어</b> 저항이 적습니다. 반대로 52주 저가 부근은 반등할 때마다 본전 매물이 쏟아집니다.</p>' +
+         '<p>그래서 상승장에서는 신고가 근처 종목이 계속 강한 경우가 많습니다. “많이 빠진 종목”을 고르는 것과 “강한 종목”을 고르는 것은 다른 전략입니다.</p>' +
+         '<p>스캐너의 등락률·추세 열과 차트의 52주 범위 위치를 함께 보세요. 고점 대비 얼마나 떨어졌는지도 참고가 됩니다.</p>',
+      tip: '신고가 종목은 손절선을 피벗 아래로 짧게 잡을 수 있어 손익비가 좋아집니다.' },
+    { c: '차트·기법', t: '지지와 저항은 매물대에서 나온다', s: '선이 아니라 사람의 기억',
+      b: '<p>지지·저항은 이전에 <b>거래가 많이 쌓인 가격대</b>에서 생깁니다. 그 가격에 사둔 사람이 많으면, 다시 그 가격에 오면 본전 심리로 팔거나 추가 매수가 들어옵니다.</p>' +
+         '<p>이평선·52주 고저·전고점이 겹치는 자리는 저항이 특히 두껍습니다. 차트의 수평선 도구로 그 가격대를 직접 표시해 두면 판단이 빨라집니다.</p>' +
+         '<p>저항을 뚫고 올라간 뒤 그 가격이 <b>지지로 바뀌는지</b> 확인하는 것이 재진입 자리입니다.</p>',
+      tip: '지지선은 “깨지면 손절” 기준과 함께 정해야 의미가 생깁니다.' },
+    { c: '차트·기법', t: '손익비(R:R) 1:2의 힘', s: '승률 40%로도 남는 구조',
+      b: '<p>손익비가 1:2라면 10번 중 4번만 맞아도 기대값은 플러스입니다. 반대로 1:0.5라면 7번 맞아도 한 번의 큰 손실에 밀립니다.</p>' +
+         '<p>그래서 진입 전에 <b>목표가와 손절가를 먼저 그리고</b>, 손익비가 1.5 미만이면 매매를 건너뛰는 규칙이 유효합니다.</p>' +
+         '<p>히어로 카드의 <b>손익비 (R:R)</b> 값이 이 계산을 대신 해 줍니다. 손절은 6 ATR, 목표는 10 ATR 기준입니다.</p>',
+      tip: '손익비가 좋아도 승률 20%짜리 자리는 오래 버티기 어렵습니다. 둘을 함께 보세요.' },
+    { c: '차트·기법', t: '추세선은 세 번째 접점에서', s: '두 점은 누구나 긋는다, 세 번째가 확인',
+      b: '<p>추세선은 저점(또는 고점) 두 개를 이어 긋습니다. 하지만 두 점만으로는 아무 선이나 그을 수 있어, <b>세 번째로 닿아 반등하는지</b>가 진짜 추세선의 조건입니다.</p>' +
+         '<p>추세선을 긋고 나면 “닿았을 때 사고, 이탈하면 판다”는 규칙이 자연스럽게 생깁니다. 작도 도구의 추세선 버튼으로 직접 그려 보세요.</p>' +
+         '<p>너무 많은 선은 판단을 흐립니다. 한 차트에 2~3개면 충분합니다.</p>',
+      tip: '추세선 이탈 후 다시 올라와도, 이탈한 선을 저항으로 되돌려보는 경우가 많습니다.' },
+    { c: '차트·기법', t: '실적 D-3, 갭 하락을 조심', s: '손절선을 건너뛰는 유일한 구멍',
+      b: '<p>실적 발표는 장 마감 후나 개장 전에 나오고, 다음 날 주가는 <b>갭</b>으로 출발합니다. 아무리 -10% 손절을 걸어 두어도 갭으로 -20% 시가가 나오면 그 가격에 체결됩니다.</p>' +
+         '<p>그래서 실적이 3일 안으로 다가온 종목은 신규 진입을 피하거나 비중을 줄이는 편이 좋습니다. 이 검색기는 히어로 카드와 트레이드 로그에 <b>실적 D-day 배지</b>를 표시합니다.</p>' +
+         '<p>발표 전에 줄이고, 발표 후 반응을 확인한 뒤 다시 들어가는 것이 리스크 관리입니다.</p>',
+      tip: '백테스트에도 갭은 시가 체결로 반영되어, 손절보다 큰 손실이 나올 수 있습니다.' },
+    { c: '차트·기법', t: '수익률보다 최대낙폭(MDD)', s: '버틸 수 있는 하락인가',
+      b: '<p>연 30% 수익도 중간에 -60%를 버티지 못하면 실현되지 않습니다. 실제 계좌에서는 <b>최대낙폭(MDD)</b>이 수익률보다 중요합니다.</p>' +
+         '<p>이 분석기의 KPI 카드에 전략별 최대낙폭이 나옵니다. 스윙형은 거래가 짧아 MDD가 작고, 단순보유는 2022년 같은 해에 크게 빠졌습니다.</p>' +
+         '<p>내 계좌가 -30%에서 버틸 수 있는지 먼저 정하고, 그에 맞는 전략과 비중을 고르세요.</p>',
+      tip: 'MDD의 절반쯤이 실제로 겪게 되는 심리적 고통이라고 생각하면 대략 맞습니다.' },
+    { c: '차트·기법', t: '분할 매수와 분할 익절', s: '타이밍을 맞히지 않아도 되는 유일한 방법',
+      b: '<p>한 번에 전부 사면 고점에 살 위험이 커집니다. 3~4회로 나눠 사면 평균 단가가 완만해지고, 판단이 틀렸을 때 수정할 여지가 남습니다.</p>' +
+         '<p>매도도 마찬가지입니다. 목표가 1차에서 절반, 2차에서 나머지처럼 나누면 “너무 일찍 팔았다”는 후회를 줄일 수 있습니다.</p>' +
+         '<p>모의매매 기능에서 수량과 비중(10·25·50·100%) 버튼으로 이 과정을 미리 연습해 보세요.</p>',
+      tip: '분할은 감정 관리 도구입니다. 규칙을 정해 두고 기계적으로 실행하세요.' },
+    { c: '차트·기법', t: '시장 레짐 필터', s: '개별 종목보다 시장이 먼저다',
+      b: '<p>아무리 좋은 종목도 시장이 무너지면 같이 빠집니다. 그래서 전략에는 <b>시장 필터</b>가 필요합니다. 이 분석기는 QQQ가 100일선 위일 때만 스윙 진입을 허용합니다.</p>' +
+         '<p>필터가 없으면 하락장에서 RSI(2) 신호가 계속 떠서 물타기만 반복하게 됩니다. 5년 백테스트에서 필터 하나로 스윙 승률이 크게 달라졌습니다.</p>' +
+         '<p>필터는 “수익을 늘리는 장치”라기보다 <b>큰 손실을 막는 장치</b>입니다.</p>',
+      tip: 'QQQ가 100일선 아래면 스윙 신호는 참고만 하고 비중을 줄이세요.' },
+    { c: '검색기 활용법', t: '시총 Top 30 + 실적 우량주 조합', s: '큰 회사 중에서 돈을 잘 버는 곳만',
+      b: '<p>프리셋 <b>시총 Top 30</b>은 유동성이 풍부한 대형주만 남깁니다. 여기에 <b>실적 우량주</b>(EPS 흑자 · 매출성장 5% 초과 · 순이익률 15% 초과)를 겹쳐 보면 “크고 잘 버는 회사”가 남습니다.</p>' +
+         '<p>두 프리셋은 동시에 켜지지 않으므로, 하나씩 눌러 목록을 비교하는 식으로 씁니다. 정렬을 <b>점수 높은순</b>이나 <b>RSI 낮은순</b>으로 바꾸면 후보가 더 빨리 줄어듭니다.</p>' +
+         '<p>거른 뒤에는 반드시 차트를 열어 240일선과 거래량을 확인하세요. 스캐너는 후보를 줄이는 도구입니다.</p>',
+      tip: '프리셋은 “사도 되는 목록”이 아니라 “더 볼 목록”입니다.' },
+    { c: '검색기 활용법', t: '실적 D-3 배지로 갭 피하기', s: '히어로 카드와 로그의 작은 배지',
+      b: '<p>종목을 고르면 히어로 카드 아래에 <b>다음 실적 발표 D-day</b>가 표시됩니다. D-3 이내면 노란 경고가 뜹니다.</p>' +
+         '<p>백테스트·모의매매 화면의 트레이드 로그에도 보유 중인 거래의 실적 일정이 함께 나옵니다. 실적을 앞두고 있으면 청산 시점을 조정하는 판단에 쓰세요.</p>' +
+         '<p>실적 직전에는 신규 진입을 미루고, 이미 보유 중이면 비중을 줄이는 것이 일반적인 대응입니다.</p>',
+      tip: '배지는 “위험하다”가 아니라 “갭이 날 수 있다”는 뜻입니다.' },
+    { c: '검색기 활용법', t: '추세형 ↔ 스윙형 전환 시점', s: '같은 종목도 장세에 따라 전략이 달라진다',
+      b: '<p>전략 탭에서 <b>추세형(중기)</b>과 <b>스윙형(단기)</b>을 바꿀 수 있습니다. 추세형은 점수 50 이상 매수 후 6 ATR 손절·10 ATR 트레일로 오래 들고, 스윙형은 RSI(2) 과매도에서 짧게 진입합니다.</p>' +
+         '<p>시장이 100일선 위에서 완만히 오르면 추세형이 편하고, 변동성이 크고 방향이 자주 바뀌면 스윙형이 유리합니다. 백테스트 기간을 1Y·2Y로 바꿔 두 전략의 승률·MDD를 비교해 보세요.</p>' +
+         '<p>전환은 “지금 시장이 어느 쪽인가”를 보고 정합니다. 최근 3개월 성과가 좋은 쪽을 따라가는 것도 방법입니다.</p>',
+      tip: '전략을 자주 바꾸면 비용만 늘어납니다. 최소 몇 주는 유지해 보세요.' },
+    { c: '검색기 활용법', t: '기간 버튼(3M~5Y)으로 장세 점검', s: '차트 기간이 곧 백테스트 기간',
+      b: '<p>차트 위의 <b>3M·6M·1Y·2Y·5Y</b> 버튼은 차트 범위와 아래 백테스트 기간을 동시에 바꿉니다. 5Y에는 2022년 하락장이 포함되어, 전략이 하락장에서 어떻게 버텼는지 볼 수 있습니다.</p>' +
+         '<p>3M으로 보면 최근 장세에서 그 종목의 신호가 얼마나 잘 맞았는지 알 수 있습니다. 다만 거래 수가 적어 통계적 의미는 약해집니다.</p>' +
+         '<p>기간을 바꿔도 지표는 전체 이력을 써서 계산하므로 미래참조는 없습니다.</p>',
+      tip: '5Y에서 MDD를, 1Y에서 최근 성과를 확인하는 식으로 나눠 보세요.' },
+    { c: '검색기 활용법', t: '트레이드 로그 읽는 법', s: '보유기간과 청산 사유의 분포',
+      b: '<p>로그에는 진입·청산 가격, <b>보유기간</b>, 수익률, <b>청산 사유</b>가 나옵니다. 청산 사유 분포를 보면 전략이 의도대로 작동하는지 알 수 있습니다.</p>' +
+         '<p>손절이 대부분이면 진입 조건이 너무 느슨하고, 추세 청산이 대부분이면 오래 들고 가는 구조입니다. 평균 보유기간이 짧으면 수수료(0.03%)의 영향이 커집니다.</p>' +
+         '<p>수익 거래만 따로 보지 말고 <b>연속 손실 구간</b>을 찾아보세요. 내가 버틸 수 있는 길이인지 판단하는 데 도움이 됩니다.</p>',
+      tip: '로그는 “과거 실적”이 아니라 “전략의 성격”을 읽는 자료입니다.' },
+    { c: '검색기 활용법', t: '모의매매로 규칙 먼저 검증', s: '실제 돈을 넣기 전에 손버릇부터',
+      b: '<p>가상투자 화면은 실제 일봉 종가로 체결됩니다. 시드($10K 등)를 정하고, 시점 리플레이로 과거 어느 날로 돌아가 <b>그때 알 수 있었던 정보만으로</b> 매매를 연습할 수 있습니다.</p>' +
+         '<p>목표는 수익을 내는 것이 아니라 <b>규칙을 지키는 연습</b>입니다. 손절선을 지켰는지, 추격 매수를 했는지 기록해 보세요.</p>' +
+         '<p>실제 주문이 아니므로 부담 없이 반복할 수 있습니다. 계좌 초기화로 언제든 처음부터 다시 시작합니다.</p>',
+      tip: '모의매매에서 20번 이상 같은 규칙을 반복하면 실제 계좌에서 덜 흔들립니다.' },
+    { c: '검색기 활용법', t: '종합 기술점수, 근거까지 읽기', s: '50점이 중립, 5개 팩터의 합',
+      b: '<p>점수는 추세·모멘텀·반전·거래량·가격구조 <b>5개 팩터</b>를 가중 합산해 50을 기준으로 만든 값입니다. 50이 중립, 70 이상이면 강한 매수 우위입니다.</p>' +
+         '<p>중요한 것은 점수 자체보다 <b>어느 팩터가 점수를 만들었는지</b>입니다. 점수는 높은데 거래량 팩터가 마이너스라면, 힘없이 오른 것일 수 있습니다.</p>' +
+         '<p>“종합 기술점수 산출 근거·해설” 카드에서 팩터별 배점과 현재 값을 함께 보세요.</p>',
+      tip: '점수 하나로 사지 말고, 반대 팩터가 무엇인지 확인하는 습관을 들이세요.' },
+    { c: '검색기 활용법', t: '관심종목은 5개면 충분', s: '많이 담으면 관리가 안 된다',
+      b: '<p>관심종목은 상단의 ★로 추가합니다. 5개 안팎으로 유지하면 실적 일정과 차트를 매일 확인할 수 있습니다.</p>' +
+         '<p>목록 내 정렬을 <b>RSI 낮은순</b>으로 바꾸면 단기 과매도 후보가 위로 올라오고, <b>점수 높은순</b>은 추세 후보를 보여 줍니다.</p>' +
+         '<p>관심종목은 이 브라우저(localStorage)에만 저장됩니다. 다른 기기와 공유되지 않습니다.</p>',
+      tip: '관심종목을 자주 갈아치우면 비교가 안 됩니다. 최소 한 달은 유지해 보세요.' },
+    { c: '검색기 활용법', t: '공포·탐욕 시계와 매수 타이밍', s: '극단적 공포는 분할 매수 구간',
+      b: '<p>CNN 공포·탐욕 지수는 시장 심리를 0~100으로 보여 줍니다. 25 이하 극단적 공포는 투매 구간, 75 이상 극단적 탐욕은 과열 구간입니다.</p>' +
+         '<p>공포 구간에서는 <b>한 번에 사지 말고 분할</b>로 접근하고, 탐욕 구간에서는 추격 매수를 줄이고 손절선을 올리는 식으로 씁니다.</p>' +
+         '<p>지수는 매일 자동 갱신되며, 실시간 API 연결에 성공하면 ‘실시간’ 배지가 켜집니다.</p>',
+      tip: '심리 지표는 타이밍을 정확히 맞히지 못합니다. 비중 조절 도구로 쓰세요.' },
+    { c: '검색기 활용법', t: 'W 프리셋으로 후보 3단계 압축', s: '돌파 · 임박 · 진행',
+      b: '<p>W 쌍바닥 프리셋은 넥라인 <b>돌파(최근 5봉)</b>, <b>임박(넥라인 5% 이내)</b>, <b>진행(바닥 형성)</b> 세 단계로 종목을 보여 줍니다.</p>' +
+         '<p>보통 “임박”에서 미리 지켜보다가 “돌파”에서 진입 여부를 판단합니다. “진행”은 아직 시간이 필요한 후보다.</p>' +
+         '<p>프리셋을 켠 뒤 차트의 W 오버레이로 넥라인과 두 바닥이 실제로 그려지는지 확인하세요. 모양이 어긋나면 신호를 믿지 않는 편이 좋습니다.</p>',
+      tip: '돌파 목록은 장 마감 기준입니다. 다음 날 갭으로 출발하면 손익비가 달라집니다.' },
+    { c: '차트·기법', t: '거래량과 OBV, 매집의 흔적', s: '가격이 안 움직여도 거래량이 말한다',
+      b: '<p>OBV(누적 거래량)는 오른 날의 거래량을 더하고 내린 날을 빼서 만든 선입니다. 가격이 횡보하는데 OBV가 우상향하면 <b>조용한 매집</b> 가능성이 있습니다.</p>' +
+         '<p>가격 신고가인데 OBV가 따라오지 못하면 상승의 힘이 약해지고 있다는 신호입니다.</p>' +
+         '<p>거래량 지표는 방향을 확정해 주지 않습니다. 돌파의 신뢰도를 높이는 보조 자료로 쓰세요.</p>',
+      tip: '거래량은 “확인”용이고, 가격이 먼저 움직입니다.' }
+  ];
+  var eduOff = 0;
+  function eduTodayNum() { var n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); }
+  function eduFmt(d) {
+    return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2) +
+      ' (' + WD_KO[d.getDay()] + ')';
+  }
+  function eduIdx(off) {
+    var d = new Date(eduTodayNum().getTime() + off * 86400000);
+    var n = EDU.length;
+    var k = Math.floor((d - new Date(2026, 0, 1)) / 86400000);
+    return { i: ((k % n) + n) % n, d: d };
+  }
+  function eduRender() {
+    var card = $('#eduCard');
+    if (!card) return;
+    var r = eduIdx(eduOff), it = EDU[r.i], n = EDU.length;
+    $('#eduDay').textContent = 'Day ' + (r.i + 1);
+    $('#eduCat').textContent = it.c;
+    $('#eduTopic').textContent = it.t;
+    $('#eduMeta').textContent = eduFmt(r.d) + (eduOff === 0 ? ' · 오늘의 팁' : ' · 다른 날 팁') + ' · ' + it.s;
+    $('#eduTxt').innerHTML = it.b;
+    $('#eduTip').innerHTML = it.tip ? '<b>실전 포인트</b> · ' + it.tip : '';
+    $('#eduProg').textContent = (r.i + 1) + '/' + n + ' · ' + n + '일 순환 · 매일 자동 변경';
+    var body = $('#eduBody');
+    if (body && !card.classList.contains('closed')) body.style.height = '';
+  }
+  function eduCollapse(closed) {
+    var card = $('#eduCard'), btn = $('#eduToggle');
+    if (!card) return;
+    card.classList.toggle('closed', !!closed);
+    if (btn) {
+      btn.setAttribute('aria-expanded', closed ? 'false' : 'true');
+      var tx = btn.querySelector('.edu-tx');
+      if (tx) tx.textContent = closed ? '펼치기' : '접기';
+    }
+    try { localStorage.setItem(EDU_KEY, closed ? '1' : '0'); } catch (e) {}
+  }
+  function eduInit() {
+    var card = $('#eduCard');
+    if (!card) return;
+    var closed = false;
+    try { closed = localStorage.getItem(EDU_KEY) === '1'; } catch (e) {}
+    eduRender();
+    eduCollapse(closed);
+    var pv = $('#eduPrev'), nx = $('#eduNext'), td = $('#eduToday'), tg = $('#eduToggle');
+    if (pv) pv.onclick = function () { eduOff -= 1; eduRender(); };
+    if (nx) nx.onclick = function () { eduOff += 1; eduRender(); };
+    if (td) td.onclick = function () { eduOff = 0; eduRender(); };
+    if (tg) tg.onclick = function () { eduCollapse(!card.classList.contains('closed')); };
+  }
+
   /* ---------------- go ---------------- */
   function start() {
     var h = (location.hash || '').replace('#', '');   /* boot()이 기본 종목을 고르기 전에 딥링크 보관 */
     accBuild();                                       /* 접힘 상태를 먼저 복원해 화면 깜빡임 방지 */
+    eduInit();                                        /* 오늘의 주식 공부 카드 (날짜별 자동 변경) */
     wire();
     boot();
+    xtogSync();                                       /* SAR · 엔벨로프 저장 상태 복원 */
     if (h && A[h]) select(h);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);

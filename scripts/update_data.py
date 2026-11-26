@@ -11,22 +11,28 @@ scripts/data.js 를 다시 생성한다.
 엔진(engine.js)은 최근 1,255봉만 백테스트 구간으로 쓰므로, 매일 갱신해도
 백테스트 창은 항상 정확히 5년으로 유지된다.
 
-  window.MARKET = {asOf, dates[], tickers[], series{}, fundamentals{}, fearGreed{}}
-    series       : 종목 102 + ^VIX + ^TNX  (off,o,h,l,c,v — 거래일 캘린더 정렬)
+  window.MARKET = {asOf, dates[], tickers[], series{}, fundamentals{}, fearGreed{}, macro{}}
+    series       : 종목 102 + ^VIX + ^TNX + DXY  (off,o,h,l,c,v — 거래일 캘린더 정렬)
     fundamentals : {asOf, fetchedAt, tickers{t:{...}}}   # t.earningsDate = 다음 실적 발표일 YYYY-MM-DD (없으면 생략)
     fearGreed    : CNN 공포·탐욕 지수 {score, rating, previousClose, previous1Week,
                    previous1Month, previous1Year, timestamp, fetchedAt, source}
+    macro        : 거시 지표 {rates{us2y, us10y, spread}, fed{targetLow,targetHigh,effr,asOf},
+                   cpi{yoy,period,latest}, pce{yoy,core,period}, jobs{unemp,period},
+                   events[{k,d,n}], refreshedAt}  # DXY 는 series['DXY']
 
 실패 처리(안전 폴백):
   · 시세 종목이 95% 미만으로 수집되면 기존 data.js 를 그대로 두고 exit 2
   · 펀더멘털만 실패하면 기존 data.js 에 박혀 있던 펀더멘털을 이어 쓰고 시세는 갱신
   · 지수(^VIX/^TNX)를 못 받으면 기존 data.js 의 지수 시리즈를 이어 쓴다
   · CNN 공포·탐욕 API 가 실패하면 기존 data.js 의 fearGreed 를 그대로 이어 쓴다
+  · 거시 지표는 美 재무부(2Y·10Y) · NY Fed(기준금리) · BLS(CPI·실업률) · BEA(PCE)를
+    직접 수집하고, 실패하면 기존 data.js 의 값 → 내장 안전 폴백 순서로 채운다
 
 사용법:
     python scripts/update_data.py            # 갱신 후 data.js 기록
     python scripts/update_data.py --check    # 갱신 없이 상태만 출력
 """
+import html
 import http.cookiejar
 import json
 import os
@@ -64,6 +70,9 @@ FUND_FIELDS = (
     'quoteType', 'earningsDate',
 )
 INDICES = {'^VIX': 'VIX', '^TNX': 'US 10Y'}
+# 달러 인덱스 — Yahoo DX-Y.NYB 를 series['DXY'] 로 담는다
+DXY_SYMBOL = 'DX-Y.NYB'
+DXY_KEY = 'DXY'
 # CNN 공포·탐욕 지수 (dataviz JSON API) — 브라우저에서 Referer 없이도 열리도록 CORS *
 FG_URL = 'https://production.dataviz.cnn.io/index/fearandgreed/graphdata'
 FG_HEADERS = {
@@ -222,6 +231,24 @@ def build_series(dates, rows, fill_forward):
     if off is None:
         return None
     return {'off': off, 'o': o, 'h': h, 'l': l, 'c': c, 'v': v}
+
+
+def carry_series(prev, key, dates):
+    """직전 data.js 의 지표 시리즈를 새 거래일 캘린더에 이어 붙인다(수집 실패 폴백)."""
+    ps = ((prev or {}).get('series') or {}).get(key)
+    if not ps:
+        return None
+    pdates = prev['dates']
+    rows = {}
+    for k in range(len(ps['c'])):
+        rows[pdates[ps['off'] + k]] = [ps['o'][k], ps['h'][k], ps['l'][k], ps['c'][k], ps['v'][k]]
+    if not any(d in rows for d in dates):
+        return None
+    s = build_series(dates, rows, fill_forward=True)
+    if s:
+        last_known = max(d for d in dates if d in rows)
+        print('WARN %s: 최신 수집 실패 — 기존 값 유지(%s 까지)' % (key, last_known))
+    return s
 
 
 # ------------------------------------------------------------- 펀더멘털
@@ -445,6 +472,244 @@ def fetch_fear_greed(tries=3):
     return None, last
 
 
+# ------------------------------------ 거시 지표 · 발표 일정 (DXY · 2Y · 금리차 · 기준금리)
+#   美 재무부 일별 수익률(2Y·10Y)  ·  뉴욕연은 EFFR(기준금리 범위)  ·  BLS(CPI·실업률)  ·  BEA(PCE)
+#   FRED 는 이 환경에서 접속되지 않아 공식 배포처를 직수집한다(실패 시 안전 폴백).
+TREASURY_URL = ('https://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages/xml'
+                '?data=daily_treasury_yield_curve&field_tdr_date_value=%d')
+EFFR_URL = 'https://markets.newyorkfed.org/api/rates/unsecured/effr/last/1.json'
+BLS_URL = 'https://api.bls.gov/publicAPI/v1/timeseries/data/'
+BEA_PCE_URL = 'https://www.bea.gov/news/%d/personal-income-and-outlays-%s-%d'
+MONTHS_EN = ['january', 'february', 'march', 'april', 'may', 'june', 'july',
+             'august', 'september', 'october', 'november', 'december']
+
+# 공식 발표 일정 (연준 FOMC · BLS CPI·고용보고서 · BEA PCE) — 2026-12 ~ 2027-12
+#   FOMC: 연준 2026-11-12 발표 개정 일정 (2027-10-26/27 은 전략회의로 금리 결정 없음 → 표시에서 제외)
+#   CPI·고용: BLS 공개 일정표 / PCE: BEA 공개 일정표
+SCHEDULE = [
+    ('JOBS', '2026-12-04'), ('FOMC', '2026-12-09'), ('CPI', '2026-12-10'), ('PCE', '2026-12-23'),
+    ('JOBS', '2027-01-08'), ('CPI', '2027-01-13'), ('FOMC', '2027-01-27'), ('PCE', '2027-01-28'),
+    ('JOBS', '2027-02-05'), ('CPI', '2027-02-11'), ('PCE', '2027-02-25'),
+    ('JOBS', '2027-03-05'), ('CPI', '2027-03-10'), ('FOMC', '2027-03-17'), ('PCE', '2027-03-31'),
+    ('JOBS', '2027-04-02'), ('CPI', '2027-04-13'), ('FOMC', '2027-04-28'), ('PCE', '2027-04-29'),
+    ('JOBS', '2027-05-07'), ('CPI', '2027-05-12'), ('PCE', '2027-05-27'),
+    ('JOBS', '2027-06-04'), ('FOMC', '2027-06-09'), ('CPI', '2027-06-10'), ('PCE', '2027-06-25'),
+    ('JOBS', '2027-07-02'), ('CPI', '2027-07-14'), ('PCE', '2027-07-29'), ('FOMC', '2027-07-28'),
+    ('JOBS', '2027-08-06'), ('CPI', '2027-08-11'), ('PCE', '2027-08-25'),
+    ('JOBS', '2027-09-03'), ('CPI', '2027-09-14'), ('FOMC', '2027-09-15'), ('PCE', '2027-09-30'),
+    ('JOBS', '2027-10-08'), ('CPI', '2027-10-14'), ('PCE', '2027-10-28'),
+    ('JOBS', '2027-11-05'), ('CPI', '2027-11-10'), ('FOMC', '2027-11-17'), ('PCE', '2027-11-24'),
+    ('JOBS', '2027-12-03'), ('CPI', '2027-12-10'), ('PCE', '2027-12-22'),
+]
+# 수집이 모두 실패해 기존 data.js 에도 값이 없을 때 쓰는 안전 폴백 (2026-11-25/26 공식 발표값)
+BASE_MACRO = {
+    'fed': {'targetLow': 3.75, 'targetHigh': 4.00, 'effr': 3.88, 'asOf': '2026-11-24'},
+    'cpi': {'yoy': 3.7, 'period': '2026-09', 'latest': '2026-10'},
+    'pce': {'yoy': 3.8, 'core': 3.3, 'period': '2026-10'},
+    'jobs': {'unemp': 4.1, 'period': '2026-10'},
+}
+
+
+def _brief_http(url, data=None, timeout=30, headers=None, tries=2):
+    """UA 만 붙인 단순 GET/POST — 거시 지표 사이트용."""
+    h = {'User-Agent': UA, 'Accept': '*/*', 'Accept-Language': 'en-US,en;q=0.9'}
+    if headers:
+        h.update(headers)
+    last = None
+    for attempt in range(tries):
+        try:
+            req = urllib.request.Request(url, data=data, headers=h)
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return r.read()
+        except Exception as e:
+            last = e
+            time.sleep(1.2 * (attempt + 1))
+    raise last
+
+
+def fetch_treasury():
+    """美 재무부 일별 수익률 — {날짜: {'y2':2년, 'y10':10년}}."""
+    rows = {}
+    y0 = today_et().year
+    for y in (y0 - 1, y0):
+        try:
+            body = _brief_http(TREASURY_URL % y, timeout=40).decode('utf-8', 'replace')
+        except Exception as e:
+            print('WARN treasury %d: %s' % (y, e))
+            continue
+        for blk in re.findall(r'<m:properties>(.*?)</m:properties>', body, re.S):
+            m = re.search(r'<d:NEW_DATE[^>]*>(\d{4}-\d{2}-\d{2})', blk)
+            if not m:
+                continue
+            two = re.search(r'<d:BC_2YEAR[^>]*>([\d.]+)</d:BC_2YEAR>', blk)
+            ten = re.search(r'<d:BC_10YEAR[^>]*>([\d.]+)</d:BC_10YEAR>', blk)
+            rows[m.group(1)] = {
+                'y2': float(two.group(1)) if two else None,
+                'y10': float(ten.group(1)) if ten else None,
+            }
+    return rows
+
+
+def macro_rates_from_treasury(rows):
+    ds = sorted(rows)
+    if not ds:
+        return None
+    last = ds[-1]
+    y2s = [(d, rows[d]['y2']) for d in ds if rows[d]['y2'] is not None]
+    if not y2s:
+        return None
+    us2y = {
+        'v': y2s[-1][1], 'prev': y2s[-2][1] if len(y2s) > 1 else None,
+        'spark': [v for _, v in y2s[-66:]], 'asOf': y2s[-1][0],
+    }
+    sp = [(d, round(rows[d]['y10'] - rows[d]['y2'], 2)) for d in ds
+          if rows[d]['y10'] is not None and rows[d]['y2'] is not None]
+    spread = {
+        'v': sp[-1][1] if sp else None, 'prev': sp[-2][1] if len(sp) > 1 else None,
+        'spark': [v for _, v in sp[-66:]], 'asOf': sp[-1][0] if sp else last,
+    }
+    y10s = [(d, rows[d]['y10']) for d in ds if rows[d]['y10'] is not None]
+    rates = {'us2y': us2y, 'spread': spread}
+    if y10s:
+        rates['us10y'] = {'v': y10s[-1][1], 'prev': y10s[-2][1] if len(y10s) > 1 else None, 'asOf': y10s[-1][0]}
+    return rates
+
+
+def fetch_fed_rate():
+    """뉴욕연은 EFFR — 기준금리 목표 범위 + 실효 연방기금금리."""
+    try:
+        d = json.loads(_brief_http(EFFR_URL, timeout=20))
+        r = (d.get('refRates') or [{}])[0]
+        lo, hi = r.get('targetRateFrom'), r.get('targetRateTo')
+        if lo is None or hi is None:
+            print('WARN fed: 목표 범위 없음')
+            return None
+        return {'targetLow': float(lo), 'targetHigh': float(hi),
+                'effr': (float(r['percentRate']) if r.get('percentRate') is not None else None),
+                'asOf': r.get('effectiveDate')}
+    except Exception as e:
+        print('WARN fed: %s' % e)
+        return None
+
+
+def fetch_bls_macro():
+    """BLS CPI-U(NSA) 12개월 상승률 + 실업률. (같은 달 작년 값이 없으면 최근 가용 월로 대체)"""
+    out = {}
+    y = today_et().year
+    try:
+        payload = json.dumps({'seriesid': ['CUUR0000SA0', 'LNS14000000'],
+                              'startyear': str(y - 2), 'endyear': str(y)}).encode()
+        d = json.loads(_brief_http(BLS_URL, data=payload, timeout=30,
+                                   headers={'Content-Type': 'application/json'}))
+        ser = {s.get('seriesID'): (s.get('data') or []) for s in ((d.get('Results') or {}).get('series') or [])}
+    except Exception as e:
+        print('WARN bls: %s' % e)
+        return out
+    m = {}
+    for x in ser.get('CUUR0000SA0') or []:
+        try:
+            if str(x.get('period', '')).startswith('M') and x['period'] != 'M13':
+                m[(int(x['year']), int(x['period'][1:]))] = float(x['value'])
+        except (TypeError, ValueError):
+            pass
+    if m:
+        latest = max(m)
+        for k in range(4):
+            yy, mm = latest[0], latest[1] - k
+            while mm <= 0:
+                mm += 12
+                yy -= 1
+            base = m.get((yy - 1, mm))
+            if base and (yy, mm) in m:
+                out['cpi'] = {'yoy': round((m[(yy, mm)] / base - 1) * 100, 1),
+                              'period': '%d-%02d' % (yy, mm),
+                              'latest': '%d-%02d' % latest}
+                break
+    un = [x for x in (ser.get('LNS14000000') or [])
+          if str(x.get('period', '')).startswith('M') and x['period'] != 'M13']
+    if un:
+        un.sort(key=lambda x: (int(x['year']), int(x['period'][1:])), reverse=True)
+        try:
+            out['jobs'] = {'unemp': float(un[0]['value']),
+                           'period': '%s-%02d' % (un[0]['year'], int(un[0]['period'][1:]))}
+        except (TypeError, ValueError):
+            pass
+    return out
+
+
+def fetch_pce():
+    """BEA 개인소비지출(PCE) 물가지수 — 발표문에서 전년비·근원 전년비를 읽는다."""
+    today = today_et()
+    for back in range(0, 4):
+        y, mo = today.year, today.month - back
+        while mo <= 0:
+            mo += 12
+            y -= 1
+        url = BEA_PCE_URL % (y, MONTHS_EN[mo - 1], y)
+        try:
+            body = _brief_http(url, timeout=25, tries=1).decode('utf-8', 'replace')
+        except Exception:
+            continue
+        txt = re.sub(r'<(script|style).*?</\1>', ' ', body, flags=re.S)
+        txt = re.sub(r'<[^>]+>', ' ', txt)
+        txt = re.sub(r'\s+', ' ', html.unescape(txt))
+        m1 = re.search(r'one year ago,\s*the\s*PCE price index\s*for\s+\w+\s*increased\s+([\d.]+)\s*percent', txt)
+        if not m1:
+            continue
+        m2 = re.search(r'Excluding food and energy,\s*the PCE price index\s*increased\s+([\d.]+)\s*percent from one year ago', txt)
+        return {'yoy': float(m1.group(1)), 'core': (float(m2.group(1)) if m2 else None),
+                'period': '%d-%02d' % (y, mo), 'source': 'BEA Personal Income and Outlays'}
+    return None
+
+
+def macro_events():
+    """오늘 이후 발표 일정 — 종류별로 가장 가까운 일정을 UI 가 골라 쓴다."""
+    today = today_et().strftime('%Y-%m-%d')
+    label = {'CPI': 'CPI', 'PCE': 'PCE', 'JOBS': '고용보고서'}
+    out = []
+    for kind, d in sorted(SCHEDULE, key=lambda x: x[1]):
+        if d < today:
+            continue
+        if kind == 'FOMC':
+            n = 'FOMC 금리 결정'
+        else:
+            yy, mm = int(d[:4]), int(d[5:7]) - 1
+            if mm == 0:
+                yy, mm = yy - 1, 12
+            n = '%d월 %s' % (mm, label[kind])
+        out.append({'k': kind, 'd': d, 'n': n})
+    return out
+
+
+def build_macro(prev_macro):
+    """거시 지표 묶음 — 최신 수집 → 기존 data.js 값 → 안전 폴백 순서."""
+    prev_macro = prev_macro or {}
+    macro = {}
+    tre = fetch_treasury()
+    rates = macro_rates_from_treasury(tre) if tre else None
+    if rates:
+        macro['rates'] = rates
+    elif prev_macro.get('rates'):
+        macro['rates'] = prev_macro['rates']
+        print('WARN rates 수집 실패 — 기존 값 유지')
+    fed = fetch_fed_rate() or prev_macro.get('fed') or BASE_MACRO['fed']
+    macro['fed'] = fed
+    bls = fetch_bls_macro()
+    macro['cpi'] = bls.get('cpi') or prev_macro.get('cpi') or BASE_MACRO['cpi']
+    macro['jobs'] = bls.get('jobs') or prev_macro.get('jobs') or BASE_MACRO['jobs']
+    macro['pce'] = fetch_pce() or prev_macro.get('pce') or BASE_MACRO['pce']
+    macro['events'] = macro_events()
+    macro['refreshedAt'] = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+    r = macro.get('rates') or {}
+    print('macro: fed %s~%s (EFFR %s) · CPI %s%% (%s) · PCE %s%% core %s%% · 실업률 %s%% · 2Y %s · 10Y-2Y %s · 일정 %d' % (
+        fed.get('targetLow'), fed.get('targetHigh'), fed.get('effr'),
+        (macro['cpi'] or {}).get('yoy'), (macro['cpi'] or {}).get('period'),
+        (macro['pce'] or {}).get('yoy'), (macro['pce'] or {}).get('core'),
+        (macro['jobs'] or {}).get('unemp'),
+        ((r.get('us2y') or {}).get('v')), ((r.get('spread') or {}).get('v')), len(macro['events'])))
+    return macro
+
+
 # ------------------------------------------------------------ 이전 data.js
 def previous_payload():
     """기존 data.js 에서 지수 시리즈·펀더멘털·공포탐욕을 읽어 폴백으로 쓴다."""
@@ -501,18 +766,19 @@ def build_payload(base, tickers, charts_ok, prev, fg=None):
             if s:
                 series[t] = s
         elif prev and t in (prev.get('series') or {}):
-            ps = prev['series'][t]
-            pdates = prev['dates']
-            rows = {}
-            for k in range(len(ps['c'])):
-                rows[pdates[ps['off'] + k]] = [ps['o'][k], ps['h'][k], ps['l'][k], ps['c'][k], ps['v'][k]]
-            # 과거 구간만 직전 파일에서 이어 붙인다(최신일 결측은 그대로 표시)
-            s = build_series([d for d in dates if d in rows], rows, fill_forward=True)
+            s = carry_series(prev, t, dates)
             if s:
-                early = [d for d in dates if d in rows]
-                s['off'] = dates.index(early[0])
-                print('WARN index %s: 최신 수집 실패 — 기존 값 유지(%s 까지)' % (t, early[-1]))
                 series[t] = s
+
+    # 달러 인덱스(DXY) — Yahoo DX-Y.NYB
+    if DXY_SYMBOL in per:
+        s = build_series(dates, per[DXY_SYMBOL], fill_forward=True)
+        if s:
+            series[DXY_KEY] = s
+    elif prev and DXY_KEY in (prev.get('series') or {}):
+        s = carry_series(prev, DXY_KEY, dates)
+        if s:
+            series[DXY_KEY] = s
 
     # 펀더멘털 (실패분은 None → UI 에서 —)
     funds = load_fundamentals(tickers)
@@ -572,6 +838,7 @@ def build_payload(base, tickers, charts_ok, prev, fg=None):
             'source': 'Yahoo Finance quoteSummary v10',
             'tickers': slim_funds,
         },
+        'macro': build_macro((prev or {}).get('macro')),
     }
     # CNN 공포·탐욕 — 이번 수집 실패 시 기존 내장값 유지
     fg_use = fg or (prev or {}).get('fearGreed')
@@ -607,6 +874,10 @@ def _stable(payload):
     g.pop('fetchedAt', None)          # 공포·탐욕도 값(점수·직전값·갱신시각)이 바뀌면 반영 대상
     if g:
         p['fearGreed'] = g
+    mc = dict(p.get('macro') or {})
+    mc.pop('refreshedAt', None)       # 거시 지표는 값·일정이 바뀔 때만 다시 쓴다
+    if mc:
+        p['macro'] = mc
     return json.dumps(_norm(p), sort_keys=True, ensure_ascii=False)
 
 
@@ -640,7 +911,7 @@ def main():
             fg.get('previous1Week'), fg.get('previous1Month'), fg.get('previous1Year')), flush=True)
     else:
         print('WARN fear&greed fetch failed: %s' % fg_err, flush=True)
-    res = download_charts(list(tickers) + list(INDICES))
+    res = download_charts(list(tickers) + list(INDICES) + [DXY_SYMBOL])
     bad = {k: v for k, v in res.items() if v != 'ok'}
     if bad:
         print('WARN: chart fetch failed for', bad, flush=True)
@@ -648,7 +919,7 @@ def main():
     if len(charts_ok) < len(tickers) * 0.95:
         print('ERROR only %d/%d tickers fetched - keeping existing data.js' % (len(charts_ok), len(tickers)))
         return 2
-    charts_all = [t for t in list(tickers) + list(INDICES) if res.get(t) == 'ok']
+    charts_all = [t for t in list(tickers) + list(INDICES) + [DXY_SYMBOL] if res.get(t) == 'ok']
 
     payload, err = build_payload(base, tickers, charts_all, prev, fg)
     if err:

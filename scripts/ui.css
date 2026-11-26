@@ -1109,8 +1109,8 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
   --cyan:#45D6FF;
   --up:#12C48B; --up2:#3FE0A6;
   --dn:#F5476A; --dn2:#FF7A93;
-  --hud-ln:rgba(96,222,255,.55);
-  --hud-glow:rgba(56,189,248,.55);
+  --hud-ln:rgba(116,230,255,.78);
+  --hud-glow:rgba(56,189,248,.42);
   --r:16px; --r-sm:11px;
   --shadow:0 26px 52px -32px rgba(0,0,0,.95), 0 1px 0 rgba(140,220,255,.05) inset;
 }
@@ -1257,7 +1257,7 @@ body{
 .card{
   position:relative;
   border-radius:16px;
-  border:1px solid rgba(96,205,255,.24);
+  border:1px solid rgba(104,216,250,.34);
   background-color:rgba(5,10,17,.55);
   background-image:
     linear-gradient(var(--hud-ln),var(--hud-ln)),
@@ -1282,8 +1282,9 @@ body{
     15px 1px, 1px 15px,
     auto;
   background-repeat:no-repeat;
-  box-shadow:0 24px 48px -34px rgba(0,0,0,.98), 0 0 34px -22px rgba(56,189,248,.85),
-             0 1px 0 rgba(150,225,255,.06) inset;
+  box-shadow:0 24px 48px -34px rgba(0,0,0,.98), 0 0 24px -16px rgba(56,189,248,.55),
+             0 0 0 1px rgba(96,222,255,.055),
+             0 1px 0 rgba(150,225,255,.07) inset;
   backdrop-filter:blur(12px) saturate(122%);
   -webkit-backdrop-filter:blur(12px) saturate(122%);
 }
@@ -1294,9 +1295,10 @@ body{
     9px 9px, 9px 9px, calc(100% - 9px) 9px, calc(100% - 9px) 9px,
     9px calc(100% - 9px), 9px calc(100% - 9px), calc(100% - 9px) calc(100% - 9px), calc(100% - 9px) calc(100% - 9px), 0 0}
 .hero{
-  border-color:rgba(96,222,255,.28);
-  box-shadow:0 24px 48px -34px rgba(0,0,0,.98), 0 0 46px -24px rgba(56,189,248,1),
-             0 1px 0 rgba(150,225,255,.08) inset;
+  border-color:rgba(110,222,252,.44);
+  box-shadow:0 24px 48px -34px rgba(0,0,0,.98), 0 0 30px -18px rgba(56,189,248,.7),
+             0 0 0 1px rgba(96,222,255,.07),
+             0 1px 0 rgba(150,225,255,.09) inset;
 }
 .hero:before{
   background:
@@ -1304,7 +1306,7 @@ body{
     radial-gradient(420px 120px at 0% 100%,rgba(126,96,255,.10),transparent 72%);
 }
 .notice-card{
-  border-color:rgba(96,205,255,.26);
+  border-color:rgba(104,216,250,.32);
   background-image:
     linear-gradient(var(--hud-ln),var(--hud-ln)),
     linear-gradient(var(--hud-ln),var(--hud-ln)),
@@ -1504,3 +1506,147 @@ body{
   .sig-badge{margin-left:auto}
   .sig-n{font-size:17px}
 }
+
+/* ============================================================
+   거시 지표 확장 (DXY · US 2Y · 10Y−2Y · FED · 발표 일정) + 오늘의 주식 공부
+   ============================================================ */
+.macro-strip{flex-direction:column;align-items:stretch;gap:7px}
+.macro-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.macro-row .mchip{flex:0 1 auto}
+.mchip{border-color:rgba(100,214,248,.32);
+  box-shadow:0 0 0 1px rgba(96,222,255,.04) inset, 0 0 16px -12px rgba(56,189,248,.55), 0 12px 26px -24px #000}
+.macro-events{border-color:rgba(100,214,248,.26);
+  box-shadow:0 0 14px -12px rgba(56,189,248,.5), 0 0 0 1px rgba(96,222,255,.03) inset}
+.mchip-slim{gap:8px}
+.mchip-slim .mc-v{font-size:14px}
+#mchipFed .mc-v,#mchipSpr .mc-v{letter-spacing:-.02em}
+.macro-events{display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  padding:5px 9px;border-radius:10px;border:1px solid var(--line2);
+  background:linear-gradient(90deg,rgba(56,189,248,.055),rgba(99,102,241,.025))}
+.macro-events:empty{display:none}
+.me-l{font-size:9px;font-weight:800;letter-spacing:.14em;color:var(--txt3);
+  padding-right:8px;margin-right:2px;border-right:1px solid var(--line);white-space:nowrap}
+.mei{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:8px;
+  border:1px solid var(--line);background:rgba(255,255,255,.025);font-size:10.5px;white-space:nowrap;
+  font-variant-numeric:tabular-nums}
+.mei b{font-family:var(--mono);font-size:9.5px;font-weight:800;letter-spacing:.05em;color:#9BE7FF}
+.mei-d{color:var(--txt2)}
+.mei-dd{font-weight:800;color:#FCD34D;background:rgba(245,158,11,.14);padding:1px 5px;border-radius:5px;font-style:normal}
+.mei-dd.today{color:#0B0E14;background:#FBBF24}
+.mei-v{color:var(--txt3)}
+.mei.soon{border-color:rgba(251,191,36,.42);background:rgba(245,158,11,.08)}
+.mei.soon b{color:#FCD34D}
+.tg[data-t=sar] i{color:#2DD4BF}
+.tg[data-t=env] i{color:#FB923C}
+
+/* ---------- 오늘의 주식 공부 & 검색기 팁 ---------- */
+.edu-card{padding:0;overflow:hidden}
+.edu-head{display:flex;align-items:center;gap:9px;padding:11px 14px;flex-wrap:wrap;
+  background:linear-gradient(90deg,rgba(56,189,248,.075),rgba(99,102,241,.035));
+  border-bottom:1px solid var(--line2)}
+.edu-ico{width:26px;height:26px;display:grid;place-items:center;border-radius:8px;flex:0 0 auto;
+  color:#7BE9FF;background:rgba(56,189,248,.12);border:1px solid rgba(96,222,255,.28)}
+.edu-ico svg{width:15px;height:15px}
+.edu-title{margin:0;font-size:13.5px;font-weight:800;letter-spacing:-.01em;white-space:nowrap}
+.edu-title em{font-style:normal;font-size:10.5px;font-weight:700;color:var(--txt3);margin-left:6px;letter-spacing:.02em}
+.edu-day{font-family:var(--mono);font-size:10.5px;font-weight:800;color:#DCF6FF;white-space:nowrap;
+  background:rgba(56,189,248,.16);border:1px solid rgba(96,222,255,.4);padding:2px 8px;border-radius:999px}
+.edu-cat{font-size:10.5px;font-weight:700;color:#C4B5FD;white-space:nowrap;
+  background:rgba(167,139,250,.13);border:1px solid rgba(167,139,250,.3);padding:2px 8px;border-radius:999px}
+.edu-nav{display:flex;gap:3px;margin-left:auto}
+.edu-nav button{height:24px;min-width:26px;padding:0 7px;border-radius:7px;border:1px solid var(--line);
+  background:rgba(255,255,255,.03);color:var(--txt2);font-size:11px;font-weight:700;line-height:1}
+.edu-nav button:hover{color:var(--txt);border-color:rgba(255,255,255,.18)}
+.edu-nav #eduToday{font-size:10px}
+.edu-toggle{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 9px;border-radius:7px;
+  border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--txt3);font-size:10px;font-weight:700}
+.edu-toggle:hover{color:var(--txt2)}
+.edu-toggle svg{width:11px;height:11px;transition:transform .25s}
+.edu-card.closed .edu-toggle svg{transform:rotate(-90deg)}
+.edu-card.closed .edu-body{display:none}
+.edu-body{overflow:hidden;height:auto}
+.edu-inner{padding:12px 15px 13px;display:flex;flex-direction:column;gap:9px}
+.edu-lead{display:flex;flex-direction:column;gap:3px}
+.edu-lead b{font-size:15px;font-weight:800;letter-spacing:-.01em;color:var(--txt);line-height:1.35}
+.edu-lead span{font-size:10.5px;color:var(--txt3);font-variant-numeric:tabular-nums}
+.edu-txt{font-size:12.4px;line-height:1.72;color:var(--txt2);word-break:keep-all}
+.edu-txt p{margin:0 0 7px}
+.edu-txt p:last-child{margin-bottom:0}
+.edu-txt b{color:var(--txt);font-weight:700}
+.edu-txt em{font-style:normal;color:#7BE9FF;font-weight:700}
+.edu-foot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-top:8px;
+  border-top:1px solid var(--line2);font-size:10.5px;color:var(--txt3)}
+.edu-tip{flex:1 1 240px;line-height:1.55}
+.edu-tip b{color:#FCD34D}
+.edu-prog{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--txt4);white-space:nowrap}
+
+/* 데스크톱: 칩은 내용 폭만큼, 기준일 표기는 자기 줄에 오른쪽 정렬 */
+.macro-row .mfoot{flex:1 1 100%;order:9;margin-left:0;text-align:right;padding-top:1px}
+
+@media (max-width:900px){
+  /* 모바일: 칩 2열 그리드 + 칩 내부는 2줄(라벨·값 / 등락) — 어떤 경우에도 글자가 잘리지 않게 */
+  .macro-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  .macro-row .mchip,.mchip-slim{flex:none;width:auto;min-width:0;
+    display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"k v" "c c";
+    align-items:center;gap:2px 8px;padding:6px 9px}
+  .mchip .mc-k{grid-area:k;flex-direction:row;align-items:baseline;gap:4px;font-size:10.5px;
+    min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .mchip .mc-k em{display:none}
+  .mchip .mc-v{grid-area:v;justify-self:end;font-size:14px;white-space:nowrap;min-width:0}
+  .mchip .mc-c{grid-area:c;justify-self:start;font-size:10px;white-space:nowrap;padding:1px 5px}
+  .mchip .mc-spark{display:none}
+  .mfoot{display:none}
+  .macro-events{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;padding:6px 8px}
+  .me-l{grid-column:1/-1;border-right:0;padding-right:0;margin-right:0;font-size:8.5px}
+  .mei{flex:none;min-width:0;flex-wrap:wrap;white-space:normal;gap:2px 6px;padding:4px 7px;font-size:10.5px}
+  .mei-v{flex:1 1 100%;margin-left:0;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .edu-head{padding:10px 12px;gap:7px}
+  .edu-title{font-size:12.5px}
+  .edu-title em{display:none}
+  .edu-inner{padding:11px 12px 12px}
+  .edu-lead b{font-size:14px}
+  .edu-txt{font-size:12px;line-height:1.66}
+}
+@media (max-width:430px){
+  .mei{font-size:10px}
+  .edu-cat{display:none}
+  .edu-nav{margin-left:0}
+  .edu-toggle{margin-left:auto}
+}
+
+/* ============================================================
+   14. 프리미엄 정밀 터미널 마감 — 블룸 최소화 · 1px 헤어라인 · 수치 정렬 통일
+   (블룸버그/기관용 다크 글래스 톤: 번짐은 줄이고 선과 여백으로 고급감을 낸다)
+   ============================================================ */
+:root{ --hud-ln:rgba(126,226,250,.62) }
+body{font-variant-numeric:tabular-nums}
+.card{
+  border:1px solid rgba(150,208,234,.19);
+  box-shadow:0 22px 44px -36px rgba(0,0,0,.98), 0 0 18px -17px rgba(56,189,248,.30),
+             0 1px 0 rgba(176,230,255,.05) inset;
+}
+.hero,.notice-card,.card.kpi{border-color:rgba(150,208,234,.22)}
+.hero{box-shadow:0 22px 44px -36px rgba(0,0,0,.98), 0 0 22px -18px rgba(56,189,248,.38),
+      0 1px 0 rgba(176,230,255,.06) inset}
+/* 거시 칩 — 선은 또렷하게, 번짐은 거의 없이 */
+.mchip{border-color:rgba(150,208,234,.22);
+  box-shadow:0 12px 24px -22px rgba(0,0,0,.9), 0 1px 0 rgba(176,230,255,.04) inset}
+.mchip .mc-c{background:rgba(255,255,255,.045)}
+.mchip .mc-c.pos{color:#3FE0A6;background:rgba(18,196,139,.10)}
+.mchip .mc-c.neg{color:#FF8298;background:rgba(245,71,106,.10)}
+.mchip .mc-c.warn{color:#F5C86B;background:rgba(245,158,11,.10)}
+.macro-events{border-color:rgba(150,208,234,.15);box-shadow:none;
+  background:linear-gradient(90deg,rgba(56,189,248,.035),rgba(99,102,241,.015))}
+.mei{border-color:rgba(150,208,234,.14);background:rgba(255,255,255,.018)}
+.mei-dd{background:rgba(245,158,11,.12)}
+.mei.soon{border-color:rgba(245,180,90,.30);background:rgba(245,158,11,.05)}
+/* 버튼·칩의 발광 제거 — 선택은 밝기와 테두리로만 */
+.tg.on{color:var(--txt);background:#141C28;border-color:rgba(150,208,234,.30)}
+.pill.on,.seg button.on,.seg-pre button.on,.pt-acct button.on,
+.pt-tabs button.on,.strat-seg button.on{box-shadow:0 0 0 1px rgba(56,189,248,.10) inset}
+.pill.on{border-color:rgba(150,208,234,.36)}
+.logo{box-shadow:0 0 0 1px rgba(56,189,248,.10) inset, 0 0 14px -9px rgba(56,189,248,.45)}
+.search-pop,.fav-pop{box-shadow:0 28px 56px -34px #000, 0 0 22px -20px rgba(56,189,248,.5)}
+/* 카드 내부 여백 균형 */
+.edu-inner{padding:14px 16px 15px}
+.macro-strip{padding-top:1px}
