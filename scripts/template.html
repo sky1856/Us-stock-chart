@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="theme-color" content="#0B0E14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>APEX QUANT · 미국주식 차트분석기</title>
+<style>__CSS__</style>
+</head>
+<body>
+
+<header class="topbar">
+  <button class="icon-btn only-mobile" id="menuBtn" aria-label="종목 목록 열기" style="width:34px;height:34px;border-radius:9px;border:1px solid var(--line);place-items:center;background:#0E131C">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+  </button>
+  <div class="brand">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M3 17.5L8.6 9.8l3.6 4.2L20.6 4.6" stroke="#38BDF8" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="20.6" cy="4.6" r="1.9" fill="#6366F1"/>
+        <path d="M3 20.6h18" stroke="rgba(255,255,255,.28)" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="brand-text"><b>APEX QUANT</b><span>US Top 100 Analyzer</span></div>
+  </div>
+  <div class="market-badge"><i class="dot"></i><span id="asOf">—</span>&nbsp;장마감</div>
+  <div class="search">
+    <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+    <input id="globalSearch" type="text" placeholder="종목 검색 · 티커 또는 회사명" autocomplete="off" spellcheck="false">
+    <kbd>⌘K</kbd>
+    <div class="search-pop" id="searchPop"></div>
+  </div>
+  <div class="fav-pills" id="favPills"></div>
+</header>
+
+<div class="shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="side-head">
+      <div>
+        <h2>시가총액 Top 100</h2>
+        <p>미국 상장 시총순 · 분석 <span id="uniCount">102</span>종목 · 장마감 기준</p>
+      </div>
+      <button class="icon-btn" id="closeSide" aria-label="닫기" style="width:30px;height:30px;border-radius:8px;place-items:center;color:var(--txt3)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="seg" id="filterTabs">
+      <button data-f="all" class="on">전체<span class="c" id="cAll">100</span></button>
+      <button data-f="buy">매수 신호<span class="c" id="cBuy">0</span></button>
+      <button data-f="sell">매도 신호<span class="c" id="cSell">0</span></button>
+      <button data-f="fav">관심 5</button>
+    </div>
+    <div class="side-tools">
+      <input id="listSearch" type="text" placeholder="목록 내 검색" autocomplete="off" spellcheck="false">
+      <select id="sortSel">
+        <option value="mc">시총순</option>
+        <option value="score">점수 높은순</option>
+        <option value="ret">수익률순</option>
+        <option value="rsi">RSI 낮은순</option>
+        <option value="chg">등락률순</option>
+      </select>
+    </div>
+    <div class="scan-head"><span>#</span><span>종목</span><span>추세</span><span>현재가</span><span>시그널</span></div>
+    <div class="scan-list" id="scanList"></div>
+    <div class="side-foot">데이터: Yahoo Finance 일봉 · <span id="footAsOf">—</span> 종가 기준<br>기술적 분석 참고용, 투자 권유가 아닙니다.</div>
+  </aside>
+
+  <main class="workspace">
+    <section class="hero card" id="hero">
+      <div class="hero-main">
+        <div class="hero-id">
+          <span class="rank-chip" id="heroRank">#—</span>
+          <h1 id="heroTicker">—</h1>
+          <div class="cname"><span id="heroName">—</span><span class="sec" id="heroSector">—</span><span class="asof-chip" id="heroAsOf">—</span></div>
+        </div>
+        <div class="hero-price">
+          <span class="px" id="heroPrice">—</span>
+          <span class="chg" id="heroChg">—</span>
+        </div>
+      </div>
+      <div class="hero-signal">
+        <div class="gauge">
+          <svg width="64" height="64" viewBox="0 0 64 64">
+            <circle cx="32" cy="32" r="27" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="5"/>
+            <circle id="gaugeArc" cx="32" cy="32" r="27" fill="none" stroke="#10B981" stroke-width="5"
+              stroke-linecap="round" stroke-dasharray="169.6" stroke-dashoffset="169.6"
+              style="transition:stroke-dashoffset .6s cubic-bezier(.2,.7,.3,1),stroke .3s"/>
+          </svg>
+          <div class="val" id="gaugeVal">—</div>
+        </div>
+        <div class="sig-meta"><b id="sigName">—</b><span id="sigSub">종합 기술 점수</span></div>
+      </div>
+      <div class="levels">
+        <div><label>진입 참고 구간</label><b id="lvEntry">—</b></div>
+        <div><label>손절가 · 3.2 ATR</label><b class="neg" id="lvStop">—</b></div>
+        <div><label>목표가 · 4.5 ATR</label><b class="pos" id="lvTarget">—</b></div>
+        <div><label>손익비 (R:R)</label><b id="lvRR">—</b></div>
+      </div>
+    </section>
+
+    <section class="card chart-card">
+      <div class="chart-bar">
+        <div class="tf" id="tf">
+          <button data-n="64">3M</button>
+          <button data-n="128" class="on">6M</button>
+          <button data-n="252">1Y</button>
+          <button data-n="0">2Y</button>
+        </div>
+        <div class="toggles" id="toggles">
+          <button class="tg on" data-t="ma"><i></i><span class="lb">이동평균 5·20·60·120·240</span><span class="lbs">MA</span></button>
+          <button class="tg on" data-t="ichi"><i></i><span class="lb">일목균형표 9·26·52</span><span class="lbs">일목</span></button>
+          <button class="tg on" data-t="ew"><i></i><span class="lb">엘리어트 파동</span><span class="lbs">파동</span></button>
+          <button class="tg on" data-t="bb"><i></i><span class="lb">볼린저 밴드</span><span class="lbs">BB</span></button>
+          <button class="tg on" data-t="sig"><i></i><span class="lb">매수·매도 마커</span><span class="lbs">신호</span></button>
+          <button class="tg on" data-t="rsi"><i></i><span class="lb">RSI 14</span><span class="lbs">RSI</span></button>
+          <button class="tg on" data-t="macd"><i></i><span class="lb">MACD</span><span class="lbs">MACD</span></button>
+        </div>
+      </div>
+      <div class="draw-bar">
+        <div class="draw-tools" id="drawTools">
+          <button data-tool="cursor" class="on" title="커서 · 차트 이동·확대">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M5.5 3.2l12.4 8.1-5.7 1.3 3.1 6.6-2.4 1.1-3.1-6.6-4.3 3.7z"/></svg>
+            <span>커서</span>
+          </button>
+          <button data-tool="trend" title="추세선 · 두 점을 클릭하거나 드래그">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 19L20 5"/><circle cx="4" cy="19" r="2"/><circle cx="20" cy="5" r="2"/></svg>
+            <span>추세선</span>
+          </button>
+          <button data-tool="hline" title="수평선 · 지지/저항 가격선">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-dasharray="3 3"><path d="M3 12h18"/></svg>
+            <span>수평선</span>
+          </button>
+          <button data-tool="fib" title="피보나치 되돌림 · 고점과 저점을 차례로 클릭">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 5h16M4 9.5h16M4 14h16M4 18.5h16"/></svg>
+            <span>피보나치</span>
+          </button>
+          <button data-tool="rect" title="구간 강조 · 박스로 구간 표시">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><rect x="3.5" y="6" width="17" height="12" rx="2"/></svg>
+            <span>구간</span>
+          </button>
+        </div>
+        <div class="draw-actions">
+          <span class="draw-count" id="drawCount">0</span>
+          <button id="drawUndo" title="마지막 작도 취소">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 8H5V4"/><path d="M5.2 8.6A8 8 0 1 1 6 16"/></svg>
+            <span>되돌리기</span>
+          </button>
+          <button id="drawClear" class="draw-danger" title="이 종목의 작도 전체 삭제">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h16M9 7V4.8h6V7M6.5 7l.9 12.2h9.2L17.5 7"/></svg>
+            <span>전체 지우기</span>
+          </button>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <div class="ma-legend" id="maLegend"></div>
+        <div class="hud" id="hud"></div>
+        <canvas id="chart"></canvas>
+      </div>
+    </section>
+
+    <section class="kpis" id="kpis">
+      <div class="card kpi">
+        <div class="lab">백테스트 수익률 <span class="tag">2Y</span></div>
+        <b id="k1">—</b>
+        <canvas class="mini" id="m1"></canvas>
+        <div class="sub" id="k1s"></div>
+        <div class="sub2" id="k1t"></div>
+      </div>
+      <div class="card kpi">
+        <div class="lab">승률 · 거래횟수</div>
+        <b id="k2">—</b>
+        <canvas class="mini" id="m2"></canvas>
+        <div class="sub" id="k2s"></div>
+        <div class="sub2" id="k2t"></div>
+      </div>
+      <div class="card kpi">
+        <div class="lab">손익비 · 최대낙폭</div>
+        <b id="k3">—</b>
+        <canvas class="mini" id="m3"></canvas>
+        <div class="sub" id="k3s"></div>
+        <div class="sub2" id="k3t"></div>
+      </div>
+      <div class="card kpi">
+        <div class="lab">기술적 점수 구성</div>
+        <b id="k4">—</b>
+        <div class="bars" id="k4b"></div>
+      </div>
+    </section>
+
+    <section class="card se-card" id="seCard">
+      <div class="panel-h">
+        <div><h3>종합 기술점수 산출 근거 · 해설</h3><p>5개 팩터를 가중 합산해 0~100점으로 환산 · 50점 = 중립</p></div>
+        <div class="se-scale" id="seScale"></div>
+      </div>
+      <div class="se-grid">
+        <div class="se-w">
+          <div class="se-h">팩터별 배점 <em>총 100점</em></div>
+          <div id="seWeightRows"></div>
+          <p class="se-note">점수 = 50 + (가중 합계 ÷ 2) → 1~99점. 시그널 칩(강력매수~강력매도)은 이 점수 구간으로 정해집니다.</p>
+        </div>
+        <div class="se-live">
+          <div class="se-h"><b id="seTicker">—</b><span id="seSummary">—</span></div>
+          <div id="seRows"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card ew-card" id="ewCard">
+      <div class="panel-h">
+        <div><h3>엘리어트 파동 분석 <span class="ew-tag">다중 차수 · 자동 카운트</span></h3>
+          <p>대파동 1-2-3-4-5 / A-B-C와 그 내부 소파동을 함께 판별하고, 3대 규칙·교대 법칙·모멘텀 다이버전스로 검증합니다</p></div>
+        <div class="ew-conf" id="ewConf"></div>
+      </div>
+      <div class="ew-mode">
+        <div class="ew-switch" id="ewSwitch"></div>
+        <div class="ew-chips" id="ewChips">
+          <button data-k="sub" class="on" title="차트에 소파동 (i)-(v) 경로 표시">소파동</button>
+          <button data-k="ch" class="on" title="엘리어트 채널(0-2 기준선·1 평행선) 표시">채널</button>
+          <button data-k="clu" class="on" title="피보나치 클러스터 겹침 구간 표시">클러스터</button>
+        </div>
+      </div>
+      <div class="ew-grid">
+        <div class="ew-l">
+          <div class="ew-state" id="ewState"></div>
+          <div class="ew-deg-box" id="ewDegrees"></div>
+          <div class="ew-rules" id="ewRules"></div>
+          <div class="ew-legs" id="ewLegs"></div>
+        </div>
+        <div class="ew-r">
+          <div class="ew-fib" id="ewFib"></div>
+          <p class="ew-comment" id="ewComment"></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card paper-card" id="paperCard">
+      <div class="panel-h">
+        <div><h3>가상투자 · 모의매매 <span class="pt-badge" id="ptBadge">LIVE DAY</span></h3>
+          <p>실제 주문이 아닙니다 · 501거래일 실제 종가로 체결·평가</p></div>
+        <div class="pt-acct" id="ptAcct">
+          <span class="pt-acct-l">시드</span>
+          <button data-seed="10000" class="on">$10K</button>
+          <button data-seed="50000">$50K</button>
+          <button data-seed="100000">$100K</button>
+          <input id="ptSeedInput" type="number" min="100" step="1000" placeholder="직접">
+          <button id="ptSeedApply">적용</button>
+          <button id="ptReset" class="pt-danger">계좌 초기화</button>
+        </div>
+      </div>
+
+      <div class="pt-sum" id="ptSum"></div>
+
+      <div class="pt-replay">
+        <div class="pt-rp-l"><b id="ptDate">—</b><span id="ptDateSub">—</span></div>
+        <div class="pt-rp-c">
+          <input type="range" id="ptSlider" min="0" max="500" value="500" step="1">
+          <div class="pt-presets" id="ptPresets">
+            <button data-go="-252">1년 전</button>
+            <button data-go="-128">6개월 전</button>
+            <button data-go="-64">3개월 전</button>
+            <button data-go="-1">−1일</button>
+            <button data-go="1">+1일</button>
+            <button data-go="5">+1주</button>
+            <button data-go="last" class="pt-last">최신일까지</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-body">
+        <div class="pt-order">
+          <div class="pt-ord-h"><b id="ptTicker">—</b><span id="ptTickerPx">—</span></div>
+          <div class="pt-tabs" id="ptTabs">
+            <button data-side="buy" class="on">매수</button>
+            <button data-side="sell">매도</button>
+          </div>
+          <div class="pt-qty-row">
+            <label>수량</label>
+            <input id="ptQty" type="number" min="0" step="0.0001" value="1" inputmode="decimal">
+            <div class="pt-stepper">
+              <button data-step="-1">−</button><button data-step="1">+</button>
+            </div>
+          </div>
+          <div class="pt-allocs" id="ptAllocs">
+            <button data-pct="0.1">10%</button><button data-pct="0.25">25%</button>
+            <button data-pct="0.5">50%</button><button data-pct="1">100%</button>
+          </div>
+          <div class="pt-est" id="ptEst">—</div>
+          <label class="pt-fee"><input type="checkbox" id="ptFee" checked> 수수료 0.03% 반영</label>
+          <button class="pt-submit buy" id="ptSubmit">매수 주문</button>
+          <div class="pt-msg" id="ptMsg"></div>
+        </div>
+        <div class="pt-col">
+          <div class="pt-h">보유 종목 <em id="ptHoldCount">0</em></div>
+          <div class="pt-hold" id="ptHoldings"></div>
+        </div>
+        <div class="pt-col">
+          <div class="pt-h">체결 내역 <em id="ptFillCount">0</em></div>
+          <div class="pt-fills" id="ptFills"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="lower">
+      <div class="card">
+        <div class="panel-h">
+          <div><h3>누적 수익률 곡선</h3><p id="eqSub">전략 vs 단순보유 (Buy &amp; Hold)</p></div>
+          <div class="legend"><span><i style="background:#38BDF8"></i>전략</span><span><i style="background:#4A5468"></i>보유</span></div>
+        </div>
+        <canvas id="equity"></canvas>
+      </div>
+      <div class="card">
+        <div class="panel-h"><div><h3>최근 시그널</h3><p>가장 최근 청산/보유 트레이드</p></div></div>
+        <div class="tl" id="recentList"></div>
+      </div>
+    </section>
+
+    <section class="card table-card">
+      <div class="panel-h">
+        <div><h3>트레이드 로그 · <span id="logTicker">—</span></h3><p id="logSub">종합점수 58 상향 돌파 매수 → 45 하회·손절 시 청산</p></div>
+        <div class="legend" id="logStats"></div>
+      </div>
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead><tr>
+            <th>진입일</th><th>진입가</th><th>청산일</th><th class="cm">청산가</th><th class="cm">보유</th><th>수익률</th><th>청산 사유</th>
+          </tr></thead>
+          <tbody id="tradeBody"></tbody>
+        </table>
+      </div>
+      <div class="foot-note">
+        과거 데이터 기반 기술적 분석·백테스트 참고용이며 투자 권유가 아닙니다. 수수료 0.03% 반영, 미래 수익을 보장하지 않습니다.
+      </div>
+    </section>
+
+    <footer style="font-size:10.5px;color:var(--txt4);line-height:1.7;padding:2px 4px 10px">
+      APEX QUANT — 멀티팩터 기술적 분석 엔진 (추세·모멘텀·반전·거래량·가격구조 5축 스코어) ·
+      데이터 Yahoo Finance 일봉, <span id="footAsOf2">—</span> 종가 기준 · 지표 이동평균 5·20·60·120·240일(단순) / 일목균형표(9·26·52) 전환·기준·선행스팬·구름대 / 볼린저 / RSI / MACD / ATR (표준 파라미터)
+    </footer>
+  </main>
+</div>
+
+<div class="backdrop" id="backdrop"></div>
+<div class="toast" id="toast"></div>
+
+<script>__DATA__</script>
+<script>__ENGINE__</script>
+<script>__UI__</script>
+</body>
+</html>
