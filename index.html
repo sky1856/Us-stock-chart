@@ -425,8 +425,44 @@ input,select{font-family:inherit;color:inherit}
 .pt-empty{font-size:10.5px;color:var(--txt4);padding:14px 0}
 .pos{color:#34D399} .neg{color:#FB7185}
 
+/* ---------- strategy notice ---------- */
+.notice-card{
+  position:relative;overflow:hidden;padding:14px 16px 13px 18px;
+  border-color:rgba(56,189,248,.17);
+  background:
+    radial-gradient(520px 180px at 88% -60%,rgba(56,189,248,.13),transparent 70%),
+    linear-gradient(180deg,rgba(56,189,248,.05),rgba(99,102,241,.018) 60%,rgba(255,255,255,0)),
+    linear-gradient(180deg,var(--card),var(--card2));
+}
+.notice-card:before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;
+  background:linear-gradient(180deg,var(--cyan),var(--indigo) 60%,rgba(99,102,241,0))}
+.nx-head{display:flex;align-items:center;gap:9px;flex-wrap:wrap;position:relative}
+.nx-ico{width:23px;height:23px;border-radius:7px;display:grid;place-items:center;flex:0 0 auto;
+  background:rgba(56,189,248,.11);border:1px solid rgba(56,189,248,.3);color:#7DD3FC}
+.nx-ico svg{width:13px;height:13px;display:block}
+.nx-title{margin:0;font-size:12.5px;font-weight:750;letter-spacing:.01em}
+.nx-en{font-family:var(--mono);font-size:8.6px;letter-spacing:.15em;text-transform:uppercase;
+  color:var(--txt4);padding-top:2px}
+.nx-tag{margin-left:auto;font-size:9px;color:var(--txt3);border:1px solid var(--line);
+  border-radius:99px;padding:3px 9px;white-space:nowrap;background:rgba(255,255,255,.025)}
+.nx-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:11px;position:relative}
+.nx-item{padding:9px 12px 10px;border-radius:10px;background:rgba(255,255,255,.022);
+  border:1px solid var(--line2);border-left-width:2px}
+.nx-item.nx-hold{border-left-color:rgba(16,185,129,.6)}
+.nx-item.nx-swing{border-left-color:rgba(245,158,11,.6)}
+.nx-lab{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.nx-lab em{font-style:normal;font-family:var(--mono);font-size:9px;color:var(--txt4);
+  border:1px solid var(--line);border-radius:4px;padding:1px 4px;line-height:1.35}
+.nx-lab b{font-size:11px;font-weight:700;letter-spacing:.01em}
+.nx-lab span{font-size:9.6px;font-weight:600;letter-spacing:.02em;padding:2px 7px;border-radius:99px;white-space:nowrap}
+.nx-hold .nx-lab span{color:#6EE7B7;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.26)}
+.nx-swing .nx-lab span{color:#FCD34D;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.26)}
+.nx-item p{margin:7px 0 0;font-size:10.8px;line-height:1.68;color:var(--txt2);letter-spacing:-.003em;word-break:keep-all}
+.nx-item p b{color:var(--txt);font-weight:700}
+.nx-foot{margin:9px 0 0;font-size:9.4px;line-height:1.55;color:var(--txt4);position:relative}
+
 /* ---------- kpi ---------- */
-.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.kpis{display:grid,grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 .kpi{padding:14px 15px;position:relative;overflow:hidden;display:flex;flex-direction:column}
 .kpi .lab{font-size:10.5px;color:var(--txt3);letter-spacing:.02em;display:flex;align-items:center;gap:6px}
 .kpi .lab .tag{font-size:9px;color:var(--txt4);border:1px solid var(--line);padding:1px 5px;border-radius:4px}
@@ -712,6 +748,12 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
   .pt-frow{grid-template-columns:64px 46px 30px 44px minmax(0,1fr) 54px;font-size:9.5px}
   .pt-hrow{grid-template-columns:58px minmax(0,1fr) 50px;gap:6px}
   .pt-hrow .ac{display:none}
+  .notice-card{padding:12px 12px 11px 14px}
+  .nx-grid{grid-template-columns:1fr;gap:8px;margin-top:9px}
+  .nx-item{padding:8px 11px 9px}
+  .nx-item p{font-size:10.4px;line-height:1.62}
+  .nx-tag{display:none}
+  .nx-en{font-size:8px;letter-spacing:.12em}
 }
 @media (max-width:420px){
   .kpis{grid-template-columns:1fr}
@@ -906,6 +948,28 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
         <div class="hud" id="hud"></div>
         <canvas id="chart"></canvas>
       </div>
+    </section>
+
+    <section class="card notice-card" id="noticeCard" aria-label="투자 운용 원칙 안내">
+      <div class="nx-head">
+        <span class="nx-ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2l7.4 3.1v5.2c0 4.3-3 7.6-7.4 9.3-4.4-1.7-7.4-5-7.4-9.3V6.3z"/><path d="M12 9.1v4.3"/><path d="M12 16.4h.01"/></svg>
+        </span>
+        <h3 class="nx-title">투자 운용 원칙 안내</h3>
+        <span class="nx-en">Risk &amp; Strategy Notice</span>
+        <span class="nx-tag">적용 범위 · 백테스트 · 모의매매</span>
+      </div>
+      <div class="nx-grid">
+        <div class="nx-item nx-hold">
+          <div class="nx-lab"><em>01</em><b>기본 원칙</b><span>장기 보유 · Buy &amp; Hold</span></div>
+          <p>우량 지수 및 핵심 성장주의 장기 복리 성과는 거래비용·세금·시장 체류 시간 측면에서 <b>장기 보유(Buy&nbsp;&amp;&nbsp;Hold)</b>가 가장 검증된 기본 해법입니다.</p>
+        </div>
+        <div class="nx-item nx-swing">
+          <div class="nx-lab"><em>02</em><b>매매 실행 시</b><span>스윙 특화 전략</span></div>
+          <p>단기·중기 관점에서 적극적 매매를 실행할 경우에는 변동성 통제와 손익비 관리가 반영된 <b>스윙 특화 전략</b>을 보조 지표로 활용하시기 바랍니다.</p>
+        </div>
+      </div>
+      <p class="nx-foot">본 화면의 백테스트·모의매매 결과는 과거 데이터 기반 참고용 시뮬레이션이며, 특정 종목의 매수·매도 권유가 아닙니다.</p>
     </section>
 
     <section class="kpis" id="kpis">
