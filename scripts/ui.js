@@ -829,6 +829,7 @@
     if (!tech) return;
     $('#peMode').textContent = mode;
     $('#phMode').textContent = mode;
+    $('#pbHold').title = '선택한 전략(' + mode + ')의 백테스트 포지션 기준 — 보유 중이 아니면 신규 진입 계획값입니다 (실제 계좌 보유와 다를 수 있음)';
 
     /* ---- 기술평가(종합점수 · 라벨) — 전략과 분리해 그대로 보여준다 ---- */
     tech.className = techCls(a.label);
