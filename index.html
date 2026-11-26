@@ -1023,7 +1023,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
 
     <footer style="font-size:10.5px;color:var(--txt4);line-height:1.7;padding:2px 4px 10px">
       APEX QUANT — 멀티팩터 기술적 분석 엔진 (추세·모멘텀·반전·거래량·가격구조 5축 스코어) ·
-      데이터 Yahoo Finance 일봉, <span id="footAsOf2">—</span> 종가 기준 · 지표 이동평균 5·20·60·120·240일(단순) / 일목균형표(9·26·52) 전환·기준·선행스팬·구름대 / 볼린저 / RSI / MACD / ATR (표준 파라미터)
+      데이터 Yahoo Finance 일봉, <span id="footAsOf2">—</span> 종가 기준 · 지표 이동평균 5·20·60·120·240일(단순) / 일목균형표(9·26·52) 선행스팬·구름대 / 볼린저 / RSI / MACD / ATR (표준 파라미터)
     </footer>
   </main>
 </div>
@@ -1204,7 +1204,8 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
     ind.ma60 = sma(c, 60);
     ind.ma120 = sma(c, 120);
     ind.ma240 = sma(c, 240);
-    /* 일목균형표 (9·26·52) — 전환·기준·선행스팬과 구름대 (후행스팬은 사용하지 않음) */
+    /* 일목균형표 (9·26·52) — 선행스팬과 구름대만 표시
+       전환선(9)과 기준선(26)은 선행스팬A 계산과 점수 산출에만 쓰고 차트에는 그리지 않으며, 후행스팬도 사용하지 않음 */
     /* 선행스팬은 26봉 앞으로 이동 */
     ind.tenkan = midHL(h, l, 9);
     ind.kijun = midHL(h, l, 26);
@@ -2748,12 +2749,11 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
     { p: 240, label: '240일', color: '#F97316', w: 1.5 }
   ];
 
-  /* 일목균형표 9·26·52·26 */
+  /* 일목균형표 9·26·52 — 선행스팬과 구름대만 표시 (전환선·기준선은 차트에 그리지 않음)
+     상승(양운)은 빨강, 하락(음운)은 파랑 */
   var ICHI = [
-    { k: 'tenkan', label: '전환9', short: '전환', color: '#F472B6', w: 1.2 },
-    { k: 'kijun', label: '기준26', short: '기준', color: '#60A5FA', w: 1.2 },
-    { k: 'spanA', label: '선행A', short: '선A', color: '#2DD4BF', w: 1.0, dash: [4, 3] },
-    { k: 'spanB', label: '선행B', short: '선B', color: '#FB7185', w: 1.0, dash: [4, 3] }
+    { k: 'spanA', label: '선행A', short: '선A', color: '#EF4444', w: 1.2, dash: [4, 3] },
+    { k: 'spanB', label: '선행B', short: '선B', color: '#3B82F6', w: 1.2, dash: [4, 3] }
   ];
   function narrow() { return window.innerWidth <= 700; }
 
@@ -3729,7 +3729,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
         });
       }
       if (state.show.ichi) {
-        ['tenkan', 'kijun', 'spanA', 'spanB'].forEach(function (k) {
+        ['spanA', 'spanB'].forEach(function (k) {
           var v = ind[k][i];
           if (v != null) { if (v > hi) hi = v; if (v < lo) lo = v; }
         });
@@ -3788,7 +3788,8 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
         ctx.lineTo(this.x(i), Y(b1));
         ctx.lineTo(this.x(i - 1), Y(b0));
         ctx.closePath();
-        ctx.fillStyle = (a1 >= b1) ? 'rgba(16,185,129,.14)' : 'rgba(244,63,94,.14)';
+        /* 상승 구름대(양운)는 빨강, 하락 구름대(음운)는 파랑 */
+        ctx.fillStyle = (a1 >= b1) ? 'rgba(239,68,68,.15)' : 'rgba(59,130,246,.16)';
         ctx.fill();
       }
     }

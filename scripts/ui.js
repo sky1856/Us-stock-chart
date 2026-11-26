@@ -16,12 +16,11 @@
     { p: 240, label: '240일', color: '#F97316', w: 1.5 }
   ];
 
-  /* 일목균형표 9·26·52·26 */
+  /* 일목균형표 9·26·52 — 선행스팬과 구름대만 표시 (전환선·기준선은 차트에 그리지 않음)
+     상승(양운)은 빨강, 하락(음운)은 파랑 */
   var ICHI = [
-    { k: 'tenkan', label: '전환9', short: '전환', color: '#F472B6', w: 1.2 },
-    { k: 'kijun', label: '기준26', short: '기준', color: '#60A5FA', w: 1.2 },
-    { k: 'spanA', label: '선행A', short: '선A', color: '#2DD4BF', w: 1.0, dash: [4, 3] },
-    { k: 'spanB', label: '선행B', short: '선B', color: '#FB7185', w: 1.0, dash: [4, 3] }
+    { k: 'spanA', label: '선행A', short: '선A', color: '#EF4444', w: 1.2, dash: [4, 3] },
+    { k: 'spanB', label: '선행B', short: '선B', color: '#3B82F6', w: 1.2, dash: [4, 3] }
   ];
   function narrow() { return window.innerWidth <= 700; }
 
@@ -997,7 +996,7 @@
         });
       }
       if (state.show.ichi) {
-        ['tenkan', 'kijun', 'spanA', 'spanB'].forEach(function (k) {
+        ['spanA', 'spanB'].forEach(function (k) {
           var v = ind[k][i];
           if (v != null) { if (v > hi) hi = v; if (v < lo) lo = v; }
         });
@@ -1056,7 +1055,8 @@
         ctx.lineTo(this.x(i), Y(b1));
         ctx.lineTo(this.x(i - 1), Y(b0));
         ctx.closePath();
-        ctx.fillStyle = (a1 >= b1) ? 'rgba(16,185,129,.14)' : 'rgba(244,63,94,.14)';
+        /* 상승 구름대(양운)는 빨강, 하락 구름대(음운)는 파랑 */
+        ctx.fillStyle = (a1 >= b1) ? 'rgba(239,68,68,.15)' : 'rgba(59,130,246,.16)';
         ctx.fill();
       }
     }
