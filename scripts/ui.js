@@ -259,6 +259,8 @@
     $('#asOf').textContent = M.asOf;
     $('#footAsOf').textContent = M.asOf;
     $('#footAsOf2').textContent = M.asOf;
+    var pb = $('#ptBars'); if (pb) pb.textContent = M.dates.length.toLocaleString('en-US');
+    renderMacro();
     var t0 = performance.now();
     M.tickers.forEach(function (x) { A[x.t] = get(x.t); });
     $('#uniCount').textContent = M.tickers.filter(function (x) { return x.r; }).length;
@@ -429,7 +431,7 @@
     });
     var ti = $('#stratTitle'); if (ti) ti.textContent = info.title + ' (' + info.sub + ')';
     var de = $('#stratDesc'); if (de) de.textContent = info.desc;
-    var el = $('#stratUni'), u = universeStats(info.key);
+    var el = $('#stratUni'), u = universeStats(info.key), ua = A[state.cur];
     if (el && u.n) {
       el.innerHTML =
         '<span><b>' + u.n + '종목 평균</b> <b class="' + cls(u.mean) + '">' + pct(u.mean, 2) + '</b></span>' +
@@ -437,7 +439,8 @@
         '<span>보유 초과 <b>' + u.beat + '/' + u.n + '</b></span>' +
         '<span>평균 MDD <b class="neg">' + pct(u.mdd, 2) + '</b></span>' +
         '<span>승률 <b class="' + (u.win >= 0.5 ? 'pos' : '') + '">' + (u.win == null ? '—' : (u.win * 100).toFixed(1) + '%') + '</b></span>';
-      el.title = u.n + '종목 단순보유 평균 ' + pct(u.bh, 2) + ' · 워밍업 210거래일 이후 구간';
+      el.title = u.n + '종목 단순보유 평균 ' + pct(u.bh, 2) + ' · 워밍업 210거래일 이후 구간' +
+        (ua ? ' (' + (ua.close.length - ua.startIdx) + '거래일)' : '');
     }
   }
   function setStrategy(mode) {
@@ -462,6 +465,7 @@
     syncHeroFav();
     $$('#scanList .srow').forEach(function (r) { r.classList.toggle('on', r.dataset.t === t); });
     renderHero(v);
+    renderFund(v);
     renderKpis(v);
     renderScoreExplain(v);
     renderElliott(v);
@@ -529,11 +533,164 @@
     }
   }
 
+  /* ---------------- 기간 라벨 ---------------- */
+  function periodTag(bars) {
+    if (bars >= 1200) return '5Y';
+    if (bars >= 850) return (bars / 252).toFixed(1) + 'Y';   /* 워밍업 210 이후 ≈ 4.1Y */
+    if (bars >= 400) return '2Y';
+    if (bars >= 180) return '1Y';
+    if (bars >= 60) return '3M';
+    return '신규';
+  }
+
+  /* ---------------- 거시 지표 (VIX · US 10Y) ---------------- */
+  function indexSeries(t) {
+    var s = M.series && M.series[t];
+    return (s && s.c && s.c.length > 1) ? s.c : null;
+  }
+  function sparkDraw(cv, arr, color) {
+    if (!cv || !arr || arr.length < 2) return;
+    var w = cv.clientWidth, h = cv.clientHeight;
+    if (!w || !h) return;                    /* 숨김 상태(모바일)에서는 그리지 않음 */
+    var dpr = window.devicePixelRatio || 1;
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    var g = cv.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+    var k = Math.min(arr.length, 66), seg = arr.slice(-k);
+    var lo = Math.min.apply(null, seg), hi = Math.max.apply(null, seg);
+    var pad = 2, ih = h - pad * 2;
+    var pt = function (v, i) {
+      return [(i / (k - 1)) * w, pad + (1 - (v - lo) / Math.max(hi - lo, 1e-9)) * ih];
+    };
+    g.beginPath();
+    for (var i = 0; i < k; i++) { var p = pt(seg[i], i); if (i) g.lineTo(p[0], p[1]); else g.moveTo(p[0], p[1]); }
+    g.strokeStyle = color; g.lineWidth = 1.4; g.lineJoin = 'round'; g.stroke();
+    var last = pt(seg[k - 1], k - 1);
+    g.beginPath(); g.arc(last[0] - 1.2, last[1], 1.8, 0, Math.PI * 2); g.fillStyle = color; g.fill();
+  }
+  function mchipFill(id, series, o) {
+    var chip = $('#mchip' + id);
+    if (!series || !chip) return;
+    var n = series.length, last = series[n - 1], prev = series[n - 2];
+    var diff = last - prev, chg = prev ? last / prev - 1 : 0;
+    var valEl = $('#' + o.key + 'Val'), chgEl = $('#' + o.key + 'Chg');
+    if (valEl) valEl.textContent = o.fmt(last);
+    var arrow = diff > 0 ? '▲' : (diff < 0 ? '▼' : '–');
+    if (chgEl) {
+      chgEl.className = 'mc-c ' + (diff === 0 ? '' : (o.invert ? (diff > 0 ? 'neg' : 'pos') : (diff > 0 ? 'warn' : 'pos')));
+      chgEl.textContent = arrow + ' ' + o.chgFmt(Math.abs(diff)) +
+        ' (' + (chg >= 0 ? '+' : '−') + Math.abs(chg * 100).toFixed(1) + '%)';
+      chgEl.title = '전일 대비 ' + o.deltaTitle(diff);
+    }
+    chip.setAttribute('data-load', '1');
+    sparkDraw($('#' + o.key + 'Spark'), series, diff >= 0 ? (o.invert ? '#FB7185' : '#FBBF24') : '#34D399');
+  }
+  function renderMacro() {
+    mchipFill('Vix', indexSeries('^VIX'), {
+      key: 'vix', invert: true,
+      fmt: function (v) { return v.toFixed(2); },
+      chgFmt: function (d) { return d.toFixed(2); },
+      deltaTitle: function (d) { return (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(2) + 'pt'; }
+    });
+    mchipFill('Tnx', indexSeries('^TNX'), {
+      key: 'tnx',
+      fmt: function (v) { return v.toFixed(2) + '%'; },
+      chgFmt: function (d) { return Math.round(d * 100) + 'bp'; },
+      deltaTitle: function (d) { return (d >= 0 ? '+' : '−') + Math.round(Math.abs(d) * 100) + 'bp'; }
+    });
+    var md = $('#macroDate'); if (md) md.textContent = M.asOf;
+  }
+
+  /* ---------------- 종목 펀더멘털 ---------------- */
+  function fundOf(t) {
+    var F = M.fundamentals;
+    return (F && F.tickers && F.tickers[t]) || null;
+  }
+  function capStr(v) {
+    if (v == null || !isFinite(v)) return '—';
+    if (v >= 1e12) return '$' + (v / 1e12).toFixed(2) + 'T';
+    if (v >= 1e9) return '$' + (v / 1e9).toFixed(1) + 'B';
+    if (v >= 1e6) return '$' + (v / 1e6).toFixed(0) + 'M';
+    return '$' + v.toFixed(0);
+  }
+  function perStr(v) {
+    if (v == null || !isFinite(v) || v <= 0) return '—';
+    return v.toFixed(1) + '배';
+  }
+  function grStr(v) {
+    if (v == null || !isFinite(v)) return '—';
+    return (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v * 100).toFixed(1) + '%';
+  }
+  function divStr(v) {
+    if (v == null || !isFinite(v)) return '—';
+    if (v <= 0) return '무배당';
+    return (v * 100).toFixed(2) + '%';
+  }
+  var REC_KO = { strong_buy: '적극 매수', buy: '매수', hold: '보유', underperform: '시장 하회', sell: '매도', strong_sell: '적극 매도' };
+  function renderFund(a) {
+    var grid = $('#fundGrid');
+    if (!grid) return;
+    var f = fundOf(a.meta.t) || {};
+    var isETF = String(f.quoteType || '').toUpperCase() === 'ETF';
+    var price = a.price;
+    var cells = [];
+    function cell(k, v, s, c, wide, extra) {
+      cells.push('<div class="fund-cell' + (wide ? ' wide' : '') + '"><span class="fk">' + k + '</span>' +
+        '<span class="fv' + (c ? ' ' + c : '') + '">' + v + '</span>' +
+        '<span class="fs' + (c === 'pos' || c === 'neg' ? ' ' + c : '') + '">' + (s || '&nbsp;') + '</span>' +
+        (extra || '') + '</div>');
+    }
+    var mc = f.marketCap != null ? f.marketCap : a.meta.mc;
+    cell('시가총액', capStr(mc), a.meta.r ? '시총 ' + a.meta.r + '위' : (mc != null && isETF ? 'ETF 순자산' : '—'));
+    cell('Forward PER', perStr(f.forwardPE), f.forwardEps != null ? 'EPS ' + usd(f.forwardEps) : '—');
+    cell('Trailing PER', perStr(f.trailingPE), f.trailingEps != null ? 'EPS ' + usd(f.trailingEps) : '—');
+    var rv = f.revenueGrowth;
+    cell('매출성장률', grStr(rv), '전년 대비 (YoY)', rv == null ? '' : cls(rv));
+    var tp = f.targetMeanPrice, up = (tp != null && price > 0) ? tp / price - 1 : null;
+    cell('애널리스트 목표가', usd(tp), up == null ? '—' : '현재가 대비 ' + pct(up, 1), up == null ? '' : cls(up));
+    cell('배당수익률', divStr(f.dividendYield), f.dividendYield > 0 ? '연간 배당' : '—');
+    var lo = f.fiftyTwoWeekLow, hi = f.fiftyTwoWeekHigh;
+    var p52 = (lo != null && hi != null && hi > lo) ? (price - lo) / (hi - lo) : null;
+    p52 = p52 == null ? null : Math.max(0, Math.min(1, p52));
+    var bar = '<div class="frange">' + (p52 == null ? '' : '<i style="left:' + (p52 * 100).toFixed(1) + '%"></i>') + '</div>';
+    cell('52주 범위', (lo == null || hi == null) ? '—' : usd(lo) + ' – ' + usd(hi),
+      p52 == null ? '52주 최고·최저' : '현재 위치 ' + Math.round(p52 * 100) + '%', '', true, bar);
+    grid.innerHTML = cells.join('');
+
+    var sub = $('#fundSub');
+    if (sub) {
+      var fd = (M.fundamentals && M.fundamentals.asOf) || '—';
+      var parts = [a.meta.t, a.meta.nk, a.meta.sk || a.meta.s || ''];
+      sub.textContent = parts.join(' · ') +
+        ' · ' + (isETF ? 'ETF — 개별 기업 펀더멘털 없음' : '기업 펀더멘털') +
+        ' · 기준일 ' + fd + ' (Yahoo Finance)';
+    }
+    var side = $('#fundSide');
+    if (side) {
+      var pills = [];
+      var rk = f.recommendationKey;
+      if (rk && REC_KO[rk]) {
+        pills.push('<span class="fund-pill ' + (/buy/.test(rk) ? 'buy' : (/sell|underperform/.test(rk) ? 'sell' : 'hold')) + '">' +
+          '투자의견 <b>' + REC_KO[rk] + '</b></span>');
+      }
+      if (f.numberOfAnalystOpinions != null) pills.push('<span class="fund-pill">애널리스트 <b>' + f.numberOfAnalystOpinions + '명</b></span>');
+      if (f.beta != null) pills.push('<span class="fund-pill">베타 <b>' + f.beta.toFixed(2) + '</b></span>');
+      if (f.returnOnEquity != null) pills.push('<span class="fund-pill">ROE <b>' + grStr(f.returnOnEquity) + '</b></span>');
+      if (!pills.length && !isETF) pills.push('<span class="fund-pill">펀더멘털 데이터 없음</span>');
+      side.innerHTML = pills.join('');
+    }
+  }
+
   /* ---------------- kpi ---------------- */
   function renderKpis(a) {
     var s = a.stats;
     var tagEl = $('#kpis .kpi .lab .tag');
-    if (tagEl) tagEl.textContent = a.replay ? '리플레이' : (a.stratKey === 'swing' ? '스윙' : '2Y');
+    if (tagEl) {
+      var bars = a.close.length - a.startIdx;
+      tagEl.textContent = a.replay ? '리플레이'
+        : ((a.stratKey === 'swing' ? '스윙 ' : '') + periodTag(bars));
+      tagEl.title = '백테스트 구간 ' + bars + '거래일' + (a.dates && a.dates[a.startIdx] ? ' · ' + a.dates[a.startIdx] + ' ~ ' + a.dates[a.dates.length - 1] : '');
+    }
     if (a.limited || !s) {
       $('#k1').textContent = '—'; $('#k2').textContent = '—'; $('#k3').textContent = '—';
       $('#k1s').innerHTML = '<span>상장 초기 · 백테스트 표본 부족</span>';
@@ -1237,6 +1394,7 @@
     }
     var pad = (hi - lo) * 0.06;
     lo -= pad; hi += pad;
+    if (lo < 0) lo = 0;                       /* 주가축이 음수로 내려가지 않게 (5년 장기 범위) */
     var Y = function (v) { return p.y + (1 - (v - lo) / (hi - lo)) * p.h; };
     this._lo = lo; this._hi = hi; this._pt = p;
 

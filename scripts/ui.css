@@ -249,6 +249,62 @@ input,select{font-family:inherit;color:inherit}
 .levels label{display:block;font-size:10px;color:var(--txt3);margin-bottom:3px;letter-spacing:.02em;word-break:keep-all;line-height:1.4}
 .levels b{font-size:13.5px;font-variant-numeric:tabular-nums;font-weight:650}
 
+/* ---------- 거시 지표 스트립 (VIX · US 10Y) ---------- */
+.macro-strip{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.mchip{position:relative;display:flex;align-items:center;gap:9px;padding:7px 11px 7px 12px;
+  border-radius:11px;border:1px solid var(--line);overflow:hidden;
+  background:linear-gradient(180deg,rgba(22,28,41,.94),rgba(13,17,25,.94));
+  box-shadow:0 1px 0 rgba(255,255,255,.045) inset,0 12px 26px -24px #000}
+.mchip:before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(140px 44px at 0% 0%,rgba(56,189,248,.11),transparent 72%)}
+.mchip .mc-k{display:flex;flex-direction:column;line-height:1.15;font-size:11px;font-weight:750;
+  letter-spacing:.07em;color:var(--txt);font-family:var(--mono);white-space:nowrap}
+.mchip .mc-k em{font-style:normal;font-size:9px;font-weight:600;letter-spacing:0;color:var(--txt3);
+  margin-top:1px;font-family:var(--sans)}
+.mchip .mc-v{font-family:var(--mono);font-size:15.5px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.mchip .mc-c{font-size:10.5px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;
+  padding:2px 6px;border-radius:6px;background:rgba(255,255,255,.05);color:var(--txt2)}
+.mchip .mc-c.pos{color:var(--up2);background:rgba(16,185,129,.12)}
+.mchip .mc-c.neg{color:var(--dn2);background:rgba(244,63,94,.12)}
+.mchip .mc-c.warn{color:#FCD34D;background:rgba(245,158,11,.14)}
+.mchip .mc-spark{display:block;width:76px;height:26px;opacity:.95}
+.mchip[data-load="0"]{opacity:.6}
+.mfoot{margin-left:auto;font-size:10px;color:var(--txt4);white-space:nowrap}
+
+/* ---------- 종목 펀더멘털 ---------- */
+.fund-card{padding:0;overflow:hidden}
+.fund-h{display:flex;align-items:flex-start;gap:12px;padding:13px 16px 11px;
+  border-bottom:1px solid var(--line2);flex-wrap:wrap}
+.fund-tt{min-width:0}
+.fund-tt h3{margin:0;font-size:13.5px;font-weight:700;letter-spacing:-.01em}
+.fund-tag{font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--cyan);margin-left:6px;
+  border:1px solid rgba(56,189,248,.3);background:rgba(56,189,248,.08);border-radius:5px;padding:2px 5px;vertical-align:middle}
+.fund-tt p{margin:4px 0 0;font-size:10.5px;color:var(--txt3);line-height:1.45;word-break:keep-all}
+.fund-side{margin-left:auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.fund-pill{display:flex;align-items:center;gap:5px;font-size:10.5px;font-weight:650;
+  font-variant-numeric:tabular-nums;color:var(--txt2);border:1px solid var(--line);
+  background:rgba(255,255,255,.03);border-radius:7px;padding:4px 8px;white-space:nowrap}
+.fund-pill b{color:var(--txt);font-weight:700}
+.fund-pill.buy{color:#A7F3D0;border-color:rgba(16,185,129,.32);background:rgba(16,185,129,.1)}
+.fund-pill.hold{color:#FDE68A;border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.1)}
+.fund-pill.sell{color:#FDA4AF;border-color:rgba(244,63,94,.3);background:rgba(244,63,94,.1)}
+.fund-grid{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:1px;background:var(--line2)}
+.fund-cell{background:linear-gradient(180deg,rgba(255,255,255,.018),rgba(255,255,255,.004));
+  padding:10px 12px;min-width:0}
+.fund-cell.wide{grid-column:span 2}
+.fund-cell .fk{display:block;font-size:9.5px;color:var(--txt3);letter-spacing:.02em;margin-bottom:3px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fund-cell .fv{display:block;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;
+  letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fund-cell .fv.pos{color:var(--up2)} .fund-cell .fv.neg{color:var(--dn2)}
+.fund-cell .fs{display:block;font-size:9.5px;color:var(--txt4);margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fund-cell .fs.pos{color:var(--up)} .fund-cell .fs.neg{color:var(--dn)}
+.frange{position:relative;height:3px;border-radius:2px;margin:6px 0 1px;
+  background:linear-gradient(90deg,rgba(244,63,94,.45),rgba(245,158,11,.45),rgba(16,185,129,.45))}
+.frange i{position:absolute;top:-3.5px;width:2px;height:10px;border-radius:2px;background:#E6EAF2;
+  box-shadow:0 0 7px rgba(230,234,242,.75);transform:translateX(-1px)}
+
 /* ---------- chart ---------- */
 .chart-card{padding:0;overflow:hidden}
 .chart-bar{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
@@ -709,6 +765,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
   .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
   .lower{grid-template-columns:1fr}
   .fav-wrap{display:none}
+  .fund-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
 }
 @media (max-width:900px){
   .topbar{gap:10px;padding:10px 12px;flex-wrap:wrap}
@@ -719,6 +776,18 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
   .sidebar.open{transform:none;box-shadow:30px 0 60px -20px rgba(0,0,0,.9)}
   .side-head .icon-btn{display:grid}
   .workspace{padding:12px 12px 32px;gap:11px}
+  .macro-strip{gap:6px}
+  .mchip{flex:1 1 145px;min-width:0;padding:6px 9px;gap:6px;align-items:center}
+  .mchip .mc-k{flex-direction:row;align-items:baseline;gap:4px;font-size:10.5px}
+  .mchip .mc-k em{display:none}
+  .mchip .mc-v{font-size:14px}
+  .mchip .mc-spark{display:none}
+  .mfoot{display:none}
+  .fund-h{padding:11px 12px 9px;gap:8px}
+  .fund-side{margin-left:0;width:100%}
+  .fund-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .fund-cell{padding:9px 10px}
+  .fund-cell .fv{font-size:13px}
   .hero{padding:14px;grid-template-columns:1fr;gap:12px}
   .hero-signal{justify-self:start}
   .hero h1{font-size:21px}
