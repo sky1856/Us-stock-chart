@@ -167,6 +167,20 @@ input,select{font-family:inherit;color:inherit}
 .seg button.on{color:var(--txt);background:#1A2232;border-color:rgba(255,255,255,.1);
   box-shadow:0 1px 0 rgba(255,255,255,.06) inset}
 .seg button .c{color:var(--txt3);font-size:10.5px;margin-left:3px;font-variant-numeric:tabular-nums}
+/* 프리셋 필터 (시총 Top 30 · 실적 우량주) — 기본 탭과 같은 필터 상태를 공유하되 알약형으로 구분 */
+.seg-pre{padding-top:0}
+.seg-pre button{
+  font-size:11px;padding:5px 9px;border-radius:999px;border:1px solid rgba(56,189,248,.22);
+  color:#A9B6C9;display:inline-flex;align-items:center}
+.seg-pre button:hover{color:var(--txt);border-color:rgba(56,189,248,.42);background:rgba(56,189,248,.07)}
+.seg-pre button.on{color:#DCF0FF;background:rgba(56,189,248,.15);border-color:rgba(56,189,248,.55);
+  box-shadow:0 0 0 1px rgba(56,189,248,.12) inset}
+.seg-pre button.on .c{color:rgba(220,240,255,.82)}
+.preset-note{padding:0 13px 9px;font-size:10px;line-height:1.45;color:var(--txt4);
+  overflow-wrap:anywhere}
+.preset-note b{color:var(--txt2);font-weight:600}
+.preset-note.on{color:var(--txt3)}
+@media (max-width:900px){.seg-pre button{padding:6px 10px;font-size:11.5px}}
 .side-tools{display:flex;gap:6px;padding:0 12px 10px}
 .side-tools input{
   flex:1;min-width:0;background:#0E131C;border:1px solid var(--line);border-radius:8px;

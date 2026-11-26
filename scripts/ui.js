@@ -323,10 +323,47 @@
   }
 
   /* ---------------- scanner ---------------- */
+  /* 프리셋 필터 — 시총 Top 30 · 실적 우량주
+     데이터(M.fundamentals)는 장마감 기준 스냅숏이므로 화면에도 그 기준일을 함께 적는다. */
+  var PRESET_TOP_N = 30;
+  var presetCache = null;
+  function presetData() {
+    if (presetCache) return presetCache;
+    var F = (M.fundamentals && M.fundamentals.tickers) || {};
+    var known = {};
+    M.tickers.forEach(function (x) { known[x.t] = 1; });
+    var keys = Object.keys(F).filter(function (t) { return known[t] && F[t] && F[t].marketCap != null; });
+    keys.sort(function (a, b) { return F[b].marketCap - F[a].marketCap; });
+    var top = keys.slice(0, PRESET_TOP_N);
+    var qual = keys.filter(function (t) {
+      var f = F[t];
+      /* null/undefined 는 Number() 가 0·NaN 이 되어 자동으로 조건 밖으로 밀린다 */
+      return Number(f.trailingEps) > 0 && Number(f.revenueGrowth) > 0.05 && Number(f.profitMargins) > 0.15;
+    });
+    var topSet = {}, qualSet = {};
+    top.forEach(function (t) { topSet[t] = 1; });
+    qual.forEach(function (t) { qualSet[t] = 1; });
+    presetCache = {
+      top30: topSet, quality: qualSet, nTop: top.length, nQual: qual.length,
+      asOf: (M.fundamentals && M.fundamentals.asOf) || M.asOf
+    };
+    return presetCache;
+  }
+  function presetNoteHtml(shown) {
+    var pd = presetData();
+    if (state.filter === 'top30') {
+      return '<b>시총 상위 ' + pd.nTop + '종목</b> · ' + pd.asOf + ' 시총 기준 · 지금 ' + shown + '종목 표시';
+    }
+    if (state.filter === 'quality') {
+      return '<b>실적 우량주</b> · EPS 흑자 + 매출성장 5% 초과 + 순이익률 15% 초과 · ' + pd.asOf + ' 실적 기준 · 지금 ' + shown + '종목 표시';
+    }
+    return '프리셋을 누르면 목록이 그 기준으로 좁혀집니다 · 검색·정렬과 함께 적용됩니다';
+  }
   function matchesFilter(a, rv) {
     if (state.filter === 'buy') return rv.score >= 58;
     if (state.filter === 'sell') return rv.score < 45;
     if (state.filter === 'fav') return isWatch(a.sym);
+    if (state.filter === 'top30' || state.filter === 'quality') return !!presetData()[state.filter][a.sym];
     return true;
   }
   function spark(a, upto) {
@@ -375,6 +412,14 @@
     $('#cAll').textContent = counts.all;
     $('#cBuy').textContent = counts.buy;
     $('#cSell').textContent = counts.sell;
+    var pd = presetData();
+    var cTop = $('#cTop30'); if (cTop) cTop.textContent = pd.nTop;
+    var cQual = $('#cQual'); if (cQual) cQual.textContent = pd.nQual;
+    var pn = $('#presetNote');
+    if (pn) {
+      pn.innerHTML = presetNoteHtml(rows.length);
+      pn.classList.toggle('on', state.filter === 'top30' || state.filter === 'quality');
+    }
 
     $('#scanList').innerHTML = rows.length ? rows.map(function (a) {
       var x = a.meta, rv = rowOf(a), ew = a.elliott;
@@ -2870,13 +2915,22 @@
       b.classList.toggle('on', state.ewShow[kk] !== false);
       chart.draw();
     };
-    $('#filterTabs').onclick = function (e) {
-      var b = e.target.closest('button'); if (!b) return;
-      $$('#filterTabs button').forEach(function (x) { x.classList.remove('on'); });
-      b.classList.add('on');
-      state.filter = b.dataset.f;
+    function setScanFilter(f) {
+      state.filter = f;
+      ['#filterTabs', '#presetTabs'].forEach(function (sel) {
+        $$(sel + ' button').forEach(function (x) { x.classList.toggle('on', x.dataset.f === f); });
+      });
       renderScanner();
-    };
+    }
+    ['#filterTabs', '#presetTabs'].forEach(function (sel) {
+      var el = $(sel);
+      if (!el) return;
+      el.onclick = function (e) {
+        var b = e.target.closest('button');
+        if (!b || !b.dataset.f) return;
+        setScanFilter(b.dataset.f);
+      };
+    });
     $('#sortSel').onchange = function () { state.sort = this.value; renderScanner(); };
     $('#listSearch').oninput = function () { state.listQ = this.value; renderScanner(); };
     $('#tf').onclick = function (e) {
