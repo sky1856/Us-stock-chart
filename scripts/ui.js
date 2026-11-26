@@ -3649,7 +3649,7 @@
   }
 
   /* ============================================================
-     오늘의 주식 공부 & 검색기 팁 — 날짜로 매일 자동 변경 (32편 순환)
+     오늘의 주식 공부 & 검색기 팁 — 날짜로 매일 자동 변경 (33편 순환)
      ============================================================ */
   var EDU_KEY = 'apex.edu.closed.v1';
   var EDU_PREV = '‹', EDU_NEXT = '›';
@@ -3843,6 +3843,16 @@
     $('#eduTxt').innerHTML = it.b;
     $('#eduTip').innerHTML = it.tip ? '<b>실전 포인트</b> · ' + it.tip : '';
     $('#eduProg').textContent = (r.i + 1) + '/' + n + ' · ' + n + '일 순환 · 매일 자동 변경';
+    /* 도해(SVG) — 편이 바뀌면 그림도 즉시 교체 */
+    var fig = $('#eduFig'), box = $('#eduFigSvg'), cap = $('#eduFigCap');
+    if (fig && box && cap && typeof EDUFIG !== 'undefined' && EDUFIG.get) {
+      var f = EDUFIG.get(r.i);
+      if (f) {
+        box.innerHTML = f.svg;
+        cap.innerHTML = f.cap;
+        fig.setAttribute('data-fig', String(r.i + 1));
+      }
+    }
     var body = $('#eduBody');
     if (body && !card.classList.contains('closed')) body.style.height = '';
   }

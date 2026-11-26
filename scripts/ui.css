@@ -1567,9 +1567,22 @@ body{
 .edu-body{overflow:hidden;height:auto}
 .edu-inner{padding:12px 15px 13px;display:flex;flex-direction:column;gap:9px}
 .edu-lead{display:flex;flex-direction:column;gap:3px}
+/* 도해: 데스크톱은 오른쪽 고정 열, 모바일은 설명 위 */
+.edu-main{display:grid;grid-template-columns:minmax(0,1fr) minmax(288px,38%);gap:14px 18px;align-items:start}
+.edu-fig{grid-column:2;grid-row:1;margin:0;display:flex;flex-direction:column;gap:6px;min-width:0;
+  padding:8px 9px 9px;border-radius:11px;background:rgba(6,14,26,.55);border:1px solid rgba(96,222,255,.16)}
+.edu-fig-hd{display:flex;align-items:center;gap:7px;line-height:1}
+.edu-fig-t{font-size:9px;font-weight:800;letter-spacing:.12em;color:#9BE9FF;text-transform:uppercase}
+.edu-fig-kind{margin-left:auto;font-size:9px;font-weight:600;color:var(--txt4);letter-spacing:.01em;white-space:nowrap}
+.edu-fig-svg{width:100%;line-height:0}
+.edu-svg{display:block;width:100%;height:auto;font-family:var(--sans)}
+.edu-fig-cap{font-size:10.4px;line-height:1.55;color:var(--txt3);word-break:keep-all}
+.edu-fig-cap b{color:#BFE9FF;font-weight:700}
+.edu-txt{grid-column:1;grid-row:1}
 .edu-lead b{font-size:15px;font-weight:800;letter-spacing:-.01em;color:var(--txt);line-height:1.35}
 .edu-lead span{font-size:10.5px;color:var(--txt3);font-variant-numeric:tabular-nums}
 .edu-txt{font-size:12.4px;line-height:1.72;color:var(--txt2);word-break:keep-all}
+.edu-main .edu-txt{font-size:12.4px;line-height:1.72}
 .edu-txt p{margin:0 0 7px}
 .edu-txt p:last-child{margin-bottom:0}
 .edu-txt b{color:var(--txt);font-weight:700}
@@ -1579,6 +1592,13 @@ body{
 .edu-tip{flex:1 1 240px;line-height:1.55}
 .edu-tip b{color:#FCD34D}
 .edu-prog{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--txt4);white-space:nowrap}
+
+/* 좁은 화면(노트북·태블릿): 도해를 설명 위로 올리고 폭을 제한 */
+@media (max-width:1300px){
+  .edu-main{grid-template-columns:minmax(0,1fr);gap:10px}
+  .edu-fig{grid-column:1;grid-row:1;max-width:520px}
+  .edu-txt{grid-column:1;grid-row:2}
+}
 
 /* 데스크톱: 칩은 내용 폭만큼, 기준일 표기는 자기 줄에 오른쪽 정렬 */
 .macro-row .mfoot{flex:1 1 100%;order:9;margin-left:0;text-align:right;padding-top:1px}
@@ -1605,7 +1625,11 @@ body{
   .edu-title em{display:none}
   .edu-inner{padding:11px 12px 12px}
   .edu-lead b{font-size:14px}
-  .edu-txt{font-size:12px;line-height:1.66}
+  .edu-main{grid-template-columns:minmax(0,1fr);gap:10px}
+  .edu-fig{grid-column:1;grid-row:1}
+  .edu-txt{grid-column:1;grid-row:2;font-size:12px;line-height:1.66}
+  .edu-fig{padding:7px 8px 8px}
+  .edu-fig-cap{font-size:10.2px;line-height:1.5}
 }
 @media (max-width:430px){
   .mei{font-size:10px}

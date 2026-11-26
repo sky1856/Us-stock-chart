@@ -21,7 +21,8 @@ def read(name):
 def main():
     tpl = read('template.html')
     for token, fname in (('__CSS__', 'ui.css'), ('__DATA__', 'data.js'),
-                         ('__ENGINE__', 'engine.js'), ('__UI__', 'ui.js')):
+                         ('__ENGINE__', 'engine.js'), ('__EDUFIG__', 'edufig.js'),
+                         ('__UI__', 'ui.js')):
         body = read(fname)
         if '</script>' in body:
             print('ERROR: %s contains </script>' % fname)
