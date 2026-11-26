@@ -99,8 +99,8 @@
     },
     swing: {
       key: 'swing', title: '스윙형', sub: '단기',
-      desc: 'RSI(2) 15 미만 + QQQ 100일선 위 → 다음 날 시가 매수 · 손절 4.5 ATR · 고정 보유기간 없이 RSI(2) 90 초과(이익 1% 이상) · RSI(14) 과매수 꺾임 · 이익 1%에서 5일선 이탈 시 다음 날 시가 청산',
-      logSub: 'RSI(2) 15 미만 + QQQ 100일선 위 매수 · 손절 4.5 ATR · RSI(2)>90·RSI(14)꺾임·5일선이탈 시 다음 날 시가 청산'
+      desc: 'RSI(2) 15 미만 + QQQ 200일선 위 → 다음 날 시가 매수 · 이익 시(+1% 이상) 20일선 이탈 → 다음 날 시가 청산 · 손절 4.5 ATR (평균 약 22일)',
+      logSub: 'RSI(2) 15 미만 + QQQ 200일선 위 매수 · 손절 4.5 ATR · 이익 중 20일선 이탈 시 다음 날 시가 청산 (평균 약 22일)'
     }
   };
   function stratKey() { return state.strategy === 'swing' ? 'swing' : 'trend'; }
@@ -511,18 +511,18 @@
     var bullish = a.score >= 45;
     var lvEL = $('#lvEntryL'), lvSL = $('#lvStopL'), lvTL = $('#lvTargetL'), lvRL = $('#lvRRL');
     if (a.stratKey === 'swing') {
-      /* 스윙형: 다음 시가 진입 · 손절 4.5 ATR · 고정 보유기간 없이 차트 청산 */
+      /* 스윙형: 다음 시가 진입 · 손절 4.5 ATR · 고정 보유기간 없이 이익 중 20일선 이탈 청산 */
       var p = a.plan || {};
       var on = !!p.signal;
       if (lvEL) lvEL.textContent = on ? '진입 · 다음 시가 매수' : '진입 대기 · RSI(2) 15 미만';
       $('#lvEntry').textContent = usd(p.entryRef != null ? p.entryRef : a.price);
       if (lvSL) lvSL.textContent = '손절가 · 4.5 ATR';
       $('#lvStop').textContent = usd(p.stopPrice);
-      if (lvTL) lvTL.textContent = '청산 기준 · RSI(2)>90 · RSI(14)꺾임 · 5일선이탈';
+      if (lvTL) lvTL.textContent = '청산 기준 · 이익 중 20일선 이탈';
       var tEl = $('#lvTarget');
-      tEl.textContent = p.exitNow ? '청산 신호' : '대기';
-      tEl.className = p.exitNow ? 'neg' : '';
-      if (lvRL) lvRL.textContent = 'RSI(2) · 시장 필터';
+      tEl.textContent = p.ma20 != null ? usd(p.ma20) : '대기';
+      tEl.className = '';
+      if (lvRL) lvRL.textContent = 'RSI(2) · QQQ 200일선';
       $('#lvRR').textContent = (p.rsi2 == null ? '—' : p.rsi2.toFixed(1)) + ' · ' + (p.marketOk ? 'QQQ\u2191' : 'QQQ\u2193');
     } else {
       var lo = bullish ? a.price - 0.6 * a.atr : a.price - 1.6 * a.atr;
