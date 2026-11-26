@@ -265,6 +265,8 @@
     $('#footAsOf2').textContent = M.asOf;
     var pb = $('#ptBars'); if (pb) pb.textContent = M.dates.length.toLocaleString('en-US');
     renderMacro();
+    renderFearGreed(M.fearGreed, false);
+    setTimeout(fgRealtime, 500);
     var t0 = performance.now();
     M.tickers.forEach(function (x) { A[x.t] = get(x.t); });
     $('#uniCount').textContent = M.tickers.filter(function (x) { return x.r; }).length;
@@ -604,6 +606,223 @@
       deltaTitle: function (d) { return (d >= 0 ? '+' : '−') + Math.round(Math.abs(d) * 100) + 'bp'; }
     });
     var md = $('#macroDate'); if (md) md.textContent = M.asOf;
+  }
+
+  /* ============================================================
+     CNN 공포·탐욕 지수 — 반원 게이지 + 상황별 심리 해석
+     data.js(window.MARKET.fearGreed)로 즉시 그리고, 백그라운드로 CNN API를
+     한 번 더 시도해 성공하면 '실시간'으로 교체한다(CORS·타임아웃은 조용히 무시).
+     ============================================================ */
+  var FG_URL = 'https://production.dataviz.cnn.io/index/fearandgreed/graphdata';
+  /* 5구간 — CNN 기준: 0~25 극단적 공포 · 25~45 공포 · 45~55 중립 · 55~75 탐욕 · 75~100 극단적 탐욕 */
+  var FG_BANDS = [
+    { min: 0, max: 25, ko: '극단적 공포', color: '#EF4444', fill: 'rgba(239,68,68,.20)',
+      guide: '투매가 쏟아지며 시장 심리가 과하게 얼어붙은 자리입니다. 공포에 휩쓸린 추격 손절은 피하고, 펀더멘털이 탄탄한 종목 위주로 <b>스윙 반등·분할 매수</b> 기회를 노려보기 좋은 구간입니다.' },
+    { min: 25, max: 45, ko: '공포', color: '#F97316', fill: 'rgba(249,115,22,.18)',
+      guide: '약세 심리가 우세하지만 극단까지는 아닌 구간입니다. 성급한 물타기·풀매수보다는 <b>분할 접근</b>이 유리하고, 지지선을 확인하고 반등 신호가 나올 때 비중을 늘리는 편이 안전합니다.' },
+    { min: 45, max: 55, ko: '중립', color: '#94A3B8', fill: 'rgba(148,163,184,.16)',
+      guide: '상승·하락 어느 쪽으로도 기울지 않은 중립 구간입니다. 방향이 정해질 때까지 현금 비중을 지키고, <b>20·60일선이 정렬된 종목</b>만 골라 대응하는 편이 좋습니다.' },
+    { min: 55, max: 75, ko: '탐욕', color: '#84CC16', fill: 'rgba(132,204,22,.18)',
+      guide: '낙관론이 앞서는 구간입니다. 신규 <b>추격 매수는 자제</b>하고, 보유 종목은 트레일 스탑으로 수익을 지키면서 비중을 서서히 줄여가는 편이 좋습니다.' },
+    { min: 75, max: 100, ko: '극단적 탐욕', color: '#22C55E', fill: 'rgba(34,197,94,.18)',
+      guide: '과열된 탐욕 구간입니다. 신고가 추격 매수가 가장 위험한 자리이니, <b>분할 차익실현과 손절선 상향</b>으로 리스크를 먼저 관리하세요.' }
+  ];
+  var FGG = { cx: 190, cy: 195, R: 166, r: 102, lab: 128, tick: 93, num: 74, hub: 46 };
+  function fgAng(s) { return 180 - Math.max(0, Math.min(100, s)) * 1.8; }
+  function fgPt(rad, a) { var t = a * Math.PI / 180; return [FGG.cx + rad * Math.cos(t), FGG.cy - rad * Math.sin(t)]; }
+  function fgXY(p) { return p[0].toFixed(1) + ' ' + p[1].toFixed(1); }
+  function fgBandIdx(s) {
+    var v = Number(s);
+    if (!isFinite(v)) return 2;
+    for (var i = 0; i < FG_BANDS.length; i++) { if (v < FG_BANDS[i].max) return i; }
+    return FG_BANDS.length - 1;
+  }
+  function fgNum(x) {
+    if (x === null || x === undefined || x === '') return null;
+    var v = Number(x);
+    return isFinite(v) ? Math.round(v * 10) / 10 : null;
+  }
+  /* CNN 페이지 표기와 동일하게 과거값은 내림 표기 (15.9→15, 29.8→29, 17.7→17) */
+  function fgShow(v) { return Math.floor(Number(v) + 1e-9); }
+  /* 0~100 원호 한 구간(도넓이 64px) 경로 */
+  function fgArc(a1, a2) {
+    return 'M' + fgXY(fgPt(FGG.R, a1)) + 'A' + FGG.R + ' ' + FGG.R + ' 0 0 1 ' + fgXY(fgPt(FGG.R, a2)) +
+      'L' + fgXY(fgPt(FGG.r, a2)) + 'A' + FGG.r + ' ' + FGG.r + ' 0 0 0 ' + fgXY(fgPt(FGG.r, a1)) + 'Z';
+  }
+  function fgSvg(score) {
+    var bi = fgBandIdx(score), b = FG_BANDS[bi], out = [];
+    /* 구간별 글로우 필터 */
+    out.push('<defs>');
+    FG_BANDS.forEach(function (x, i) {
+      out.push('<filter id="fgG' + i + '" x="-40%" y="-40%" width="180%" height="180%">' +
+        '<feDropShadow dx="0" dy="0" stdDeviation="4.5" flood-color="' + x.color + '" flood-opacity=".5"/></filter>');
+    });
+    /* 구간 안쪽 글자용 호 */
+    FG_BANDS.forEach(function (x, i) {
+      out.push('<path id="fgL' + i + '" d="M' + fgXY(fgPt(FGG.lab, fgAng(x.min))) + 'A' + FGG.lab + ' ' + FGG.lab +
+        ' 0 0 1 ' + fgXY(fgPt(FGG.lab, fgAng(x.max))) + '"/>');
+    });
+    out.push('</defs>');
+    /* 5구간 링 — 현재 구간만 컬러 테두리 + 글로우, 나머지는 다크 슬레이트 */
+    FG_BANDS.forEach(function (x, i) {
+      var on = i === bi;
+      out.push('<path d="' + fgArc(fgAng(x.min), fgAng(x.max)) + '" fill="' + (on ? x.fill : '#151f32') +
+        '" stroke="' + (on ? x.color : '#233046') + '" stroke-width="' + (on ? 2 : 1.2) + '"' +
+        (on ? ' filter="url(#fgG' + i + ')"' : '') + '/>');
+    });
+    /* 구간 이름 */
+    FG_BANDS.forEach(function (x, i) {
+      var on = i === bi, narrowSeg = (x.max - x.min) < 20;
+      out.push('<text fill="' + (on ? x.color : '#5c6a80') + '" font-size="' + (narrowSeg ? 9.5 : 10.5) +
+        '" font-weight="' + (on ? 800 : 700) + '" letter-spacing=".02em" text-anchor="middle">' +
+        '<textPath href="#fgL' + i + '" startOffset="50%">' + x.ko + '</textPath></text>');
+    });
+    /* 0~100 눈금 점선(5점 간격) */
+    var tk = [];
+    for (var s = 0; s <= 100; s += 5) {
+      var p = fgPt(FGG.tick, fgAng(s)), major = (s % 25 === 0), inBand = fgBandIdx(s) === bi;
+      tk.push('<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="' + (major ? 1.9 : 1.2) +
+        '" fill="' + (inBand ? b.color : (major ? '#5c6a80' : '#3d4a5f')) + '" opacity="' + (inBand ? '.8' : '.7') + '"/>');
+    }
+    out.push('<g>' + tk.join('') + '</g>');
+    /* 기준 숫자 0 · 25 · 50 · 75 · 100 */
+    [[0, '0'], [25, '25'], [50, '50'], [75, '75'], [100, '100']].forEach(function (n) {
+      var q = fgPt(FGG.num, fgAng(n[0]));
+      out.push('<text x="' + q[0].toFixed(1) + '" y="' + q[1].toFixed(1) + '" fill="#64748b" font-size="10.5"' +
+        ' font-weight="700" text-anchor="middle" dominant-baseline="middle">' + n[1] + '</text>');
+    });
+    /* 가운데 원 + 점수 + 등급 (숫자는 항상 맨 위 레이어) */
+    out.push('<circle cx="' + FGG.cx + '" cy="' + FGG.cy + '" r="' + FGG.hub + '" fill="#0d1422" stroke="#243247" stroke-width="1.5"/>');
+    out.push('<circle cx="' + FGG.cx + '" cy="' + FGG.cy + '" r="' + FGG.hub + '" fill="none" stroke="' + b.color + '" stroke-width="1.4" opacity=".38"/>');
+    /* 바늘 — 원 테두리(r=46) 바깥에서 시작해 숫자를 가리지 않는다 */
+    var a = fgAng(score), t = a * Math.PI / 180;
+    var base = fgPt(FGG.hub + 1, a), tip = fgPt(100, a);
+    var px = Math.sin(t), py = Math.cos(t), hw = 2.8;
+    out.push('<polygon class="fg-needle" points="' +
+      (base[0] + px * hw).toFixed(1) + ',' + (base[1] + py * hw).toFixed(1) + ' ' +
+      (base[0] - px * hw).toFixed(1) + ',' + (base[1] - py * hw).toFixed(1) + ' ' +
+      tip[0].toFixed(1) + ',' + tip[1].toFixed(1) + '" fill="#f8fafc" stroke="#0b0e14" stroke-width=".6"/>');
+    out.push('<circle cx="' + tip[0].toFixed(1) + '" cy="' + tip[1].toFixed(1) + '" r="2.9" fill="' + b.color +
+      '" stroke="#0b0e14" stroke-width="1.1"/>');
+    out.push('<circle cx="' + base[0].toFixed(1) + '" cy="' + base[1].toFixed(1) + '" r="2.2" fill="#f1f5f9"/>');
+    out.push('<text x="' + FGG.cx + '" y="200" fill="#f8fafc" font-size="31" font-weight="900" text-anchor="middle"' +
+      ' style="font-variant-numeric:tabular-nums;letter-spacing:-.02em">' + Math.round(score) + '</text>');
+    out.push('<text x="' + FGG.cx + '" y="219" fill="' + b.color + '" font-size="9" font-weight="800" text-anchor="middle"' +
+      ' letter-spacing=".04em">' + b.ko + '</text>');
+    return out.join('');
+  }
+  /* 1주 전·1개월 전 대비 변화 방향 문구 */
+  function fgMove(score, v, label) {
+    if (v === null || v === undefined || !isFinite(v)) return '';
+    var d = score - v, di = fgBandIdx(score) - fgBandIdx(v), vv = fgShow(v);
+    if (di <= -2) return label + '(' + vv + ') 대비 두 단계 넘게 얼어붙은 상태';
+    if (di === -1) return label + '(' + vv + ') 대비 한 단계 더 공포 쪽으로 밀린 상태';
+    if (di === 1) return label + '(' + vv + ') 대비 한 단계 회복된 상태';
+    if (di >= 2) return label + '(' + vv + ') 대비 두 단계 넘게 회복된 상태';
+    if (Math.abs(d) <= 3) return label + '(' + vv + ') 대비 거의 같은 수준';
+    return label + '(' + vv + ') 대비 같은 구간에서 ' + (d < 0 ? '조금 더 가라앉은' : '조금 회복된') + ' 상태';
+  }
+  function fgTrendText(score, fg) {
+    var m = fgNum(fg.previous1Month), w = fgNum(fg.previous1Week);
+    var mt = fgMove(score, m, '1개월 전'), wt = fgMove(score, w, '지난주');
+    if (mt && wt) return '지금은 ' + mt + '이고, ' + wt + '입니다.';
+    if (mt) return '지금은 ' + mt + '입니다.';
+    if (wt) return '지금은 ' + wt + '입니다.';
+    return '';
+  }
+  function fgTsText(iso) {
+    if (!iso) return '';
+    var tms = Date.parse(iso);
+    if (!isFinite(tms)) return '';
+    var d = new Date(tms + 9 * 3600 * 1000);      /* KST 고정 표기 */
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return d.getUTCFullYear() + '-' + p(d.getUTCMonth() + 1) + '-' + p(d.getUTCDate()) + ' ' +
+      p(d.getUTCHours()) + ':' + p(d.getUTCMinutes());
+  }
+  function fgLiveUI(on) {
+    var el = $('#fgLive'); if (!el) return;
+    el.className = 'fg-live' + (on ? ' on' : '');
+    var tx = $('#fgLiveTx'); if (tx) tx.textContent = on ? '실시간' : '일일 갱신';
+    el.title = on ? 'CNN 실시간 API 응답으로 갱신됨' : 'CNN API 연결 전 — data.js 일일 갱신값 표시';
+  }
+  function renderFearGreed(fg, live) {
+    var card = $('#fgCard'); if (!card || !fg) return;
+    var score = Number(fg.score);
+    if (!isFinite(score)) return;
+    var b = FG_BANDS[fgBandIdx(score)], dial = $('#fgDial');
+    if (dial) {
+      dial.innerHTML = '<svg viewBox="0 0 380 246" role="img" aria-label="CNN 공포·탐욕 지수 ' +
+        Math.round(score) + ' · ' + b.ko + '">' + fgSvg(score) + '</svg>';
+    }
+    var badge = $('#fgBadge');
+    if (badge) {
+      badge.textContent = b.ko + ' · ' + Math.round(score);
+      badge.style.color = b.color;
+      badge.style.borderColor = b.color + '88';
+      badge.style.background = b.fill;
+      badge.title = 'CNN Fear & Greed ' + (fg.rating ? '(' + fg.rating + ') ' : '') + (fgNum(score) || '') + '점';
+    }
+    var hist = $('#fgHist');
+    if (hist) {
+      var rows = [['직전 마감', fg.previousClose], ['1주 전', fg.previous1Week],
+                  ['1개월 전', fg.previous1Month], ['1년 전', fg.previous1Year]];
+      hist.innerHTML = rows.map(function (r) {
+        var v = fgNum(r[1]), has = v !== null, sb = has ? FG_BANDS[fgBandIdx(v)] : null;
+        return '<div class="fg-row"><div class="fg-rw">' +
+          '<span class="w">' + r[0] + '</span>' +
+          '<span class="s" style="color:' + (sb ? sb.color : 'var(--txt3)') + '">' + (sb ? sb.ko : '—') + '</span></div>' +
+          '<i class="fg-dots"></i>' +
+          '<b class="fg-b"' + (has ? ' title="' + v + '점 · ' + sb.ko + '"' : '') + ' style="color:' +
+          (sb ? sb.color : 'var(--txt3)') + ';border-color:' + (sb ? sb.color + '99' : 'var(--line)') +
+          ';background:' + (sb ? sb.fill : 'transparent') + '">' + (has ? fgShow(v) : '—') + '</b></div>';
+      }).join('');
+    }
+    var guide = $('#fgGuide');
+    if (guide) {
+      var trend = fgTrendText(score, fg);
+      guide.style.borderLeftColor = b.color;
+      guide.innerHTML = '<div class="fg-gh" style="color:' + b.color + '">현재 심리 해석 · ' + b.ko +
+        ' (' + b.min + '~' + b.max + ')</div><p>' + b.guide + (trend ? ' ' + trend : '') + '</p>';
+    }
+    var src = $('#fgSrc');
+    if (src) {
+      var ts = fgTsText(fg.timestamp);
+      src.textContent = 'CNN 기준' + (ts ? ' · ' + ts + ' 갱신' : '') + (live ? ' · 실시간 연결' : '');
+    }
+    fgLiveUI(!!live);
+  }
+  /* 실시간 시도 — 4초 타임아웃, 실패·CORS 차단은 조용히 무시하고 data.js 값 유지 */
+  var fgLiveTried = false;
+  function fgRealtime() {
+    if (fgLiveTried || typeof fetch !== 'function') return;
+    fgLiveTried = true;
+    var ctl = null, timer = null, done = false;
+    try { if (window.AbortController) ctl = new AbortController(); } catch (e) { ctl = null; }
+    var stop = function () { done = true; if (timer) { clearTimeout(timer); timer = null; } };
+    timer = setTimeout(function () {
+      if (done) return;
+      stop();
+      try { if (ctl) ctl.abort(); } catch (e) {}
+    }, 4000);
+    var opt = { cache: 'no-store', credentials: 'omit', mode: 'cors' };
+    if (ctl) opt.signal = ctl.signal;
+    try {
+      fetch(FG_URL, opt).then(function (r) {
+        if (!r || !r.ok) throw new Error('fg ' + (r ? r.status : 'no response'));
+        return r.json();
+      }).then(function (j) {
+        if (done) return;
+        stop();
+        var f = j && j.fear_and_greed;
+        if (!f || fgNum(f.score) === null) return;
+        renderFearGreed({
+          score: fgNum(f.score), rating: f.rating,
+          previousClose: fgNum(f.previous_close), previous1Week: fgNum(f.previous_1_week),
+          previous1Month: fgNum(f.previous_1_month), previous1Year: fgNum(f.previous_1_year),
+          timestamp: f.timestamp
+        }, true);
+      }).catch(function () { stop(); });   /* console.error 없이 조용히 폴백 */
+    } catch (e) { stop(); }
   }
 
   /* ---------------- 종목 펀더멘털 ---------------- */

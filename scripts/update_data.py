@@ -10,14 +10,17 @@ scripts/data.js 를 다시 생성한다.
 엔진(engine.js)은 최근 1,255봉만 백테스트 구간으로 쓰므로, 매일 갱신해도
 백테스트 창은 항상 정확히 5년으로 유지된다.
 
-  window.MARKET = {asOf, dates[], tickers[], series{}, fundamentals{}}
+  window.MARKET = {asOf, dates[], tickers[], series{}, fundamentals{}, fearGreed{}}
     series       : 종목 102 + ^VIX + ^TNX  (off,o,h,l,c,v — 거래일 캘린더 정렬)
     fundamentals : {asOf, fetchedAt, tickers{t:{...}}}
+    fearGreed    : CNN 공포·탐욕 지수 {score, rating, previousClose, previous1Week,
+                   previous1Month, previous1Year, timestamp, fetchedAt, source}
 
 실패 처리(안전 폴백):
   · 시세 종목이 95% 미만으로 수집되면 기존 data.js 를 그대로 두고 exit 2
   · 펀더멘털만 실패하면 기존 data.js 에 박혀 있던 펀더멘털을 이어 쓰고 시세는 갱신
   · 지수(^VIX/^TNX)를 못 받으면 기존 data.js 의 지수 시리즈를 이어 쓴다
+  · CNN 공포·탐욕 API 가 실패하면 기존 data.js 의 fearGreed 를 그대로 이어 쓴다
 
 사용법:
     python scripts/update_data.py            # 갱신 후 data.js 기록
@@ -60,6 +63,15 @@ FUND_FIELDS = (
     'quoteType',
 )
 INDICES = {'^VIX': 'VIX', '^TNX': 'US 10Y'}
+# CNN 공포·탐욕 지수 (dataviz JSON API) — 브라우저에서 Referer 없이도 열리도록 CORS *
+FG_URL = 'https://production.dataviz.cnn.io/index/fearandgreed/graphdata'
+FG_HEADERS = {
+    'User-Agent': UA,
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Referer': 'https://www.cnn.com/markets/fear-and-greed',
+    'Origin': 'https://www.cnn.com',
+}
 
 KO = {
  'AAPL':('애플','Technology'),'NVDA':('엔비디아','Semiconductors'),'MSFT':('마이크로소프트','Software'),
@@ -336,9 +348,53 @@ def load_fundamentals(tickers):
     return out
 
 
+# --------------------------------------------------- CNN 공포·탐욕 지수
+def _fg_num(x):
+    try:
+        v = float(x)
+    except (TypeError, ValueError):
+        return None
+    if v != v or v < 0 or v > 100:
+        return None
+    return round(v, 1)
+
+
+def fetch_fear_greed(tries=3):
+    """CNN Fear & Greed 현재값 + 직전 마감/1주/1개월/1년 전. 실패하면 (None, 이유)."""
+    last = ''
+    for attempt in range(tries):
+        try:
+            req = urllib.request.Request(FG_URL, headers=FG_HEADERS)
+            with urllib.request.urlopen(req, timeout=20) as r:
+                body = r.read()
+            d = json.loads(body)
+            fg = d.get('fear_and_greed') or {}
+            score = _fg_num(fg.get('score'))
+            if score is None:
+                last = 'no score:' + json.dumps(fg)[:100]
+            else:
+                return {
+                    'score': score,
+                    'rating': fg.get('rating'),
+                    'previousClose': _fg_num(fg.get('previous_close')),
+                    'previous1Week': _fg_num(fg.get('previous_1_week')),
+                    'previous1Month': _fg_num(fg.get('previous_1_month')),
+                    'previous1Year': _fg_num(fg.get('previous_1_year')),
+                    'timestamp': fg.get('timestamp'),
+                    'fetchedAt': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+                    'source': 'CNN Fear & Greed Index',
+                }, None
+        except urllib.error.HTTPError as e:
+            last = 'http%d' % e.code
+        except Exception as e:
+            last = type(e).__name__ + ':' + str(e)[:80]
+        time.sleep(1.5 * (attempt + 1))
+    return None, last
+
+
 # ------------------------------------------------------------ 이전 data.js
 def previous_payload():
-    """기존 data.js 에서 지수 시리즈·펀더멘털을 읽어 폴백으로 쓴다."""
+    """기존 data.js 에서 지수 시리즈·펀더멘털·공포탐욕을 읽어 폴백으로 쓴다."""
     try:
         s = open(DATA_JS, encoding='utf-8').read()
         i = s.index('window.MARKET=')
@@ -349,7 +405,7 @@ def previous_payload():
 
 
 # ------------------------------------------------------------------ 빌드
-def build_payload(base, tickers, charts_ok, prev):
+def build_payload(base, tickers, charts_ok, prev, fg=None):
     per, metas = {}, {}
     for t in charts_ok:
         per[t], metas[t] = parse_chart(t)
@@ -464,6 +520,12 @@ def build_payload(base, tickers, charts_ok, prev):
             'tickers': slim_funds,
         },
     }
+    # CNN 공포·탐욕 — 이번 수집 실패 시 기존 내장값 유지
+    fg_use = fg or (prev or {}).get('fearGreed')
+    if fg_use and _fg_num(fg_use.get('score')) is not None:
+        payload['fearGreed'] = fg_use
+        if not fg:
+            print('WARN fear&greed 수집 실패 — 기존 내장값 유지 (score %s)' % fg_use.get('score'))
     return payload, None
 
 
@@ -488,6 +550,10 @@ def _stable(payload):
     f = dict(p.get('fundamentals') or {})
     f.pop('fetchedAt', None)
     p['fundamentals'] = f
+    g = dict(p.get('fearGreed') or {})
+    g.pop('fetchedAt', None)          # 공포·탐욕도 값(점수·직전값·갱신시각)이 바뀌면 반영 대상
+    if g:
+        p['fearGreed'] = g
     return json.dumps(_norm(p), sort_keys=True, ensure_ascii=False)
 
 
@@ -514,6 +580,13 @@ def main():
     base, tickers = ticker_list()
     print('tickers:', len(tickers), flush=True)
     prev = previous_payload()
+    fg, fg_err = fetch_fear_greed()
+    if fg:
+        print('fear&greed: %.1f %s (prev %.1f / 1w %s / 1m %s / 1y %s)' % (
+            fg['score'], fg.get('rating'), fg.get('previousClose') or -1,
+            fg.get('previous1Week'), fg.get('previous1Month'), fg.get('previous1Year')), flush=True)
+    else:
+        print('WARN fear&greed fetch failed: %s' % fg_err, flush=True)
     res = download_charts(list(tickers) + list(INDICES))
     bad = {k: v for k, v in res.items() if v != 'ok'}
     if bad:
@@ -524,7 +597,7 @@ def main():
         return 2
     charts_all = [t for t in list(tickers) + list(INDICES) if res.get(t) == 'ok']
 
-    payload, err = build_payload(base, tickers, charts_all, prev)
+    payload, err = build_payload(base, tickers, charts_all, prev, fg)
     if err:
         print('WARN:', err, '- keeping existing data.js')
         return 2
@@ -534,9 +607,11 @@ def main():
         return 2
 
     nf = len(payload['fundamentals']['tickers'])
-    print('check ok: asOf %s, tickers %d, dates %d, series %d, fundamentals %d' % (
+    fgp = payload.get('fearGreed') or {}
+    print('check ok: asOf %s, tickers %d, dates %d, series %d, fundamentals %d, fearGreed %s' % (
         payload['asOf'], len(payload['tickers']), len(payload['dates']),
-        len(payload['series']), nf))
+        len(payload['series']), nf,
+        ('%.1f (%s)' % (fgp.get('score'), fgp.get('timestamp'))) if fgp else '—'))
     if check_only:
         return 0
     if prev and _stable(prev) == _stable(payload):

@@ -2,7 +2,7 @@
 
 102개 미국 종목(대형주 100 + NKE, QQQ)의 최근 1,505 일봉(2020-11-30~2026-11-25)을 한 화면에서 보는 단일 HTML 차트 분석 도구입니다.
 이 중 **앞쪽 250봉은 지표 워밍업**, 뒤쪽 **1,255거래일(2021-11-26~2026-11-25, 정확히 5년)** 이 추세형·스윙형 백테스트 구간입니다 — 2022년 하락장이 포함됩니다.
-거시 지표(VIX · 미 10년물 금리)와 종목별 펀더멘털(Forward/Trailing PER, 매출성장률, 애널리스트 목표가, 배당수익률, 52주 범위)을 함께 보여줍니다.
+거시 지표(VIX · 미 10년물 금리), **CNN 공포·탐욕 지수(Fear & Greed) 반원 게이지와 상황별 심리 해석**, 종목별 펀더멘털(Forward/Trailing PER, 매출성장률, 애널리스트 목표가, 배당수익률, 52주 범위)을 함께 보여줍니다.
 엘리엇 파동 심층분석, 작도 도구, 일목균형표, 이동평균, 거래량 분석을 포함합니다.
 
 - 앱: https://sky1856.github.io/Us-stock-chart/
@@ -11,8 +11,12 @@
 ## 자동 갱신
 
 미국 증시 마감 후 매일 아침(KST) 최신 일봉으로 `scripts/data.js` 와 `index.html` 이 다시 만들어져 커밋됩니다.
-갱신은 `scripts/update_data.py`(Yahoo Finance 10년 일봉을 받아 최근 1,505봉만 유지 + `^VIX`·`^TNX` + 펀더멘털 수집 → `data.js`) → `scripts/build.py`(`index.html` 재생성) 순서로 돌고,
+갱신은 `scripts/update_data.py`(Yahoo Finance 10년 일봉을 받아 최근 1,505봉만 유지 + `^VIX`·`^TNX` + 펀더멘털 + CNN 공포·탐욕 지수 수집 → `data.js`) → `scripts/build.py`(`index.html` 재생성) 순서로 돌고,
 GitHub Pages 가 `main` 브랜치를 그대로 배포하므로 커밋 후 몇 분 안에 사이트에 반영됩니다.
+
+공포·탐욕 지수는 `window.MARKET.fearGreed`(현재 점수·등급·직전 마감·1주/1개월/1년 전·갱신 시각)로 `data.js` 에 들어갑니다.
+페이지를 열면 이 값으로 즉시 그린 뒤, 브라우저에서 CNN API(`production.dataviz.cnn.io`)를 한 번 더 시도해 성공하면 `실시간`으로 바꿔 그립니다(4초 타임아웃, 실패·CORS 차단 시 조용히 `일일 갱신` 값 유지).
+CNN API 가 일시에 실패해도 `update_data.py` 는 기존 `data.js` 의 `fearGreed` 를 그대로 이어 씁니다.
 
 GitHub Actions 로 돌리고 싶다면 `docs/update-stocks.yml` 을 `.github/workflows/update-stocks.yml` 로 옮기면 됩니다
 (화~토 21:30 UTC = 수~일 06:30 KST 자동 실행 + 수동 실행 버튼).
