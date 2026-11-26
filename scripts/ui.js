@@ -99,8 +99,8 @@
     },
     swing: {
       key: 'swing', title: '스윙형', sub: '단기',
-      desc: 'RSI(2) 15 미만 + QQQ 200일선 위 → 다음 날 시가 매수 · 이익 시(+5% 이상) 20일선 이탈 → 다음 날 시가 청산 · 손절 4.5 ATR (평균 약 49일)',
-      logSub: 'RSI(2) 15 미만 + QQQ 200일선 위 매수 · 손절 4.5 ATR · 이익 중 20일선 이탈 시 다음 날 시가 청산 (평균 약 49일)'
+      desc: 'RSI(2) 15 미만 + QQQ 200일선 위 → 다음 날 시가 매수 · 이익 시(+5% 이상) 20일선 이탈 → 다음 날 시가 청산 · 손절 4.5 ATR (최대 -10%) (평균 약 42일)',
+      logSub: 'RSI(2) 15 미만 + QQQ 200일선 위 매수 · 손절 4.5 ATR (최대 -10%) · 이익 중 20일선 이탈 시 다음 날 시가 청산 (평균 약 42일)'
     }
   };
   function stratKey() { return state.strategy === 'swing' ? 'swing' : 'trend'; }
@@ -511,12 +511,12 @@
     var bullish = a.score >= 45;
     var lvEL = $('#lvEntryL'), lvSL = $('#lvStopL'), lvTL = $('#lvTargetL'), lvRL = $('#lvRRL');
     if (a.stratKey === 'swing') {
-      /* 스윙형: 다음 시가 진입 · 손절 4.5 ATR · 고정 보유기간 없이 이익 중 20일선 이탈 청산 */
+      /* 스윙형: 다음 시가 진입 · 손절 4.5 ATR(최대 -10%) · 고정 보유기간 없이 이익 중 20일선 이탈 청산 */
       var p = a.plan || {};
       var on = !!p.signal;
       if (lvEL) lvEL.textContent = on ? '진입 · 다음 시가 매수' : '진입 대기 · RSI(2) 15 미만';
       $('#lvEntry').textContent = usd(p.entryRef != null ? p.entryRef : a.price);
-      if (lvSL) lvSL.textContent = '손절가 · 4.5 ATR';
+      if (lvSL) lvSL.textContent = '손절가 · 4.5 ATR (최대 -10%)';
       $('#lvStop').textContent = usd(p.stopPrice);
       if (lvTL) lvTL.textContent = '청산 기준 · 이익 중 20일선 이탈';
       var tEl = $('#lvTarget');
@@ -1153,8 +1153,10 @@
     /* 목표 · 무효화 · 클러스터 · 채널 · 시나리오 */
     var rows = [];
     (e.targets || []).forEach(function (t, i) {
+      var val = t.bad ? '계산 불가(하락폭 초과)' : (t.floor ? '$0' : usd(t.lo)) + ' ~ ' + usd(t.hi);
+      var note = t.name + (t.floor ? ' · 하락 목표 하한 $0' : '');
       rows.push('<div class="ew-fib-row tgt"><div class="k"><i></i>' + (i === 0 ? '다음 목표가 구간' : '2차 목표 구간') + '</div>' +
-        '<div class="v">' + usd(t.lo) + ' ~ ' + usd(t.hi) + '</div><div class="s">' + t.name + '</div></div>');
+        '<div class="v">' + val + '</div><div class="s">' + note + '</div></div>');
     });
     (e.supports || []).forEach(function (s) {
       if (e.inv && Math.abs(s.price - e.inv.price) / Math.max(Math.abs(e.inv.price), 1e-9) < 0.002) return;
@@ -1662,7 +1664,7 @@
     if (state.show.ew && a.elliott && a.elliott.ok) {
       var span0 = Math.max(hi - lo, 1e-6), ewa = (typeof ewScnOf === 'function' ? ewScnOf(a) : a.elliott) || a.elliott;
       var gs = [];
-      if (ewa.targets && ewa.targets[0]) gs.push(ewa.targets[0].lo, ewa.targets[0].hi);
+      if (ewa.targets && ewa.targets[0] && !ewa.targets[0].bad) gs.push(ewa.targets[0].lo, ewa.targets[0].hi);
       if (ewa.supports && ewa.supports[0]) gs.push(ewa.supports[0].price);
       if (ewa.inv) gs.push(ewa.inv.price);
       gs.forEach(function (v) {
@@ -2168,18 +2170,22 @@
     var gx0 = Math.min(QE.clamp(self.x(Math.min(e.to.i, i1)), L.padL, xr), xr - L.plotW * 0.34);
     var tags = [];
     e.targets.slice(0, 1).forEach(function (t) {
+      if (t.bad) return;
       var yl = Y(t.lo), yh = Y(t.hi);
-      if (Math.min(yl, yh) > L.price.y + L.price.h || Math.max(yl, yh) < L.price.y) return;
+      var py0 = L.price.y, py1 = L.price.y + L.price.h;
+      if (Math.min(yl, yh) > py1 || Math.max(yl, yh) < py0) return;
+      /* 구간이 패널 밖으로 나가도(하한 $0 클램프 등) 패널 안으로 잘라서 그린다 */
+      var ra = Math.max(Math.min(yl, yh), py0), rb = Math.min(Math.max(yl, yh), py1);
       ctx.fillStyle = 'rgba(16,185,129,.085)';
-      ctx.fillRect(gx0, Math.min(yl, yh), xr - gx0, Math.max(Math.abs(yh - yl), 1));
+      ctx.fillRect(gx0, ra, xr - gx0, Math.max(rb - ra, 1));
       ctx.setLineDash([4, 3]);
       ctx.strokeStyle = 'rgba(52,211,153,.5)'; ctx.lineWidth = 1;
       [t.lo, t.hi].forEach(function (v) {
-        var yy = Y(v);
+        var yy = Math.min(Math.max(Y(v), py0), py1);
         ctx.beginPath(); ctx.moveTo(gx0, yy); ctx.lineTo(xr, yy); ctx.stroke();
       });
       ctx.setLineDash([]);
-      tags.push({ y: (yl + yh) / 2, text: '목표 ' + pxs(t.lo) + '~' + pxs(t.hi), c: '#6EE7B7', bg: 'rgba(6,44,34,.92)' });
+      tags.push({ y: (ra + rb) / 2, text: '목표 ' + pxs(t.lo) + '~' + pxs(t.hi), c: '#6EE7B7', bg: 'rgba(6,44,34,.92)' });
     });
     if (e.inv) {
       var yi = Y(e.inv.price);

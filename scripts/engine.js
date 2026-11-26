@@ -433,20 +433,24 @@
             ② QQQ 종가 > QQQ 200일 단순이동평균
              → 신호 다음 거래일 시가 매수
        청산 고정 보유기간 없음 — 종가에 아래 조건을 확인해 다음 날 시가 매도
-            ① 손절  진입가 − 4.5 × ATR(14)  (장중 지정가, 갭이면 시가)
+            ① 손절  min(진입가 − 4.5 × ATR(14), 진입가 −10%)  (장중 지정가, 갭이면 시가)
             ② 이익 상태(평가수익 +5% 이상)에서 종가가 20일 단순이동평균 아래로
        비용  매수·매도 각 0.03%
      지표·신호는 당일 종가까지만 사용 — 미래참조 없음
-     백테스트 (99종목, 2021-11-26~2026-11-25 5년, 2022년 하락장 포함): 이익 +5% 게이트 기준
-       평균 +91.0% · 승률 약 62% · 보유초과 29/99 · 평균 MDD 약 -38.6% · 평균 보유 약 49일
+     손절 상한: 진입가 −10% (4.5 ATR 손절선이 그보다 멀 때만 적용) — 대형 손절 방어
+     백테스트 (99종목, 2021-11-26~2026-11-25 5년, 2022년 하락장 포함): 이익 +5% 게이트 + -10% 상한 기준
+       평균 +87.37% · 중앙 +60.34% · 승률 57.6% · 보유초과 35/99 · 평균 MDD -36.90% · 평균 보유 41.5일
+       (상한 없던 직전 기준: 평균 +90.98% · 중앙 +54.46% · 승률 62.1% · 평균 MDD -38.62% · 평균 보유 48.7일)
        (직전 +1% 게이트: 평균 +81.87% · 중앙 +53.21% · 승률 77.1% · 평균 보유 21.8일)
        (직전 단기 청산 G3는 +41.19% · 중앙 +26.29% · 승률 80.1% · 평균 보유 11.2일)
      ============================================================ */
   var SWING_P = {
     rsiLen: 2, rsiEntry: 15, qqqMa: 200, useMarketFilter: true,
     ma20Exit: true,            /* 이익 상태에서 종가 < 20일선이면 다음 날 시가 청산 */
-    ma20Gate: 0.05,            /* '이익 상태' = 평가수익 +5% 이상 (99종목 5년 평균 +91.0% · 승률 62% · 평균 보유 49일) */
-    stopAtr: 4.5, fee: 0.0003, warmup: WARMUP
+    ma20Gate: 0.05,            /* '이익 상태' = 평가수익 +5% 이상 (99종목 5년 -10% 상한 기준 평균 +87.4% · 승률 57.6% · 평균 보유 41.5일) */
+    stopAtr: 4.5,              /* 진입가 − 4.5 × ATR */
+    stopCap: 0.10,             /* 손절 상한 — 4.5 ATR이 −10%보다 멀면 −10%에서 먼저 청산 (대형 손절 방어) */
+    fee: 0.0003, warmup: WARMUP
   };
   var _swingMap = null;
   function swingOpts(o) {
@@ -501,10 +505,11 @@
       rsi2: rNow, rsi2Prev: r2[i - 1], rsi14: r14, ma5: ind.ma5[i], ma20: ind.ma20[i],
       qqq: rec ? rec.qqq : null, qqqMa: rec ? rec.ma : null, marketOk: mktOk,
       entryRef: series.c[i],                 /* 다음 거래일 시가 체결 — 참고가는 당일 종가 */
-      stopPrice: series.c[i] - o.stopAtr * atrNow,
+      stopPrice: Math.max(series.c[i] - o.stopAtr * atrNow, series.c[i] * (1 - o.stopCap)),
+      stopCap: o.stopCap,
       stopAtr: o.stopAtr, atr: atrNow, target: null,
       exitNow: null,                          /* 보유 중일 때만 — 이익 상태 & 종가<20일선 */
-      exitRule: '손절 -' + o.stopAtr + ' ATR · 이익(+' + Math.round(o.ma20Gate * 100) + '% 이상) 중 20일선 이탈 → 다음 날 시가 청산 (고정 보유기간 없음 · 평균 49일)',
+      exitRule: '손절 min(' + o.stopAtr + ' ATR, -' + Math.round(o.stopCap * 100) + '%) · 이익(+' + Math.round(o.ma20Gate * 100) + '% 이상) 중 20일선 이탈 → 다음 날 시가 청산 (고정 보유기간 없음 · 평균 42일)',
       reason: sig
         ? 'RSI(2) ' + rNow.toFixed(1) + ' — 과매도 극단 · QQQ 200일선 위 (다음 시가 매수)'
         : 'RSI(2) ' + (rNow == null ? '—' : rNow.toFixed(1)) +
@@ -544,7 +549,8 @@
       pendEntry = false;
       /* 2) 장중 손절 (지정가, 갭 하락이면 시가) */
       if (pos) {
-        var lvl = pos.entry - o.stopAtr * pos.atr0;
+        /* 손절 = min(진입가 − 4.5 ATR, 진입가 −10%) — 두 선 중 더 가까운(높은) 가격에서 먼저 청산 */
+        var lvl = Math.max(pos.entry - o.stopAtr * pos.atr0, pos.entry * (1 - o.stopCap));
         if (L[i] <= lvl) closeAt(Math.min(O[i], lvl), i, lvl >= pos.entry ? '이익보전' : '손절');
       }
       /* 3) 종가 판단 — 차트 청산 / 신규 진입 */
@@ -1414,6 +1420,8 @@
     if (!best) return null;
     best.upper = Math.max(best.endBase, best.endPara);
     best.lower = Math.min(best.endBase, best.endPara);
+    if (!isFinite(best.upper) || best.upper < 0.01) best.upper = 0.01;
+    if (!isFinite(best.lower) || best.lower < 0.01) best.lower = 0.01;
     best.far = bestD > 0.12;                      /* 현재가가 채널을 크게 벗어남 */
     best.dist = bestD;
     return best;
@@ -1489,10 +1497,22 @@
     var price = series.c[series.c.length - 1];
     var P = function (w) { return pts[w].p; };
     var plan = { targets: [], supports: [], inv: null, comment: '', bias: 'neu', dir: dir };
+    var FLOOR = 0.01;                      /* 주가 하한 — 음수 달러가 화면에 나오지 않게 클램프 */
     var w1 = cd.L.w1, w3 = cd.L.w3 || w1;
     var up = dir > 0;
-    var zone = function (name, a, b) { return { name: name, lo: Math.min(a, b), hi: Math.max(a, b) }; };
-    var ztxt = function (z) { return px(z.lo) + '~' + px(z.hi); };
+    var zone = function (name, a, b) {
+      var rlo = Math.min(a, b), rhi = Math.max(a, b);
+      if (!isFinite(rlo) || !isFinite(rhi) || rhi <= FLOOR) return { name: name, lo: FLOOR, hi: FLOOR, bad: true };
+      if (rlo < FLOOR) return { name: name, lo: FLOOR, hi: rhi, floor: true };
+      return { name: name, lo: rlo, hi: rhi };
+    };
+    /* 음수 달러 표기 금지 — 목표가 하한은 $0.01, 완전히 0 미만이면 계산 불가로 표시 */
+    var ztxt = function (z) {
+      if (z.bad) return '계산 불가($0 미만)';
+      if (z.floor) return '$0(하한)~' + px(z.hi);
+      return px(z.lo) + '~' + px(z.hi);
+    };
+    var pxsafe = function (v) { return px(Math.max(v, FLOOR)); };
     var rtxt = function (a, b) { return px(Math.min(a, b)) + '~' + px(Math.max(a, b)); };
     var hiSide = up ? '고점' : '저점';
     var loSide = up ? '저점' : '고점';
@@ -1566,7 +1586,7 @@
         plan.inv = { price: P(5), name: '5파 ' + hiSide };
         plan.comment = 'A파가 ' + px(P(5)) + '→' + px(A0) + ' (' + (aLen0 / Math.abs(P(5) - P(0)) * 100).toFixed(0) +
           '% 되돌림)에서 완료되고 B파 되돌림이 진행 중입니다. B파 목표는 A파의 0.382~0.618 되돌림 ' + ztxt(bz) +
-          '이고, B파가 끝나면 C파가 A파와 등가(약 ' + px(cMid) + ')까지 열립니다. ' +
+          '이고, B파가 끝나면 C파가 A파와 등가(약 ' + pxsafe(cMid) + ')까지 열립니다. ' +
           (up ? '5파 고점 ' : '5파 저점 ') + px(P(5)) + (up ? '을 다시 넘으면' : '을 다시 이탈하면') + ' 조정 카운트가 무효입니다.';
       } else if (post.length === 2) {
         var A2 = post[0].p, B2 = post[1].p, aLen3 = Math.abs(A2 - P(5));
@@ -1574,7 +1594,9 @@
         plan.targets.push(cz);
         plan.supports.push({ name: 'A파 ' + loSide, price: A2 });
         plan.inv = { price: B2, name: 'B파 ' + hiSide };
-        plan.comment = 'B파 반등 후 C파를 준비하는 자리입니다. C파 목표 ' + ztxt(cz) + '까지 열려 있고, ' +
+        plan.comment = 'B파 반등 후 C파를 준비하는 자리입니다. ' +
+          (cz.bad ? 'C파 목표는 A파 대비 하락폭이 커 $0 미만(계산 불가)입니다. '
+                  : 'C파 목표 ' + ztxt(cz) + '까지 열려 있고, ') +
           'B파 ' + hiSide + ' ' + px(B2) + ' 돌파 시 조정이 끝난 것으로 봅니다.';
       } else if (post.length === 3) {
         var A3 = post[0].p, C3 = post[2].p, cw = Math.abs(A3 - P(5));
@@ -1594,6 +1616,9 @@
       }
     }
     plan.bias = (k < 5) ? (up ? 'bull' : 'bear') : 'neu';
+    /* 안전망: 어떤 경로로도 음수 가격이 화면·차트에 닿지 않도록 지지·무효화 가격도 하한 처리 */
+    plan.supports.forEach(function (s) { if (!isFinite(s.price) || s.price < FLOOR) s.price = FLOOR; });
+    if (plan.inv && (!isFinite(plan.inv.price) || plan.inv.price < FLOOR)) plan.inv.price = FLOOR;
     if (plan.inv) plan.inv.side = plan.inv.price > price ? '돌파' : '이탈';
     return plan;
   }
