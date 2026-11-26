@@ -660,7 +660,9 @@
     var sub = $('#fundSub');
     if (sub) {
       var fd = (M.fundamentals && M.fundamentals.asOf) || '—';
-      var parts = [a.meta.t, a.meta.nk, a.meta.sk || a.meta.s || ''];
+      var sec = a.meta.sk || a.meta.s || '';
+      var parts = [a.meta.t, a.meta.nk];
+      if (sec && !(isETF && sec === 'ETF')) parts.push(sec);
       sub.textContent = parts.join(' · ') +
         ' · ' + (isETF ? 'ETF — 개별 기업 펀더멘털 없음' : '기업 펀더멘털') +
         ' · 기준일 ' + fd + ' (Yahoo Finance)';
