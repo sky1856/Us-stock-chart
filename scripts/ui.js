@@ -810,7 +810,7 @@
     $('#recentList').innerHTML = t.length ? t.map(function (x) {
       var open = x.reason === '보유중';
       return '<div class="it"><span class="d">' + x.exitDate.slice(2) + '</span>' +
-        '<div class="m"><b style="color:' + (open ? '#38BDF8' : (x.reason === '손절' ? '#FB7185' : x.reason === '이익보전' ? '#34D399' : '#9BA6BA')) + '">' +
+        '<div class="m"><b style="color:' + (open ? '#38BDF8' : (x.reason === '손절' ? '#FB7185' : (x.reason === '이익보전' || x.reason === '트레일') ? '#34D399' : '#9BA6BA')) + '">' +
         (open ? '보유 중' : x.reason) + '</b>' +
         '<span>' + usd(x.entry) + ' → ' + usd(x.exit) + ' · ' + Math.round(x.hold || 0) + '일</span></div>' +
         '<span class="r ' + cls(x.ret) + '">' + pct(x.ret, 1) + '</span></div>';

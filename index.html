@@ -843,7 +843,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
       <div class="levels">
         <div><label>진입 참고 구간</label><b id="lvEntry">—</b></div>
         <div><label>손절가 · 6 ATR</label><b class="neg" id="lvStop">—</b></div>
-        <div><label>트레일 기준 · 12 ATR</label><b class="pos" id="lvTarget">—</b></div>
+        <div><label>트레일 기준 · 10 ATR</label><b class="pos" id="lvTarget">—</b></div>
         <div><label>손익비 (R:R)</label><b id="lvRR">—</b></div>
       </div>
     </section>
@@ -1066,7 +1066,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
 
     <section class="card table-card">
       <div class="panel-h">
-        <div><h3>트레이드 로그 · <span id="logTicker">—</span></h3><p id="logSub">종합점수 50 이상 매수 → 시장약세·손절(6 ATR)·트레일(12 ATR) 청산</p></div>
+        <div><h3>트레이드 로그 · <span id="logTicker">—</span></h3><p id="logSub">종합점수 50 이상 매수 · 시장 단계(100/50/0%) 방어 · 손절 6 ATR · 트레일 10 ATR 청산</p></div>
         <div class="legend" id="logStats"></div>
       </div>
       <div class="tbl-wrap">
@@ -1456,11 +1456,17 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
   }
 
   /* ============================================================
-     Backtest (v2 — 2026-11 개선안, bt_opt 연구 결과)
-     · 진입: 종합점수 ENTRY 이상이면 다음 거래일 시가 매수 (추세 유지형)
-     · 청산: ① 시장(QQQ) 100일선 하락 전환+종가 아래 → 전량
-             ② 샹들리에 트레일(고가 고점 - 12×ATR, +6×ATR 이익 이후)
-             ③ 손절(평단가 - 6×ATR)
+     Backtest (v3 — 2026-11 bt_opt 최종 후보 best_combined.js 이식)
+     · 시장 레짐 3단계 노출목표 (QQQ, 당일 종가 판단)
+         - QQQ < 100일선 & 100일선 20일 하락 → 0%  (전량 청산)
+         - QQQ < 100일선 & 100일선 20일 상승 → 50% (보유·신규 진입 50%)
+         - 50% 구간에서 QQQ가 20일선을 잃으면  → 0%
+         - 0% 구간에서 QQQ가 50일선 회복       → 100%,
+           또는 20일선 2일 연속 상회           → 50%
+     · 진입: 종합점수 ENTRY(50) 이상이면 다음 거래일 시가, 비중은 노출목표 비례
+     · 청산: ① 손절(평단가 - 6×ATR)
+             ② 샹들리에 트레일(고가 고점 - 10×ATR, +6×ATR 이익 이후 작동)
+             ③ 시장 단계 0%(전량 청산)
      · 미래참조 없음: 모든 판단은 당일 종가, 체결은 다음 거래일 시가
      · 매수·매도 각 FEE(0.03%)
      ============================================================ */
@@ -1470,26 +1476,28 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
     if (!MKT || !MKT.series || !MKT.series.QQQ) return null;
     var key = MKT.asOf || 'na';
     if (_regCache && _regCache.key === key) return _regCache.map;
-    var c = MKT.series.QQQ.c, dts = MKT.dates, n = c.length, P = 100, SLP = 20, PE = 50;
-    var ma = new Array(n), s = 0, maE = new Array(n), se2 = 0, map = {};
-    for (var i = 0; i < n; i++) {
-      s += c[i];
-      if (i >= P) s -= c[i - P];
-      ma[i] = i >= P - 1 ? s / P : null;
-      se2 += c[i];
-      if (i >= PE) se2 -= c[i - PE];
-      maE[i] = i >= PE - 1 ? se2 / PE : null;
-    }
-    /* 비대칭 레짐: 느린 청산(QQQ 종가 < 100일선 그리고 100일선 하락) /
-       빠른 재진입(QQQ 종가 > 50일선) */
-    var on = true;
+    var c = MKT.series.QQQ.c, dts = MKT.dates, n = c.length;
+    var ma100 = sma(c, 100), ma50 = sma(c, 50), ma20 = sma(c, 20);
+    var map = {}, tw = 1, streak = 0;
     for (var j = 0; j < n; j++) {
-      if (on) {
-        if (ma[j] != null && j >= SLP && ma[j - SLP] != null && c[j] < ma[j] && ma[j] < ma[j - SLP]) on = false;
+      var sl = (j >= 20 && ma100[j] != null && ma100[j - 20] != null) ? ma100[j] - ma100[j - 20] : null;
+      var above20 = (ma20[j] != null && c[j] > ma20[j]);
+      var below20 = (ma20[j] != null && c[j] < ma20[j]);
+      var below100 = (ma100[j] != null && c[j] < ma100[j]);
+      var above100 = (ma100[j] != null && c[j] > ma100[j]);
+      var ma50ok = (ma50[j] != null && c[j] > ma50[j]);
+      streak = above20 ? streak + 1 : 0;          /* 20일선 위 연속 종가 일수 */
+      if (tw >= 1) {
+        if (below100) tw = (sl != null && sl < 0) ? 0 : 0.5;
+      } else if (tw === 0.5) {
+        if (ma50ok || above100) tw = 1;
+        else if (below20) tw = 0;
+        else if (sl != null && sl < 0) tw = 0;
       } else {
-        if (maE[j] != null && c[j] > maE[j]) on = true;
+        if (ma50ok) tw = 1;
+        else if (streak >= 2) tw = 0.5;
       }
-      map[dts[j]] = (ma[j] == null) ? true : on;
+      map[dts[j]] = { tw: tw, st: tw === 0 ? 'risk' : (tw < 1 ? 'caution' : 'normal') };
     }
     _regCache = { key: key, map: map };
     return map;
@@ -1499,7 +1507,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
     opts = opts || {};
     var ENTRY = opts.entry !== undefined ? opts.entry : 50;
     var STOP_ATR = opts.stopAtr !== undefined ? opts.stopAtr : 6;
-    var TRAIL_ATR = opts.trailAtr !== undefined ? opts.trailAtr : 12;
+    var TRAIL_ATR = opts.trailAtr !== undefined ? opts.trailAtr : 10;
     var TRAIL_START = opts.trailStartAtr !== undefined ? opts.trailStartAtr : 6;
     var FEE = opts.fee !== undefined ? opts.fee : 0.0003;
     var WARM = opts.warmup !== undefined ? opts.warmup : 210;
@@ -1508,69 +1516,88 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
     var c = series.c, o = series.o, h = series.h, l = series.l, d = series.d;
     var n = c.length;
     var S = sc.score, A = ind.atr;
-    var rm = USE_REGIME ? marketRegimeMap() : null;
-    var reg = null;
-    if (rm) { reg = new Array(n); for (var q = 0; q < n; q++) reg[q] = rm[d[q]] !== false; }
+    var RM = USE_REGIME ? (opts.regime || marketRegimeMap()) : null;
 
-    var trades = [], equity = new Array(n).fill(null);
-    var pos = null, eq = 1, i, inMarket = 0, bars = 0, pendEntry = false, pendExit = null;
-    var startIdx = Math.min(Math.max(WARM, 60), n - 2);
+    var first = Math.min(Math.max(WARM, 60), n - 2);
+    var equity = new Array(n).fill(null), trades = [];
+    var cash = 1, pos = null, i;
+    var pendEntry = false, pendExit = null, pendW = 1, targetW = 1, bars = 0, inMarket = 0;
 
-    for (i = startIdx; i < n; i++) {
-      /* 1) 전일 종가 신호 → 오늘 시가 체결 */
-      if (pos && pendExit) {
-        trades.push(finish(pos, i, o[i], pendExit, d[i], false));
-        eq *= (1 + posWeighted(pos, o[i])) * (1 - FEE) * (1 - FEE);
-        pos = null;
-      }
-      pendExit = null;
-      if (!pos && pendEntry) {
-        var atr0 = nz(A[i - 1], 0);
-        if (atr0 > 0) {
-          var px = o[i];
-          pos = { entry: px, entryIdx: i, entryDate: d[i], atr0: atr0,
-            stop: px - (STOP_ATR > 0 ? STOP_ATR * atr0 : 1e9), peakH: Math.max(h[i], px),
-            partialFrac: 0, partialPx: 0 };
-        }
-        pendEntry = false;
-      }
-      /* 2) 장중 손절 */
-      if (pos) {
-        if (l[i] <= pos.stop) {
-          var fillS = Math.min(o[i], pos.stop);
-          trades.push(finish(pos, i, fillS, fillS >= pos.entry ? '이익보전' : '손절', d[i], false));
-          eq *= (1 + posWeighted(pos, fillS)) * (1 - FEE) * (1 - FEE);
-          pos = null;
-        } else {
-          if (h[i] > pos.peakH) pos.peakH = h[i];
-          var atrNow = nz(A[i], pos.atr0);
-          if (pos.peakH > pos.entry + TRAIL_START * pos.atr0) {
-            var tr = pos.peakH - TRAIL_ATR * atrNow;
-            if (tr > pos.stop) pos.stop = tr;
-          }
-        }
-      }
-      /* 3) 종가 판단 */
-      if (pos) {
-        if (reg && !reg[i]) pendExit = '시장약세';
-      } else {
-        if (S[i] != null && S[i] >= ENTRY && (!reg || reg[i]) && nz(A[i], 0) > 0) pendEntry = true;
-      }
-      /* 4) 평가 */
-      equity[i] = eq * (1 + (pos ? posWeighted(pos, c[i]) : 0));
-      bars++;
-      if (pos) inMarket++;
+    function eqAt(px) { return cash + (pos ? pos.shares * px : 0); }
+    function openPos(px, w, idx) {
+      var e0 = eqAt(px), notional = e0 * Math.min(w, 1);
+      if (!(notional > 0) || !(px > 0)) return;
+      var atr0 = A[idx - 1] > 0 ? A[idx - 1] : A[idx];
+      if (!(atr0 > 0)) return;
+      var sh = notional / px;
+      cash -= notional + notional * FEE;
+      pos = { entry: px, entryIdx: idx, entryDate: d[idx], atr0: atr0, shares: sh, initShares: sh,
+        realized: 0, peakH: Math.max(h[idx], px), w: Math.min(w, 1), trailStop: null,
+        stop: px - (STOP_ATR > 0 ? STOP_ATR * atr0 : 1e9) };
     }
-    if (pos) {
-      trades.push(finish(pos, n - 1, c[n - 1], '보유중', d[n - 1], true));
-      eq *= (1 + posWeighted(pos, c[n - 1])) * (1 - FEE) * (1 - FEE);
-      equity[n - 1] = eq;
+    function sell(sh, px) {
+      sh = Math.min(sh, pos.shares); if (!(sh > 0)) return;
+      cash += sh * px * (1 - FEE);
+      pos.shares -= sh;
+      pos.realized += (sh / pos.initShares) * (px / pos.entry - 1);
+    }
+    function closePos(px, idx, reason) {
+      if (pos.shares > 1e-12) sell(pos.shares, px);
+      trades.push({ entryDate: pos.entryDate, entry: pos.entry, exitDate: d[idx], exit: px,
+        ret: pos.realized, hold: idx - pos.entryIdx, reason: reason, w: pos.w, open: false });
       pos = null;
     }
+    /* 레짐 노출목표로 비중 축소·확대 (시가 체결, 2% 이내 차이는 손대지 않음) */
+    function scaleTo(w, px) {
+      var e = eqAt(px), target = w * e, val = pos.shares * px;
+      if (val <= 0) return;
+      if (target < val * 0.98) sell(pos.shares * (1 - target / val), px);
+      else if (target > val * 1.02) {
+        var delta = Math.min(target - val, cash);
+        if (delta > 0) { var sh = delta / px; cash -= delta * (1 + FEE); pos.shares += sh; pos.initShares += sh; }
+      }
+    }
+
+    for (i = first; i < n; i++) {
+      /* 1) 시가 집행 — 비중·청산은 직전 종가에 결정된 값 (미래참조 없음) */
+      if (pos && pendExit) closePos(o[i], i, pendExit);
+      pendExit = null;
+      if (pos) scaleTo(targetW, o[i]);
+      if (!pos && pendEntry) { openPos(o[i], pendW, i); pendEntry = false; }
+
+      /* 2) 장중 손절·트레일 */
+      if (pos) {
+        var atrNow = A[i] > 0 ? A[i] : pos.atr0;
+        if (pos.peakH > pos.entry + TRAIL_START * pos.atr0) {
+          var tr = pos.peakH - TRAIL_ATR * atrNow;
+          if (pos.trailStop == null || tr > pos.trailStop) pos.trailStop = tr;
+        }
+        var lvl = Math.max(pos.stop, pos.trailStop == null ? -Infinity : pos.trailStop);
+        if (l[i] <= lvl) {
+          var fill = Math.min(o[i], lvl);
+          closePos(fill, i, pos.trailStop != null && pos.trailStop >= pos.stop ? '트레일'
+            : (fill >= pos.entry ? '이익보전' : '손절'));
+        } else if (h[i] > pos.peakH) pos.peakH = h[i];
+        if (pos && pos.shares > 1e-6) inMarket++;
+      }
+
+      /* 3) 종가 판단 */
+      var rg = (RM && RM[d[i]]) || { tw: 1, st: 'normal' };
+      if (pos) {
+        if (rg.tw === 0) pendExit = '시장약세';
+        else targetW = rg.tw;
+      } else {
+        if (S[i] != null && S[i] >= ENTRY && nz(A[i], 0) > 0 && rg.tw > 0) { pendEntry = true; pendW = rg.tw; }
+      }
+      equity[i] = eqAt(c[i]);
+      bars++;
+    }
+    if (pos) closePos(c[n - 1], n - 1, '보유중');
+    equity[n - 1] = cash;
+
     /* ---- stats (기존과 동일 필드) ---- */
-    var first = startIdx;
     var bh = c[n - 1] / c[first] - 1;
-    var total = eq - 1;
+    var total = cash - 1;
     var wins = trades.filter(function (t) { return t.ret > 0; });
     var losses = trades.filter(function (t) { return t.ret <= 0; });
     var gp = wins.reduce(function (a, t) { return a + t.ret; }, 0);
@@ -1591,7 +1618,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
     }
     var days = n - 1 - first;
     var years = days / 252;
-    var cagr = years > 0 ? Math.pow(Math.max(eq, 1e-6), 1 / years) - 1 : 0;
+    var cagr = years > 0 ? Math.pow(Math.max(cash, 1e-6), 1 / years) - 1 : 0;
     var rets = [];
     for (i = first + 1; i < n; i++) {
       if (equity[i] != null && equity[i - 1] != null && equity[i - 1] > 0)
@@ -1613,34 +1640,6 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
         avgLoss: losses.length ? -gl / losses.length : 0,
         exposure: bars ? inMarket / bars : 0
       }
-    };
-  }
-
-  /* weighted (unrealised) return of the remaining + already-sold portion */
-  function posWeighted(pos, px) {
-    if (!pos.partialFrac) return px / pos.entry - 1;
-    var rest = 1 - pos.partialFrac;
-    return pos.partialFrac * (pos.partialPx / pos.entry - 1) + rest * (px / pos.entry - 1);
-  }
-  /* multiplier applied to account equity when closing the whole position */
-  function applyExit(pos, px, fee) {
-    var r = posWeighted(pos, px);
-    return (1 + r) * (1 - fee) * (1 - fee);
-  }
-
-  function finish(pos, idx, px, reason, date, open) {
-    if (pos.partialFrac) {
-      return { entryDate: pos.entryDate, entry: pos.entry,
-        exitDate: date, exit: px,
-        ret: posWeighted(pos, px), hold: idx - pos.entryIdx, reason: reason, open: !!open,
-        partial: true, partialPx: pos.partialPx, partialFrac: pos.partialFrac };
-    }
-    return finishPlain(pos, idx, px, reason, date, open);
-  }
-  function finishPlain(pos, idx, px, reason, date, open) {
-    return {
-      entryDate: pos.entryDate, entry: pos.entry, exitDate: date, exit: px,
-      ret: px / pos.entry - 1, hold: idx - pos.entryIdx, reason: reason, open: !!open
     };
   }
 
@@ -2786,7 +2785,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
       vol: series.v[i], volAvg: ind.volSma[i], volRatio: ind.volSma[i] ? series.v[i] / ind.volSma[i] : null,
       hi52: Math.max.apply(null, series.h.slice(Math.max(0, n - 252))),
       lo52: Math.min.apply(null, series.l.slice(Math.max(0, n - 252))),
-      stop: price - 6 * atrNow, target: price + 12 * atrNow,
+      stop: price - 6 * atrNow, target: price + 10 * atrNow,
       entryZone: [Math.max(price - 1.2 * atrNow, ind.ma20[i] || price), price + 0.3 * atrNow],
       lastDate: series.d[i],
       hist: { score: sc.score.slice(-260), dates: series.d.slice(-260) },
@@ -3626,7 +3625,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
     $('#recentList').innerHTML = t.length ? t.map(function (x) {
       var open = x.reason === '보유중';
       return '<div class="it"><span class="d">' + x.exitDate.slice(2) + '</span>' +
-        '<div class="m"><b style="color:' + (open ? '#38BDF8' : (x.reason === '손절' ? '#FB7185' : x.reason === '이익보전' ? '#34D399' : '#9BA6BA')) + '">' +
+        '<div class="m"><b style="color:' + (open ? '#38BDF8' : (x.reason === '손절' ? '#FB7185' : (x.reason === '이익보전' || x.reason === '트레일') ? '#34D399' : '#9BA6BA')) + '">' +
         (open ? '보유 중' : x.reason) + '</b>' +
         '<span>' + usd(x.entry) + ' → ' + usd(x.exit) + ' · ' + Math.round(x.hold || 0) + '일</span></div>' +
         '<span class="r ' + cls(x.ret) + '">' + pct(x.ret, 1) + '</span></div>';
