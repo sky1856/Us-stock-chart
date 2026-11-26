@@ -1491,7 +1491,10 @@ body{
 /* ---------- 13. 좁은 화면 보정 ---------- */
 @media (max-width:900px){
   body{background-size:auto,auto,auto,46px 46px,46px 46px}
-  .fg-card{padding:11px 13px 12px}
+  .fg-card{padding:11px 12px 12px}
+  /* 좁은 화면: 제목 부제(공포·탐욕 시계)를 숨겨 제목·등급 배지·실시간 배지를 한 줄에 */
+  .fg-h em{display:none}
+  .fg-title{gap:7px}
   .sig-badge{padding:3px 10px 4px 11px; border-radius:9px; gap:1px}
   .sig-badge::before{top:7px; bottom:7px}
   .sig-k{font-size:6.5px; letter-spacing:.18em}
