@@ -1,0 +1,49 @@
+# GitHub Actions 자동 갱신 워크플로 (템플릿)
+# 저장소에 Actions(워크플로) 쓰기 권한이 생기면 이 파일을
+# .github/workflows/update-stocks.yml 로 옮기면 그대로 동작합니다.
+# 그전까지 데이터 갱신은 외부 스케줄(매일 아침)로 같은 스크립트를 돌려 커밋합니다.
+
+name: Update stock data
+
+# 미국 증시 마감 이후 자동 실행 (화~토 21:30 UTC = 수~일 06:30 KST)
+on:
+  schedule:
+    - cron: '30 21 * * 2-6'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-stocks
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Fetch latest daily bars (Yahoo Finance) and rebuild data.js
+        run: python scripts/update_data.py
+
+      - name: Build index.html
+        run: python scripts/build.py
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- scripts/data.js index.html; then
+            echo "변경 없음 - 커밋 생략"
+            exit 0
+          fi
+          git add scripts/data.js index.html
+          git commit -m "data: $(date -u +'%Y-%m-%d') 자동 갱신"
+          git push
