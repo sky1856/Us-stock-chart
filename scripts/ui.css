@@ -95,6 +95,55 @@ input,select{font-family:inherit;color:inherit}
 .pill.on{border-color:rgba(56,189,248,.5);background:rgba(56,189,248,.09);
   box-shadow:0 0 0 1px rgba(56,189,248,.16), 0 8px 20px -14px rgba(56,189,248,.8)}
 .pill.on b{color:#BFE9FF}
+
+/* ---------- 관심종목 편집 ---------- */
+.fav-wrap{display:flex;align-items:center;gap:6px;flex:0 0 auto;position:relative}
+.fav-pills{display:flex;gap:6px;flex:0 1 auto;max-width:min(46vw,520px);overflow-x:auto;overflow-y:visible;
+  padding:0 2px;scrollbar-width:none}
+.fav-pills::-webkit-scrollbar{display:none}
+.pill{position:relative}
+.pill .x{position:absolute;top:-5px;right:-5px;width:15px;height:15px;border-radius:50%;padding:0;
+  display:grid;place-items:center;font-size:11px;font-style:normal;line-height:1;
+  background:#1C2432;border:1px solid rgba(255,255,255,.14);color:var(--txt3);opacity:.6;transition:.14s}
+.pill:hover .x{opacity:1}
+.pill .x:hover{background:#3A1520;border-color:rgba(244,63,94,.6);color:#FDA4AF;opacity:1}
+.fav-add{display:flex;align-items:center;gap:3px;height:34px;white-space:nowrap;
+  font-size:11px;font-weight:600;color:var(--txt2);padding:0 9px;border-radius:9px;
+  border:1px dashed rgba(255,255,255,.16);background:rgba(255,255,255,.015);transition:.16s}
+.fav-add span{font-size:12px;line-height:1;opacity:.85}
+.fav-add:hover{color:#BFE9FF;border-color:rgba(56,189,248,.5);background:rgba(56,189,248,.08)}
+.fav-pop{display:none;position:absolute;top:calc(100% + 10px);right:0;width:336px;max-width:86vw;
+  background:var(--elev);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);
+  padding:8px;z-index:92}
+.fav-pop.on{display:block}
+.fp-search{position:relative;margin-bottom:6px}
+.fp-search svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:var(--txt3)}
+.fp-search input{width:100%;padding:8px 10px 8px 28px;border-radius:9px;font-size:12px;
+  background:#0E131C;border:1px solid var(--line);outline:none}
+.fp-search input:focus{border-color:rgba(56,189,248,.45)}
+.fp-list{max-height:298px;overflow:auto;display:flex;flex-direction:column;gap:1px}
+.fp-row{display:flex;align-items:center;gap:8px;width:100%;padding:7px 8px;border-radius:8px;text-align:left;transition:.12s}
+.fp-row:hover{background:var(--hover)}
+.fp-row b{font-family:var(--mono);font-size:11.5px;min-width:54px}
+.fp-row .nm{flex:1;font-size:11.5px;color:var(--txt2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fp-row .ch{font-size:10.5px;font-variant-numeric:tabular-nums;min-width:46px;text-align:right}
+.fp-row .st{font-style:normal;font-size:11px;width:19px;height:19px;display:grid;place-items:center;
+  color:var(--txt3);border:1px solid var(--line);border-radius:6px;flex:0 0 auto}
+.fp-row.on .st{color:#FBBF24;border-color:rgba(251,191,36,.45);background:rgba(251,191,36,.12)}
+.fp-foot{display:flex;align-items:center;justify-content:space-between;margin-top:7px;padding-top:7px;
+  border-top:1px solid var(--line2);font-size:10.5px;color:var(--txt3)}
+.fp-foot button{font-size:10.5px;color:var(--txt3);border:1px solid var(--line);border-radius:6px;padding:2px 8px;transition:.14s}
+.fp-foot button:hover{color:var(--txt);background:var(--hover);border-color:rgba(255,255,255,.18)}
+.hero-fav{font-size:16px;line-height:1;color:var(--txt4);padding:2px 5px;border-radius:7px;transition:.16s;margin-left:-2px}
+.hero-fav:hover{color:#FBBF24;background:rgba(251,191,36,.1)}
+.hero-fav.on{color:#FBBF24}
+.srow .fstar{font-style:normal;font-size:10px;color:var(--txt4);margin-right:4px;cursor:pointer;transition:.14s;vertical-align:1px}
+.srow .fstar:hover{color:#FBBF24}
+.srow .fstar.on{color:#FBBF24}
+@media (hover:none), (max-width:900px){
+  .srow .fstar{font-size:14px;padding:6px 8px;margin:-6px 2px -6px -6px;vertical-align:0}
+  .hero-fav{font-size:20px;padding:2px 6px}
+}
 .pos{color:var(--up2)!important} .neg{color:var(--dn2)!important} .neu{color:var(--amber)!important}
 
 /* ---------- layout ---------- */
@@ -590,7 +639,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
 @media (max-width:1180px){
   .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
   .lower{grid-template-columns:1fr}
-  .fav-pills{display:none}
+  .fav-wrap{display:none}
 }
 @media (max-width:900px){
   .topbar{gap:10px;padding:10px 12px;flex-wrap:wrap}

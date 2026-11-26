@@ -32,7 +32,18 @@
     <kbd>⌘K</kbd>
     <div class="search-pop" id="searchPop"></div>
   </div>
-  <div class="fav-pills" id="favPills"></div>
+  <div class="fav-wrap" id="favWrap">
+    <div class="fav-pills" id="favPills"></div>
+    <button class="fav-add" id="favAdd" title="관심종목 추가 — 102종목 검색"><span>＋</span>추가</button>
+    <div class="fav-pop" id="favPop">
+      <div class="fp-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input id="favSearch" type="text" placeholder="종목 검색 · 티커 또는 회사명" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="fp-list" id="favList"></div>
+      <div class="fp-foot"><span id="favCount">관심 5종목</span><button id="favReset" title="관심종목을 기본 5종목으로 되돌립니다">기본값</button></div>
+    </div>
+  </div>
 </header>
 
 <div class="shell">
@@ -50,7 +61,7 @@
       <button data-f="all" class="on">전체<span class="c" id="cAll">100</span></button>
       <button data-f="buy">매수 신호<span class="c" id="cBuy">0</span></button>
       <button data-f="sell">매도 신호<span class="c" id="cSell">0</span></button>
-      <button data-f="fav">관심 5</button>
+      <button data-f="fav">관심<span class="c" id="cFav">5</span></button>
     </div>
     <div class="side-tools">
       <input id="listSearch" type="text" placeholder="목록 내 검색" autocomplete="off" spellcheck="false">
@@ -73,6 +84,7 @@
         <div class="hero-id">
           <span class="rank-chip" id="heroRank">#—</span>
           <h1 id="heroTicker">—</h1>
+          <button class="hero-fav" id="heroFav" title="관심종목 추가/해제">☆</button>
           <div class="cname"><span id="heroName">—</span><span class="sec" id="heroSector">—</span><span class="asof-chip" id="heroAsOf">—</span></div>
         </div>
         <div class="hero-price">

@@ -24,14 +24,70 @@
   ];
   function narrow() { return window.innerWidth <= 700; }
 
+  /* ---------------- 관심종목 (개인 브라우저 localStorage 저장) ---------------- */
+  var WATCH_KEY = 'apex.watchlist.v1';
+  var WATCH_DEFAULT = M.tickers.filter(function (x) { return x.fav; }).map(function (x) { return x.t; });
+  var watchKnown = {};
+  M.tickers.forEach(function (x) { watchKnown[x.t] = 1; });
+  function isWatch(t) { return state.watch.indexOf(t) >= 0; }
+  function watchPersist() {
+    try { localStorage.setItem(WATCH_KEY, JSON.stringify(state.watch)); } catch (e) {}
+  }
+  function watchRestore() {
+    var saved = null;
+    try {
+      var raw = localStorage.getItem(WATCH_KEY);
+      if (raw) {
+        var v = JSON.parse(raw);
+        if (Array.isArray(v)) saved = v;
+        else if (v && Array.isArray(v.t)) saved = v.t;
+      }
+    } catch (e) { saved = null; }
+    if (!saved) { state.watch = WATCH_DEFAULT.slice(); return; }   /* 저장된 값이 없으면 기본 5종목 */
+    var seen = {};
+    var kept = saved.filter(function (t) {           /* 종목 코드 검증·중복 제거 (데이터셋에 없는 티커는 버린다) */
+      if (typeof t !== 'string' || !watchKnown[t] || seen[t]) return false;
+      seen[t] = 1; return true;
+    });
+    state.watch = kept.length ? kept : (saved.length ? WATCH_DEFAULT.slice() : []);   /* 전부 무효면 기본값 */
+  }
+  function watchToggle(t, force) {
+    if (!watchKnown[t]) return;
+    var has = isWatch(t), want = (force == null) ? !has : !!force;
+    if (want === has) return;
+    state.watch = want ? state.watch.concat([t]) : state.watch.filter(function (x) { return x !== t; });
+    watchPersist();
+    watchRefresh();
+  }
+  function watchRefresh() {
+    renderFavs();
+    var sl = $('#scanList'), st = sl ? sl.scrollTop : 0;
+    renderScanner();
+    if (sl) sl.scrollTop = st;                       /* 별을 찍어도 목록 스크롤이 튀지 않게 */
+    var cf = $('#cFav'); if (cf) cf.textContent = state.watch.length;
+    var fc = $('#favCount'); if (fc) fc.textContent = '관심 ' + state.watch.length + '종목';
+    syncHeroFav();
+    var pop = $('#favPop');
+    if (pop && pop.classList.contains('on')) renderFavPop();
+  }
+  function syncHeroFav() {
+    var b = $('#heroFav'); if (!b) return;
+    var on = isWatch(state.cur);
+    b.textContent = on ? '★' : '☆';
+    b.classList.toggle('on', on);
+    b.title = on ? '관심종목에서 제거 (' + state.cur + ')' : '관심종목에 추가 (' + state.cur + ')';
+  }
+
   var cache = new Map();
   var state = {
     cur: 'NVDA', range: 128, filter: 'all', sort: 'mc', q: '', listQ: '',
     show: { ma: true, ichi: true, bb: true, sig: true, rsi: true, macd: true, ew: true },
     maOn: { 5: true, 20: true, 60: true, 120: true, 240: true },
     simIdx: 0, tool: 'cursor', ewMode: 0,
-    ewShow: { sub: true, ch: true, clu: true }
+    ewShow: { sub: true, ch: true, clu: true },
+    watch: []
   };
+  watchRestore();
   function maVisible(p) { return state.show.ma && state.maOn[p]; }
   function maSeries(a, p) { return a.ind['ma' + p]; }
 
@@ -160,20 +216,54 @@
     var t0 = performance.now();
     M.tickers.forEach(function (x) { A[x.t] = get(x.t); });
     $('#uniCount').textContent = M.tickers.filter(function (x) { return x.r; }).length;
+    var cf = $('#cFav'); if (cf) cf.textContent = state.watch.length;
     renderFavs();
     renderScanner();
     select(state.cur, true);    console.log('[APEX] analyzed ' + M.tickers.length + ' tickers in ' + Math.round(performance.now() - t0) + 'ms');
   }
 
   function renderFavs() {
-    var favs = M.tickers.filter(function (x) { return x.fav; });
-    $('#favPills').innerHTML = favs.map(function (f) {
-      var rv = rowOf(A[f.t]);
-      return '<button class="pill' + (state.cur === f.t ? ' on' : '') + '" data-t="' + f.t + '">' +
-        '<b>' + f.t + '</b><span class="' + cls(rv.change) + '">' + pct(rv.change, 2) + '</span></button>';
+    var el = $('#favPills'); if (!el) return;
+    el.innerHTML = state.watch.map(function (t) {
+      var a = A[t]; if (!a) return '';
+      var rv = rowOf(a);
+      return '<button class="pill' + (state.cur === t ? ' on' : '') + '" data-t="' + t + '" title="' + a.meta.nk + ' · 클릭하여 차트 보기">' +
+        '<b>' + t + '</b><span class="' + cls(rv.change) + '">' + pct(rv.change, 2) + '</span>' +
+        '<i class="x" data-x="' + t + '" role="button" aria-label="' + t + ' 관심종목에서 삭제" title="관심종목에서 삭제">×</i></button>';
     }).join('');
-    $$('#favPills .pill').forEach(function (b) {
-      b.onclick = function () { select(b.dataset.t); };
+    el.onclick = function (e) {
+      var x = e.target.closest('[data-x]');
+      if (x) { e.preventDefault(); e.stopPropagation(); watchToggle(x.getAttribute('data-x'), false); return; }
+      var b = e.target.closest('.pill');
+      if (b) select(b.getAttribute('data-t'));
+    };
+  }
+
+  /* 관심종목 추가 팝오버 — 102종목 검색·토글 */
+  function renderFavPop() {
+    var list = $('#favList'); if (!list) return;
+    var q = ($('#favSearch') && $('#favSearch').value ? $('#favSearch').value : '').trim().toLowerCase();
+    var keepTop = list.scrollTop;
+    var rows = M.tickers.filter(function (x) {
+      if (!q) return true;
+      return (x.t + ' ' + x.n + ' ' + x.nk + ' ' + (x.sk || '') + ' ' + (x.s || '')).toLowerCase().indexOf(q) >= 0;
+    });
+    rows.sort(function (a, b) {
+      var aw = isWatch(a.t) ? 0 : 1, bw = isWatch(b.t) ? 0 : 1;
+      return aw - bw || ((a.r || 999) - (b.r || 999));
+    });
+    list.innerHTML = rows.length ? rows.map(function (x) {
+      var a = A[x.t], rv = a ? rowOf(a) : null, on = isWatch(x.t);
+      return '<button class="fp-row' + (on ? ' on' : '') + '" data-t="' + x.t + '">' +
+        '<b>' + x.t + '</b><span class="nm">' + x.nk + '</span>' +
+        (rv ? '<span class="ch ' + cls(rv.change) + '">' + pct(rv.change, 2) + '</span>' : '') +
+        '<i class="st" title="' + (on ? '관심종목에서 제거' : '관심종목에 추가') + '">' + (on ? '★' : '＋') + '</i></button>';
+    }).join('') : '<div class="fp-row" style="color:var(--txt3)">검색 결과가 없습니다</div>';
+    var cnt = $('#favCount'); if (cnt) cnt.textContent = '관심 ' + state.watch.length + '종목';
+    list.scrollTop = keepTop;
+    $$('.fp-row', list).forEach(function (b) {
+      if (!b.dataset.t) return;
+      b.onclick = function (e) { e.stopPropagation(); watchToggle(b.dataset.t); };
     });
   }
 
@@ -181,7 +271,7 @@
   function matchesFilter(a, rv) {
     if (state.filter === 'buy') return rv.score >= 58;
     if (state.filter === 'sell') return rv.score < 45;
-    if (state.filter === 'fav') return a.meta.fav;
+    if (state.filter === 'fav') return isWatch(a.sym);
     return true;
   }
   function spark(a, upto) {
@@ -233,7 +323,7 @@
       var ewb = (ew && ew.ok) ? '<i class="ewb ' + (ew.dir > 0 ? 'up' : 'dn') + '">' + ew.badge + '</i>' : '';
       return '<div class="srow' + (state.cur === x.t ? ' on' : '') + '" data-t="' + x.t + '">' +
         '<div class="rk">' + (x.r || '·') + '</div>' +
-        '<div class="tk"><b>' + x.t + ewb + '</b><span>' + x.nk + '</span></div>' +
+        '<div class="tk"><b><i class="fstar' + (isWatch(x.t) ? ' on' : '') + '" data-f="' + x.t + '" role="button" title="' + (isWatch(x.t) ? '관심종목에서 제거' : '관심종목에 추가') + '">' + (isWatch(x.t) ? '★' : '☆') + '</i>' + x.t + ewb + '</b><span>' + x.nk + '</span></div>' +
         spark(a, rv.i) +
         '<div class="px"><b>' + (rv.price >= 1000 ? rv.price.toFixed(0) : rv.price.toFixed(2)) + '</b>' +
         '<span class="' + cls(rv.change) + '">' + pct(rv.change, 2) + '</span></div>' +
@@ -242,7 +332,11 @@
         '</div>';
     }).join('') : '<div class="empty">해당 조건의 종목이 없습니다</div>';
     $$('#scanList .srow').forEach(function (r) {
-      r.onclick = function () { select(r.dataset.t); };
+      r.onclick = function (e) {
+        var f = e.target.closest('.fstar');
+        if (f) { e.stopPropagation(); watchToggle(f.getAttribute('data-f')); return; }
+        select(r.dataset.t);
+      };
     });
   }
 
@@ -255,6 +349,7 @@
     drawState.anchor = null; drawState.preview = null;
     drawCount();
     $$('#favPills .pill').forEach(function (b) { b.classList.toggle('on', b.dataset.t === t); });
+    syncHeroFav();
     $$('#scanList .srow').forEach(function (r) { r.classList.toggle('on', r.dataset.t === t); });
     renderHero(v);
     renderKpis(v);
@@ -2165,6 +2260,33 @@
     setTool('cursor');
     drawCount();
 
+    /* ---- 관심종목 추가·삭제 바인딩 ---- */
+    var heroFav = $('#heroFav');
+    if (heroFav) heroFav.onclick = function () { watchToggle(state.cur); };
+    var favAdd = $('#favAdd');
+    if (favAdd) favAdd.onclick = function (e) {
+      e.stopPropagation();
+      var pop = $('#favPop'); if (!pop) return;
+      if (pop.classList.contains('on')) { pop.classList.remove('on'); return; }
+      var fs = $('#favSearch'); if (fs) fs.value = '';
+      renderFavPop();
+      pop.classList.add('on');
+      if (fs) fs.focus();
+    };
+    var favSearch = $('#favSearch');
+    if (favSearch) favSearch.oninput = function () { renderFavPop(); };
+    if (favSearch) favSearch.onkeydown = function (e) {
+      if (e.key === 'Escape') { var p = $('#favPop'); if (p) p.classList.remove('on'); this.blur(); }
+      if (e.key === 'Enter') { var f0 = $('#favList .fp-row'); if (f0 && f0.dataset.t) watchToggle(f0.dataset.t); }
+    };
+    var favReset = $('#favReset');
+    if (favReset) favReset.onclick = function (e) {
+      e.stopPropagation();
+      state.watch = WATCH_DEFAULT.slice();
+      watchPersist();
+      watchRefresh();
+    };
+
     var swEl = $('#ewSwitch');
     if (swEl) swEl.onclick = function (e) {
       var b = e.target.closest('button'); if (!b) return;
@@ -2219,6 +2341,7 @@
     };
     document.addEventListener('click', function (e) {
       if (!e.target.closest('.search')) $('#searchPop').classList.remove('on');
+      if (!e.target.closest('.fav-wrap')) { var fp = $('#favPop'); if (fp) fp.classList.remove('on'); }
     });
     document.addEventListener('keydown', function (e) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
@@ -2226,6 +2349,7 @@
       }
       if (e.key === 'Escape') {
         closeDrawer(); $('#searchPop').classList.remove('on');
+        var fpop = $('#favPop'); if (fpop) fpop.classList.remove('on');
         if (drawState.anchor) { drawState.anchor = null; drawState.preview = null; if (chart) chart.draw(); }
       }
       if (e.target && e.target.tagName === 'INPUT') return;
