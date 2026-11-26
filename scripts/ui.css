@@ -452,8 +452,41 @@ input,select{font-family:inherit;color:inherit}
 .nx-item p b{color:var(--txt);font-weight:700}
 .nx-foot{margin:9px 0 0;font-size:9.4px;line-height:1.55;color:var(--txt4);position:relative}
 
+/* ---------- strategy switch (추세형 ↔ 스윙형) ---------- */
+.strat-bar{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:8px 10px;border:1px solid var(--line);border-radius:12px;
+  background:linear-gradient(180deg,rgba(22,28,41,.92),rgba(15,19,28,.92));
+  box-shadow:0 1px 0 rgba(255,255,255,.03) inset;
+}
+.strat-seg{display:flex;gap:3px;padding:3px;flex:0 0 auto;
+  background:#0A0D13;border:1px solid var(--line);border-radius:10px}
+.strat-seg button{
+  display:flex;align-items:baseline;gap:5px;padding:7px 15px;border-radius:8px;
+  font-size:12px;font-weight:650;color:var(--txt3);white-space:nowrap;
+  transition:color .16s,background .16s,box-shadow .16s;
+}
+.strat-seg button b{font-weight:750;letter-spacing:-.01em}
+.strat-seg button span{font-size:10px;font-weight:600;color:var(--txt4);letter-spacing:.01em}
+.strat-seg button:hover{color:var(--txt2);background:rgba(255,255,255,.035)}
+.strat-seg button.on{
+  color:#EAF6FF;background:linear-gradient(180deg,#1D2A3B,#16202E);
+  box-shadow:0 1px 0 rgba(255,255,255,.07) inset,0 0 0 1px rgba(56,189,248,.28),0 8px 18px -14px rgba(56,189,248,.9);
+}
+.strat-seg button.on span{color:var(--cyan)}
+.strat-txt{flex:1 1 260px;min-width:0}
+.strat-txt b{display:block;font-size:11.5px;font-weight:700;color:var(--txt);letter-spacing:.01em}
+.strat-txt p{margin:2px 0 0;font-size:10.5px;line-height:1.5;color:var(--txt3);word-break:keep-all}
+.strat-uni{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;
+  border-left:1px solid var(--line);padding-left:14px;
+  font-size:10px;color:var(--txt3);font-variant-numeric:tabular-nums}
+.strat-uni b{font-weight:650;color:var(--txt2)}
+.strat-uni b.pos{color:var(--up2)}
+.strat-uni b.neg{color:var(--dn2)}
+.strat-uni span{white-space:nowrap}
+
 /* ---------- kpi ---------- */
-.kpis{display:grid,grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 .kpi{padding:14px 15px;position:relative;overflow:hidden;display:flex;flex-direction:column}
 .kpi .lab{font-size:10.5px;color:var(--txt3);letter-spacing:.02em;display:flex;align-items:center;gap:6px}
 .kpi .lab .tag{font-size:9px;color:var(--txt4);border:1px solid var(--line);padding:1px 5px;border-radius:4px}
@@ -692,6 +725,11 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
   .hero-price .px{font-size:27px}
   .levels{grid-template-columns:repeat(2,1fr)}
   #chart{height:432px}
+  .strat-bar{gap:9px;padding:7px 8px}
+  .strat-seg{width:100%}
+  .strat-seg button{flex:1 1 0;justify-content:center;padding:7px 6px}
+  .strat-txt{flex:1 1 100%}
+  .strat-uni{width:100%;border-left:0;padding-left:0;border-top:1px solid var(--line2);padding-top:6px;font-size:9.5px;gap:3px 12px}
   .kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
   .kpi b{font-size:19px}
   .lower{grid-template-columns:1fr}
@@ -754,6 +792,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
 @media (max-width:640px){
   .kpis{grid-template-columns:1fr 1fr;gap:8px}
   .kpi{padding:11px 11px}
+  .strat-txt p{font-size:10px;line-height:1.45}
   .kpi>b{font-size:19px;margin-top:4px}
   .kpi .lab{font-size:9.5px}
   .kpi .sub{grid-template-columns:1fr;gap:2px;padding-top:6px;font-size:10px}

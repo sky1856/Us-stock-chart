@@ -105,10 +105,10 @@
         <div class="sig-meta"><b id="sigName">—</b><span id="sigSub">종합 기술 점수</span></div>
       </div>
       <div class="levels">
-        <div><label>진입 참고 구간</label><b id="lvEntry">—</b></div>
-        <div><label>손절가 · 6 ATR</label><b class="neg" id="lvStop">—</b></div>
-        <div><label>트레일 기준 · 10 ATR</label><b class="pos" id="lvTarget">—</b></div>
-        <div><label>손익비 (R:R)</label><b id="lvRR">—</b></div>
+        <div><label id="lvEntryL">진입 참고 구간</label><b id="lvEntry">—</b></div>
+        <div><label id="lvStopL">손절가 · 6 ATR</label><b class="neg" id="lvStop">—</b></div>
+        <div><label id="lvTargetL">트레일 기준 · 10 ATR</label><b class="pos" id="lvTarget">—</b></div>
+        <div><label id="lvRRL">손익비 (R:R)</label><b id="lvRR">—</b></div>
       </div>
     </section>
 
@@ -192,6 +192,18 @@
         </div>
       </div>
       <p class="nx-foot">본 화면의 백테스트·모의매매 결과는 과거 데이터 기반 참고용 시뮬레이션이며, 특정 종목의 매수·매도 권유가 아닙니다.</p>
+    </section>
+
+    <section class="strat-bar" id="stratBar" aria-label="전략 모드 전환">
+      <div class="strat-seg" id="stratSeg" role="tablist" aria-label="전략 모드">
+        <button data-m="trend" class="on" role="tab" aria-selected="true"><b>추세형</b><span>(중기)</span></button>
+        <button data-m="swing" role="tab" aria-selected="false"><b>스윙형</b><span>(단기)</span></button>
+      </div>
+      <div class="strat-txt">
+        <b id="stratTitle">추세형 (중기)</b>
+        <p id="stratDesc">종합 기술점수 50 이상 매수 · 시장 단계(100/50/0%)로 비중 조절 · 손절 6 ATR · 트레일 10 ATR 청산</p>
+      </div>
+      <div class="strat-uni" id="stratUni"></div>
     </section>
 
     <section class="kpis" id="kpis">

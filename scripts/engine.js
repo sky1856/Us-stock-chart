@@ -407,6 +407,169 @@
     return map;
   }
 
+  /* ============================================================
+     Swing strategy — 단기 눌림 반등 (RSI(2) 과매도 + 시장 필터)
+     --------------------------------------------
+     work/stock/bt_opt/swing/best_swing.js 를 이 엔진에서 그대로 돌도록 이식.
+       진입  RSI(2) < 15  그리고 QQQ 종가 > QQQ 100일 단순이동평균
+             → 신호 다음 거래일 시가 매수
+       손절  진입가 − 3.5 × ATR(14)  (장중 지정가, 갭이면 시가)
+       청산  보유 10거래일째 종가 판단 → 다음 날 시가 청산 (고정 목표 없음)
+       비용  매수·매도 각 0.03%
+     지표·신호는 당일 종가까지만 사용 — 미래참조 없음
+     ============================================================ */
+  var SWING_P = {
+    rsiLen: 2, rsiEntry: 15, qqqMa: 100, useMarketFilter: true,
+    stopAtr: 3.5, holdBars: 10, fee: 0.0003, warmup: 210
+  };
+  var _swingMap = null;
+  function swingOpts(o) {
+    var out = {}, k;
+    for (k in SWING_P) out[k] = SWING_P[k];
+    if (o) for (k in o) out[k] = o[k];
+    return out;
+  }
+  /* QQQ 100일선 시장 필터 — 날짜별 맵 (MARKET.asOf 가 바뀌면 다시 계산) */
+  function swingMarketMap(o) {
+    var MKT = (root && root.MARKET) || null;
+    if (!o.useMarketFilter || !MKT || !MKT.series || !MKT.series.QQQ || !MKT.dates) return null;
+    var key = (MKT.asOf || 'na') + '|' + o.qqqMa;
+    if (_swingMap && _swingMap.key === key) return _swingMap.map;
+    var qc = MKT.series.QQQ.c, ma = sma(qc, o.qqqMa), map = {};
+    for (var i = 0; i < MKT.dates.length; i++) {
+      map[MKT.dates[i]] = { qqq: qc[i], ma: ma[i], ok: (ma[i] == null ? true : qc[i] > ma[i]) };
+    }
+    _swingMap = { key: key, map: map };
+    return map;
+  }
+  /* 종목의 로컬 인덱스 → 그 날짜의 시장 상태 (그 종목만 거래된 날은 직전 날짜 사용) */
+  function swingMktAt(map, dts, i) {
+    if (!map) return true;
+    var rec = map[dts[i]];
+    if (rec) return rec.ok;
+    var prev = map[dts[Math.max(0, i - 1)]];
+    return prev ? prev.ok : true;
+  }
+
+  /* 마지막 봉 기준 신호 상태 · 주문 계획 (전환 탭의 손절/보유기한 안내에 사용) */
+  function swingStatus(series, ind, opts) {
+    var o = swingOpts(opts), n = series.c.length, i = n - 1;
+    if (i < 1) return null;
+    var r2 = rsi(series.c, o.rsiLen);
+    var map = swingMarketMap(o);
+    var rec = map ? map[series.d[i]] : null;
+    var rNow = r2[i], mktOk = swingMktAt(map, series.d, i);
+    var atrNow = ind.atr[i] > 0 ? ind.atr[i] : series.c[i] * 0.02;
+    var sig = (rNow != null && rNow < o.rsiEntry) && mktOk && ind.atr[i] > 0;
+    return {
+      strategy: 'swing', date: series.d[i], signal: !!sig,
+      rsi2: rNow, rsi2Prev: r2[i - 1],
+      qqq: rec ? rec.qqq : null, qqqMa: rec ? rec.ma : null, marketOk: mktOk,
+      entryRef: series.c[i],                 /* 다음 거래일 시가 체결 — 참고가는 당일 종가 */
+      stopPrice: series.c[i] - o.stopAtr * atrNow,
+      stopAtr: o.stopAtr, atr: atrNow, target: null, holdBars: o.holdBars,
+      exitRule: '손절 -' + o.stopAtr + ' ATR · 최대 ' + o.holdBars + '거래일 보유 · 고정 목표 없음',
+      reason: sig
+        ? 'RSI(2) ' + rNow.toFixed(1) + ' — 과매도 극단 · QQQ 100일선 위 (다음 시가 매수)'
+        : 'RSI(2) ' + (rNow == null ? '—' : rNow.toFixed(1)) +
+          (mktOk ? '' : ' · QQQ 100일선 아래(진입 금지)') + ' — 진입 조건 미충족'
+    };
+  }
+
+  function swingBacktest(series, ind, opts) {
+    var o = swingOpts(opts);
+    var c = series.c, O = series.o, H = series.h, L = series.l, D = series.d, n = c.length;
+    var A = ind.atr;
+    var r2 = rsi(c, o.rsiLen);
+    var map = swingMarketMap(o);
+    var first = Math.min(Math.max(o.warmup, 1), Math.max(n - 2, 1));
+    var cash = 1, pos = null, pendEntry = false, pendExit = null;
+    var trades = [], equity = new Array(n).fill(null), bars = 0, inMkt = 0;
+
+    function openAt(px, i) {
+      if (!(px > 0)) return;
+      var a0 = A[i - 1] > 0 ? A[i - 1] : A[i];
+      if (!(a0 > 0)) return;
+      pos = { entry: px, entryIdx: i, entryDate: D[i], atr0: a0, shares: cash / (px * (1 + o.fee)) };
+      cash = 0;
+    }
+    function closeAt(px, i, reason) {
+      cash += pos.shares * px * (1 - o.fee);
+      trades.push({ entryDate: pos.entryDate, entry: pos.entry, exitDate: D[i], exit: px,
+        ret: cash / (pos.shares * pos.entry) - 1, hold: i - pos.entryIdx, reason: reason, atr0: pos.atr0 });
+      pos = null;
+    }
+
+    for (var i = first; i < n; i++) {
+      /* 1) 시가 집행 — 직전 종가에 정해진 주문 */
+      if (pos && pendExit) closeAt(O[i], i, pendExit);
+      pendExit = null;
+      if (!pos && pendEntry) openAt(O[i], i);
+      pendEntry = false;
+      /* 2) 장중 손절 (지정가, 갭 하락이면 시가) */
+      if (pos) {
+        var lvl = pos.entry - o.stopAtr * pos.atr0;
+        if (L[i] <= lvl) closeAt(Math.min(O[i], lvl), i, lvl >= pos.entry ? '이익보전' : '손절');
+      }
+      /* 3) 종가 판단 — 보유 기한 / 신규 진입 */
+      if (pos) {
+        if (i - pos.entryIdx >= o.holdBars - 1) pendExit = '시간';
+      } else if (i < n - 1) {
+        if (swingMktAt(map, D, i) && r2[i] != null && r2[i] < o.rsiEntry && A[i] > 0) pendEntry = true;
+      }
+      equity[i] = cash + (pos ? pos.shares * c[i] : 0);
+      bars++; if (pos) inMkt++;
+    }
+    if (pos) { closeAt(c[n - 1], n - 1, '보유중'); equity[n - 1] = cash; }
+
+    /* ---- stats (추세형과 같은 필드) ---- */
+    var bh = c[n - 1] / c[first] - 1;
+    var total = cash - 1;
+    var wins = trades.filter(function (t) { return t.ret > 0; });
+    var losses = trades.filter(function (t) { return t.ret <= 0; });
+    var gp = wins.reduce(function (a, t) { return a + t.ret; }, 0);
+    var gl = Math.abs(losses.reduce(function (a, t) { return a + t.ret; }, 0));
+    var pf = gl > 0 ? gp / gl : (gp > 0 ? 99 : 0);
+    var mdd = 0, peak = 0, j;
+    for (j = first; j < n; j++) {
+      if (equity[j] == null) continue;
+      if (equity[j] > peak) peak = equity[j];
+      var dd = (equity[j] - peak) / peak;
+      if (dd < mdd) mdd = dd;
+    }
+    var bhmdd = 0, bpeak = 0;
+    for (j = first; j < n; j++) {
+      if (c[j] > bpeak) bpeak = c[j];
+      var dd2 = (c[j] - bpeak) / bpeak;
+      if (dd2 < bhmdd) bhmdd = dd2;
+    }
+    var days = n - 1 - first;
+    var years = days / 252;
+    var cagr = years > 0 ? Math.pow(Math.max(cash, 1e-6), 1 / years) - 1 : 0;
+    var rets = [];
+    for (j = first + 1; j < n; j++) {
+      if (equity[j] != null && equity[j - 1] != null && equity[j - 1] > 0) rets.push(equity[j] / equity[j - 1] - 1);
+    }
+    var mean = rets.reduce(function (a, b) { return a + b; }, 0) / Math.max(rets.length, 1);
+    var varr = rets.reduce(function (a, b) { return a + (b - mean) * (b - mean); }, 0) / Math.max(rets.length - 1, 1);
+    var sh = Math.sqrt(varr) > 0 ? mean / Math.sqrt(varr) * Math.sqrt(252) : 0;
+    var holdAvg = trades.length ? trades.reduce(function (a, t) { return a + t.hold; }, 0) / trades.length : 0;
+    var reasons = {}; trades.forEach(function (t) { reasons[t.reason] = (reasons[t.reason] || 0) + 1; });
+
+    return {
+      trades: trades, equity: equity, startIdx: first, reasons: reasons,
+      stats: {
+        totalReturn: total, bhReturn: bh, alpha: total - bh,
+        winRate: trades.length ? wins.length / trades.length : 0,
+        profitFactor: pf, mdd: mdd, bhMdd: bhmdd, trades: trades.length,
+        avgHold: holdAvg, cagr: cagr, sharpe: sh,
+        avgWin: wins.length ? gp / wins.length : 0,
+        avgLoss: losses.length ? -gl / losses.length : 0,
+        exposure: bars ? inMkt / bars : 0
+      }
+    };
+  }
+
   function backtestRun(series, ind, sc, opts) {
     opts = opts || {};
     var ENTRY = opts.entry !== undefined ? opts.entry : 50;
@@ -1672,6 +1835,9 @@
     var ind = computeIndicators(series);
     var sc = scoreSeries(series, ind);
     var bt = backtestRun(series, ind, sc, opts);
+    var sw = swingBacktest(series, ind, opts);
+    var swPlan = swingStatus(series, ind, opts);
+    var mode = (opts && opts.strategyMode === 'swing') ? 'swing' : 'trend';
     var n = series.c.length;
     var i = n - 1;
     var price = series.c[i], prev = series.c[i - 1];
@@ -1695,13 +1861,25 @@
       hist: { score: sc.score.slice(-260), dates: series.d.slice(-260) },
       ind: ind, scoreSeries: sc
     };
-    rec.stats = bt.stats;
-    rec.trades = bt.trades;
-    rec.equity = bt.equity;
-    rec.startIdx = bt.startIdx;
     rec.dates = series.d;
     rec.close = series.c;
     rec.elliott = ewAnalyze(series, ind);
+    /* 두 전략을 함께 산출 — 전환 탭은 다시 계산하지 않고 이 결과를 골라 쓴다 */
+    rec.strategyMode = mode;
+    rec.strategy = {
+      trend: { key: 'trend', title: '추세형', sub: '중기', stats: bt.stats, trades: bt.trades,
+        equity: bt.equity, startIdx: bt.startIdx, plan: null },
+      swing: { key: 'swing', title: '스윙형', sub: '단기', stats: sw.stats, trades: sw.trades,
+        equity: sw.equity, startIdx: sw.startIdx, plan: swPlan }
+    };
+    rec.swing = swPlan;
+    /* 상위 필드는 요청한 모드의 전략 결과 (기본 'trend' — 기존 호출부와 호환) */
+    var act = rec.strategy[mode];
+    rec.stats = act.stats;
+    rec.trades = act.trades;
+    rec.equity = act.equity;
+    rec.startIdx = act.startIdx;
+    rec.plan = act.plan;
     return rec;
   }
 
@@ -1710,6 +1888,7 @@
     bollinger: bollinger, obv: obv,
     computeIndicators: computeIndicators, scoreSeries: scoreSeries,
     backtest: backtestRun, analyze: analyze, labelOf: labelOf, LABELS: LABELS, explain: explain,
+    swingBacktest: swingBacktest, swingStatus: swingStatus, swingParams: SWING_P,
     clamp: clamp, elliott: ewAnalyze
   };
 
