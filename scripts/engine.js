@@ -410,17 +410,26 @@
   /* ============================================================
      Swing strategy — 단기 눌림 반등 (RSI(2) 과매도 + 시장 필터)
      --------------------------------------------
-     work/stock/bt_opt/swing/best_swing.js 를 이 엔진에서 그대로 돌도록 이식.
-       진입  RSI(2) < 15  그리고 QQQ 종가 > QQQ 100일 단순이동평균
+     work/stock/bt_opt/swing/best_swing_chart_exit.js 를 이 엔진에서 그대로 돌도록 이식.
+       진입 ① RSI(2) < 15
+            ② QQQ 종가 > QQQ 100일 단순이동평균
              → 신호 다음 거래일 시가 매수
-       손절  진입가 − 3.5 × ATR(14)  (장중 지정가, 갭이면 시가)
-       청산  보유 10거래일째 종가 판단 → 다음 날 시가 청산 (고정 목표 없음)
+       청산 고정 보유기간 없음 — 종가에 아래 조건을 확인해 다음 날 시가 매도
+            ① 손절  진입가 − 4.5 × ATR(14)  (장중 지정가, 갭이면 시가)
+            ② 이익 +1% 이상에서 RSI(2) > 90
+            ③ RSI(14)가 최근 3봉 안에 70 이상을 찍은 뒤 하락 전환
+            ④ 이익 +1% 이상에서 종가가 5일선 아래로
        비용  매수·매도 각 0.03%
      지표·신호는 당일 종가까지만 사용 — 미래참조 없음
+     백테스트 (100종목, 2025-10~2026-11): 평균 +17.35% · 중앙 +15.99% ·
+       보유초과 51/100 · 평균 MDD -19.87% · 승률 83.9% · 평균 보유 11.8일
      ============================================================ */
   var SWING_P = {
     rsiLen: 2, rsiEntry: 15, qqqMa: 100, useMarketFilter: true,
-    stopAtr: 3.5, holdBars: 10, fee: 0.0003, warmup: 210
+    rsi2Exit: 90, rsi14Exit: 70, useRsi14Exit: true,
+    profitGate: 0.01,          /* ②는 이 수익률 이상일 때만 (0.01 = +1%) */
+    maProtect: 0.01,           /* ④는 이 수익률 이상 & 종가 < 5일선 (0 = 끔) */
+    stopAtr: 4.5, fee: 0.0003, warmup: 210
   };
   var _swingMap = null;
   function swingOpts(o) {
@@ -451,7 +460,25 @@
     return prev ? prev.ok : true;
   }
 
-  /* 마지막 봉 기준 신호 상태 · 주문 계획 (전환 탭의 손절/보유기한 안내에 사용) */
+  /* 청산 규칙 판정 (종가 기준, 우선순위 ② → ③ → ④) */
+  function swingExitAt(series, ind, i, pos, o, r2) {
+    var c = series.c, pnl = c[i] / pos.entry - 1;
+    /* ② 과열: 이익 게이트를 넘긴 상태에서 RSI(2) 과매수 극단 */
+    if (r2[i] != null && r2[i] > o.rsi2Exit) {
+      if (!(o.profitGate > 0) || pnl >= o.profitGate) return 'RSI2과열';
+    }
+    /* ③ RSI(14) 과매수 도달 후 하락 전환 (최근 3봉 최고치 기준) */
+    if (o.useRsi14Exit && ind.rsi[i] != null && ind.rsi[i - 1] != null) {
+      var mx = ind.rsi[i];
+      for (var k = 1; k <= 2 && i - k >= 0; k++) if (ind.rsi[i - k] != null && ind.rsi[i - k] > mx) mx = ind.rsi[i - k];
+      if (mx >= o.rsi14Exit && ind.rsi[i] < ind.rsi[i - 1]) return 'RSI14꺾임';
+    }
+    /* ④ 5일선 보호: 수익 상태에서 종가가 5일선 아래로 내려오면 */
+    if (o.maProtect > 0 && ind.ma5[i] != null && pnl >= o.maProtect && c[i] < ind.ma5[i]) return '5일선이탈';
+    return null;
+  }
+
+  /* 마지막 봉 기준 신호 상태 · 청산 계획 (전환 탭의 손절/청산기준 안내에 사용) */
   function swingStatus(series, ind, opts) {
     var o = swingOpts(opts), n = series.c.length, i = n - 1;
     if (i < 1) return null;
@@ -461,14 +488,23 @@
     var rNow = r2[i], mktOk = swingMktAt(map, series.d, i);
     var atrNow = ind.atr[i] > 0 ? ind.atr[i] : series.c[i] * 0.02;
     var sig = (rNow != null && rNow < o.rsiEntry) && mktOk && ind.atr[i] > 0;
+    var r14 = ind.rsi[i], r14p = ind.rsi[i - 1];
+    var hot = rNow != null && rNow > o.rsi2Exit;
+    var turn = o.useRsi14Exit && r14 != null && r14p != null && r14 >= o.rsi14Exit && r14 < r14p;
     return {
       strategy: 'swing', date: series.d[i], signal: !!sig,
-      rsi2: rNow, rsi2Prev: r2[i - 1],
+      rsi2: rNow, rsi2Prev: r2[i - 1], rsi14: r14, ma5: ind.ma5[i],
       qqq: rec ? rec.qqq : null, qqqMa: rec ? rec.ma : null, marketOk: mktOk,
       entryRef: series.c[i],                 /* 다음 거래일 시가 체결 — 참고가는 당일 종가 */
       stopPrice: series.c[i] - o.stopAtr * atrNow,
-      stopAtr: o.stopAtr, atr: atrNow, target: null, holdBars: o.holdBars,
-      exitRule: '손절 -' + o.stopAtr + ' ATR · 최대 ' + o.holdBars + '거래일 보유 · 고정 목표 없음',
+      stopAtr: o.stopAtr, atr: atrNow, target: null,
+      exitNow: hot ? ('RSI(2) ' + rNow.toFixed(1) + ' > ' + o.rsi2Exit)
+                  : (turn ? 'RSI(14) 과매수 후 꺾임' : null),
+      exitRule: '손절 -' + o.stopAtr + ' ATR · RSI(2)>' + o.rsi2Exit +
+        (o.profitGate > 0 ? ' & 이익 +' + (o.profitGate * 100) + '%' : '') +
+        ' · RSI(14) ' + o.rsi14Exit + ' 도달 후 꺾임' +
+        (o.maProtect > 0 ? ' · 이익 +' + (o.maProtect * 100) + '% 5일선 이탈' : '') +
+        ' → 다음 날 시가 청산 (고정 보유기간 없음)',
       reason: sig
         ? 'RSI(2) ' + rNow.toFixed(1) + ' — 과매도 극단 · QQQ 100일선 위 (다음 시가 매수)'
         : 'RSI(2) ' + (rNow == null ? '—' : rNow.toFixed(1)) +
@@ -511,9 +547,10 @@
         var lvl = pos.entry - o.stopAtr * pos.atr0;
         if (L[i] <= lvl) closeAt(Math.min(O[i], lvl), i, lvl >= pos.entry ? '이익보전' : '손절');
       }
-      /* 3) 종가 판단 — 보유 기한 / 신규 진입 */
+      /* 3) 종가 판단 — 차트 청산 / 신규 진입 */
       if (pos) {
-        if (i - pos.entryIdx >= o.holdBars - 1) pendExit = '시간';
+        var why = swingExitAt(series, ind, i, pos, o, r2);
+        if (why) pendExit = why;
       } else if (i < n - 1) {
         if (swingMktAt(map, D, i) && r2[i] != null && r2[i] < o.rsiEntry && A[i] > 0) pendEntry = true;
       }

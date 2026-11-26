@@ -99,8 +99,8 @@
     },
     swing: {
       key: 'swing', title: '스윙형', sub: '단기',
-      desc: 'RSI(2) 15 미만 + QQQ 100일선 위 → 다음 날 시가 매수 · 손절 3.5 ATR · 최대 10거래일 보유 후 시가 청산 · 고정 목표 없음',
-      logSub: 'RSI(2) 15 미만 + QQQ 100일선 위 매수 · 손절 3.5 ATR · 최대 10거래일 보유 후 시가 청산'
+      desc: 'RSI(2) 15 미만 + QQQ 100일선 위 → 다음 날 시가 매수 · 손절 4.5 ATR · 고정 보유기간 없이 RSI(2) 90 초과(이익 1% 이상) · RSI(14) 과매수 꺾임 · 이익 1%에서 5일선 이탈 시 다음 날 시가 청산',
+      logSub: 'RSI(2) 15 미만 + QQQ 100일선 위 매수 · 손절 4.5 ATR · RSI(2)>90·RSI(14)꺾임·5일선이탈 시 다음 날 시가 청산'
     }
   };
   function stratKey() { return state.strategy === 'swing' ? 'swing' : 'trend'; }
@@ -405,7 +405,7 @@
   /* 백테스트 표본이 충분한 100종목의 전략 성과 분포 (워밍업 210 + 80봉 미만 제외) */
   function universeStats(mode) {
     if (uniCache[mode]) return uniCache[mode];
-    var rets = [], mdds = [], bhs = [], beat = 0;
+    var rets = [], mdds = [], bhs = [], beat = 0, wins = 0, ntr = 0;
     M.tickers.forEach(function (x) {
       var a = A[x.t];
       if (!a || !a.strategy || !a.close || a.close.length < 290) return;
@@ -413,8 +413,10 @@
       if (!b || !b.stats) return;
       rets.push(b.stats.totalReturn); mdds.push(b.stats.mdd); bhs.push(b.stats.bhReturn);
       if (b.stats.totalReturn > b.stats.bhReturn) beat++;
+      if (b.stats.trades > 0) { ntr += b.stats.trades; wins += b.stats.winRate * b.stats.trades; }
     });
-    var r = { n: rets.length, mean: meanOf(rets), med: medianOf(rets), beat: beat, mdd: meanOf(mdds), bh: meanOf(bhs) };
+    var r = { n: rets.length, mean: meanOf(rets), med: medianOf(rets), beat: beat, mdd: meanOf(mdds), bh: meanOf(bhs),
+      win: ntr > 0 ? wins / ntr : null, trades: ntr };
     if (r.n) uniCache[mode] = r;
     return r;
   }
@@ -433,7 +435,8 @@
         '<span><b>' + u.n + '종목 평균</b> <b class="' + cls(u.mean) + '">' + pct(u.mean, 2) + '</b></span>' +
         '<span>중앙 <b class="' + cls(u.med) + '">' + pct(u.med, 2) + '</b></span>' +
         '<span>보유 초과 <b>' + u.beat + '/' + u.n + '</b></span>' +
-        '<span>평균 MDD <b class="neg">' + pct(u.mdd, 2) + '</b></span>';
+        '<span>평균 MDD <b class="neg">' + pct(u.mdd, 2) + '</b></span>' +
+        '<span>승률 <b class="' + (u.win >= 0.5 ? 'pos' : '') + '">' + (u.win == null ? '—' : (u.win * 100).toFixed(1) + '%') + '</b></span>';
       el.title = u.n + '종목 단순보유 평균 ' + pct(u.bh, 2) + ' · 워밍업 210거래일 이후 구간';
     }
   }
@@ -497,15 +500,17 @@
     var bullish = a.score >= 45;
     var lvEL = $('#lvEntryL'), lvSL = $('#lvStopL'), lvTL = $('#lvTargetL'), lvRL = $('#lvRRL');
     if (a.stratKey === 'swing') {
-      /* 스윙형: 다음 시가 진입 · 손절 3.5 ATR · 최대 10거래일 보유 */
+      /* 스윙형: 다음 시가 진입 · 손절 4.5 ATR · 고정 보유기간 없이 차트 청산 */
       var p = a.plan || {};
       var on = !!p.signal;
       if (lvEL) lvEL.textContent = on ? '진입 · 다음 시가 매수' : '진입 대기 · RSI(2) 15 미만';
       $('#lvEntry').textContent = usd(p.entryRef != null ? p.entryRef : a.price);
-      if (lvSL) lvSL.textContent = '손절가 · 3.5 ATR';
+      if (lvSL) lvSL.textContent = '손절가 · 4.5 ATR';
       $('#lvStop').textContent = usd(p.stopPrice);
-      if (lvTL) lvTL.textContent = '최대 보유 기한';
-      $('#lvTarget').textContent = (p.holdBars || 10) + '거래일';
+      if (lvTL) lvTL.textContent = '청산 기준 · RSI(2)>90 · RSI(14)꺾임 · 5일선이탈';
+      var tEl = $('#lvTarget');
+      tEl.textContent = p.exitNow ? '청산 신호' : '대기';
+      tEl.className = p.exitNow ? 'neg' : '';
       if (lvRL) lvRL.textContent = 'RSI(2) · 시장 필터';
       $('#lvRR').textContent = (p.rsi2 == null ? '—' : p.rsi2.toFixed(1)) + ' · ' + (p.marketOk ? 'QQQ\u2191' : 'QQQ\u2193');
     } else {
@@ -516,7 +521,9 @@
       if (lvSL) lvSL.textContent = '손절가 · 6 ATR';
       $('#lvStop').textContent = usd(a.stop);
       if (lvTL) lvTL.textContent = '트레일 기준 · 10 ATR';
-      $('#lvTarget').textContent = usd(a.target);
+      var tEl2 = $('#lvTarget');
+      tEl2.textContent = usd(a.target);
+      tEl2.className = 'pos';
       if (lvRL) lvRL.textContent = '손익비 (R:R)';
       $('#lvRR').textContent = '1 : ' + ((a.target - a.price) / Math.max(a.price - a.stop, 1e-9)).toFixed(2);
     }

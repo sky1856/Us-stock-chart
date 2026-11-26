@@ -246,7 +246,7 @@ input,select{font-family:inherit;color:inherit}
 .levels{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);gap:1px;
   background:var(--line2);border-radius:10px;overflow:hidden;border:1px solid var(--line2)}
 .levels div{background:linear-gradient(180deg,rgba(255,255,255,.022),rgba(255,255,255,.008));padding:9px 12px}
-.levels label{display:block;font-size:10px;color:var(--txt3);margin-bottom:3px;letter-spacing:.02em}
+.levels label{display:block;font-size:10px;color:var(--txt3);margin-bottom:3px;letter-spacing:.02em;word-break:keep-all;line-height:1.4}
 .levels b{font-size:13.5px;font-variant-numeric:tabular-nums;font-weight:650}
 
 /* ---------- chart ---------- */
