@@ -131,24 +131,58 @@
   function stratPersist() {
     try { localStorage.setItem(STRAT_KEY, state.strategy); } catch (e) {}
   }
-  function stratBundle(a) {
-    return (a && a.strategy) ? (a.strategy[stratKey()] || a.strategy.trend) : null;
+  /* ---------------- 백테스트 기간 연동 (차트 3M·6M·1Y·2Y·5Y) ----------------
+     차트 상단 기간 버튼을 누르면 아래 백테스트(KPI·자산곡선·트레이드 로그·99종목 평균)가
+     같은 기간으로 다시 계산된다. 지표·점수·W 신호는 전체 이력 계산을 그대로 쓰고
+     거래 시작 인덱스만 기간에 맞춰 자르므로 미래참조는 없다. */
+  var BT_WIN = { '64': 63, '128': 126, '252': 252, '501': 504, '1255': 1255 };
+  var BT_TAG = { 63: '3M', 126: '6M', 252: '1Y', 504: '2Y', 1255: '5Y' };
+  var BT_NAME = { 63: '최근 3개월', 126: '최근 6개월', 252: '최근 1년', 504: '최근 2년', 1255: '최근 5년' };
+  function btBars() { return BT_WIN[String(state.range)] || 1255; }
+  function btTag() { return BT_TAG[btBars()] || '5Y'; }
+  function btName() { return BT_NAME[btBars()] || '최근 5년'; }
+  var winCache = Object.create(null);      /* 'TICKER|bars' → { trend, swing } */
+  function winOf(t, bars) {
+    var a = A[t];
+    if (!a || !a.series || !a.ind || !a.wsig) return null;
+    if (!bars || bars >= 1255) return a.strategy;
+    var k = t + '|' + bars, c = winCache[k];
+    if (c) return c;
+    c = QE.strategyWindow(a.series, a.ind, a.scoreSeries, a.wsig, bars);
+    winCache[k] = c;
+    return c;
   }
-  /* 선택된 전략의 KPI·거래·에쿼티만 갈아 끼운 사본 — 백테스트를 다시 돌리지 않는다 */
+  function stratBundle(a) {
+    if (!a || !a.strategy) return null;
+    var bars = btBars();
+    if (!a.replay && bars < 1255 && a.sym) {                 /* 기간 집계가 이미 있으면 그것을 쓴다 */
+      var w = winCache[a.sym + '|' + bars];
+      if (w && w[stratKey()]) return w[stratKey()];
+    }
+    return a.strategy[stratKey()] || a.strategy.trend;
+  }
+  /* 선택된 전략·선택된 기간의 KPI·거래·에쿼티만 갈아 끼운 사본 — 화면 전환마다 다시 돌리지 않는다 */
   function stratView(a) {
     if (!a || !a.strategy) return a;
-    var b = stratBundle(a);
+    var bars = a.replay ? 0 : btBars();                       /* 리플레이 중에는 기간 연동을 끈다 */
+    var src = bars ? winOf(a.sym, bars) : null;
+    var b = src ? (src[stratKey()] || src.trend) : stratBundle(a);
     if (!b) return a;
     var store = a._sv || (a._sv = {});
-    if (store[b.key]) return store[b.key];
+    var key = b.key + '|' + (bars || 'full');
+    if (store[key]) return store[key];
     var v = {}, k;
     for (k in a) {
       if (k === '_sv') continue;
       if (Object.prototype.hasOwnProperty.call(a, k)) v[k] = a[k];
     }
     v.stats = b.stats; v.trades = b.trades; v.equity = b.equity; v.startIdx = b.startIdx;
-    v.plan = b.plan; v.stratKey = b.key; v.strat = b;
-    store[b.key] = v;
+    /* 스윙 진입 계획(다음 시가·손절가 안내)은 마지막 봉 기준이라 기간과 무관 — 원본 것을 유지 */
+    v.plan = (b.plan == null && a.strategy.swing) ? a.strategy.swing.plan : b.plan;
+    v.stratKey = b.key; v.strat = b;
+    v.btBars = bars || 1255;
+    v.btCovered = (a.close ? a.close.length : 0) - b.startIdx;
+    store[key] = v;
     return v;
   }
   stratRestore();
@@ -294,6 +328,7 @@
     renderScanner();
     renderStrategy();
     select(state.cur, true);    console.log('[APEX] analyzed ' + M.tickers.length + ' tickers in ' + Math.round(performance.now() - t0) + 'ms');
+    prefetchPeriods();          /* 3M·6M·1Y·2Y 기간 집계를 백그라운드에서 미리 계산 */
   }
 
   function renderFavs() {
@@ -384,8 +419,50 @@
     wCountCache = { cnt: cnt, set: set, total: total, asOf: asOf };
     return wCountCache;
   }
+  /* VCP 프리셋 — 대형 우량주(시총 Top 30 ∪ 실적 우량주) 안에서만
+     미너비니 Trend Template(정배열) + VCP 변동성 축소(피벗 돌파/임박) 종목을 골라낸다.
+     ※ 표시 전용 필터 — 스윙/추세 백테스트 규칙에는 손대지 않는다. */
+  var vcpCache = null;
+  function vcpCounts() {
+    if (vcpCache) return vcpCache;
+    var pd = presetData();
+    var set = {}, cnt = { pool: 0, tt: 0, brk: 0, near: 0, total: 0 }, rows = [];
+    M.tickers.forEach(function (x) {
+      var a = A[x.t];
+      if (!a || !a.vcp || !a.meta) return;
+      if (!pd.top30[x.t] && !pd.quality[x.t]) return;      /* 대형 우량주 풀 밖은 제외 */
+      cnt.pool++;
+      var v = a.vcp;
+      if (!v.tt) return;
+      cnt.tt++;
+      if (v.state === '돌파' || v.breakRecent) cnt.brk++;
+      if (v.state === '임박') cnt.near++;
+      if (v.state === '돌파' || v.state === '임박') { set[x.t] = 1; rows.push(x.t); cnt.total++; }
+    });
+    vcpCache = { set: set, cnt: cnt, rows: rows, asOf: (M.fundamentals && M.fundamentals.asOf) || M.asOf };
+    return vcpCache;
+  }
+  /* 목록 행의 VCP 표시 (TT 충족 + 돌파/임박만) */
+  function vcpBadge(a) {
+    var v = a && a.vcp;
+    if (!v || !v.tt || (v.state !== '돌파' && v.state !== '임박')) return '';
+    var t;
+    if (v.state === '돌파') {
+      t = 'VCP 돌파 · 피벗 ' + pxs(v.pivot) + ' 상향' + (v.volRatio ? ' · 거래량 ' + v.volRatio.toFixed(2) + '배' : '');
+    } else {
+      t = 'VCP 임박 · 피벗 ' + pxs(v.pivot) + '까지 ' + (v.dist * 100).toFixed(1) + '% · 베이스 ' + v.baseLen + '봉' +
+        (v.tight ? ' · 10일 박스 8% 이내' : '') + (v.contracted ? ' · 변동성 축소' : '') +
+        (v.volRatio ? ' · 거래량 ' + v.volRatio.toFixed(2) + '배' : '');
+    }
+    return '<i class="vcpb ' + (v.state === '돌파' ? 'brk' : 'near') + '" title="' + t + '">VCP</i>';
+  }
   function presetNoteHtml(shown) {
     var pd = presetData();
+    if (state.filter === 'vcp') {
+      var vc = vcpCounts(), c = vc.cnt;
+      return '<b>VCP · 대형 우량주 한정</b> · 정배열(TT) + 변동성 축소 임박/돌파 · 시총 Top 30 ∪ 실적 우량주 ' + c.pool + '종목 중' +
+        ' TT <b>' + c.tt + '</b> · 돌파 <b>' + c.brk + '</b> · 임박 <b>' + c.near + '</b> · ' + vc.asOf + ' 종가 기준 · 지금 ' + shown + '종목 표시';
+    }
     if (state.filter === 'top30') {
       return '<b>시총 상위 ' + pd.nTop + '종목</b> · ' + pd.asOf + ' 시총 기준 · 지금 ' + shown + '종목 표시';
     }
@@ -406,6 +483,7 @@
     if (state.filter === 'fav') return isWatch(a.sym);
     if (state.filter === 'top30' || state.filter === 'quality') return !!presetData()[state.filter][a.sym];
     if (state.filter === 'w') return !!wCounts().set[a.sym];
+    if (state.filter === 'vcp') return !!vcpCounts().set[a.sym];
     return true;
   }
   function spark(a, upto) {
@@ -458,10 +536,11 @@
     var cTop = $('#cTop30'); if (cTop) cTop.textContent = pd.nTop;
     var cQual = $('#cQual'); if (cQual) cQual.textContent = pd.nQual;
     var cW = $('#cW'); if (cW) cW.textContent = wCounts().total;
+    var cV = $('#cVcp'); if (cV) cV.textContent = vcpCounts().cnt.total;
     var pn = $('#presetNote');
     if (pn) {
       pn.innerHTML = presetNoteHtml(rows.length);
-      pn.classList.toggle('on', state.filter === 'top30' || state.filter === 'quality' || state.filter === 'w');
+      pn.classList.toggle('on', state.filter === 'top30' || state.filter === 'quality' || state.filter === 'w' || state.filter === 'vcp');
     }
 
     $('#scanList').innerHTML = rows.length ? rows.map(function (a) {
@@ -469,7 +548,7 @@
       var ewb = (ew && ew.ok) ? '<i class="ewb ' + (ew.dir > 0 ? 'up' : 'dn') + '">' + ew.badge + '</i>' : '';
       return '<div class="srow' + (state.cur === x.t ? ' on' : '') + '" data-t="' + x.t + '">' +
         '<div class="rk">' + (x.r || '·') + '</div>' +
-        '<div class="tk"><b><i class="fstar' + (isWatch(x.t) ? ' on' : '') + '" data-f="' + x.t + '" role="button" title="' + (isWatch(x.t) ? '관심종목에서 제거' : '관심종목에 추가') + '">' + (isWatch(x.t) ? '★' : '☆') + '</i>' + x.t + ewb + '</b><span>' + x.nk + '</span></div>' +
+        '<div class="tk"><b><i class="fstar' + (isWatch(x.t) ? ' on' : '') + '" data-f="' + x.t + '" role="button" title="' + (isWatch(x.t) ? '관심종목에서 제거' : '관심종목에 추가') + '">' + (isWatch(x.t) ? '★' : '☆') + '</i>' + x.t + ewb + vcpBadge(a) + earnChip(x.t) + '</b><span>' + x.nk + '</span></div>' +
         spark(a, rv.i) +
         '<div class="px"><b>' + (rv.price >= 1000 ? rv.price.toFixed(0) : rv.price.toFixed(2)) + '</b>' +
         '<span class="' + cls(rv.change) + '">' + pct(rv.change, 2) + '</span></div>' +
@@ -497,25 +576,80 @@
     var b = a.slice().sort(function (x, y) { return x - y; }), m = b.length >> 1;
     return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2;
   }
-  var uniCache = {};
-  /* 5년 백테스트 창을 온전히 채운 종목의 전략 성과 분포 (상장 초기·표본 부족 제외) */
-  function universeStats(mode) {
-    if (uniCache[mode]) return uniCache[mode];
-    var rets = [], mdds = [], bhs = [], wrs = [], beat = 0, ntr = 0;
+  var uniCache = {};          /* 'mode|bars' → 종목 성과 분포 */
+  var uniRunning = {};        /* 진행 중인 기간 집계 */
+  function uniKey(mode, bars) { return mode + '|' + bars; }
+  function accNew() { return { rets: [], mdds: [], bhs: [], wrs: [], beat: 0, ntr: 0 }; }
+  function accAdd(acc, it, covered, bars) {
+    if (!it || !it.stats) return;
+    if (covered < bars) return;          /* 선택 기간을 다 채우지 못한 종목(상장 초기) 제외 */
+    acc.rets.push(it.stats.totalReturn); acc.mdds.push(it.stats.mdd); acc.bhs.push(it.stats.bhReturn);
+    if (it.stats.totalReturn > it.stats.bhReturn) acc.beat++;
+    if (it.stats.trades > 0) { acc.wrs.push(it.stats.winRate); acc.ntr += it.stats.trades; }
+  }
+  function accEnd(acc) {
+    return { n: acc.rets.length, mean: meanOf(acc.rets), med: medianOf(acc.rets), beat: acc.beat,
+      mdd: meanOf(acc.mdds), bh: meanOf(acc.bhs),
+      win: acc.wrs.length ? meanOf(acc.wrs) : null, trades: acc.ntr };
+  }
+  function uniBundle(t, bars) { return bars >= 1255 ? (A[t] && A[t].strategy) : winOf(t, bars); }
+  /* 5년(또는 선택 기간) 백테스트 창을 온전히 채운 종목의 전략 성과 분포 */
+  function computeUniNow(mode, bars) {
+    var acc = accNew();
     M.tickers.forEach(function (x) {
       var a = A[x.t];
-      if (!a || !a.strategy || !a.close) return;
-      var b = a.strategy[mode];
-      if (!b || !b.stats) return;
-      if (a.close.length - b.startIdx < 1250) return;   /* 5년(1,255거래일) 창을 다 채우지 못한 종목 제외 */
-      rets.push(b.stats.totalReturn); mdds.push(b.stats.mdd); bhs.push(b.stats.bhReturn);
-      if (b.stats.totalReturn > b.stats.bhReturn) beat++;
-      if (b.stats.trades > 0) { wrs.push(b.stats.winRate); ntr += b.stats.trades; }
+      if (!a || !a.close) return;
+      var b = uniBundle(x.t, bars); if (!b) return;
+      var it = b[mode] || b.trend; if (!it) return;
+      accAdd(acc, it, a.close.length - it.startIdx, bars);
     });
-    var r = { n: rets.length, mean: meanOf(rets), med: medianOf(rets), beat: beat, mdd: meanOf(mdds), bh: meanOf(bhs),
-      win: wrs.length ? meanOf(wrs) : null, trades: ntr };
-    if (r.n) uniCache[mode] = r;
-    return r;
+    return accEnd(acc);
+  }
+  /* 기간 집계를 8ms 단위로 나눠 계산 — 기간 전환 순간 UI가 멈추지 않게 */
+  function startUniJob(bars, done) {
+    var key = 'job' + bars;
+    if (uniRunning[key]) { if (done) uniRunning[key].push(done); return; }
+    var waits = uniRunning[key] = done ? [done] : [];
+    var order = M.tickers.slice(), idx = 0;
+    var accs = { trend: accNew(), swing: accNew() };
+    function step() {
+      var t0 = performance.now();
+      while (idx < order.length && performance.now() - t0 < 8) {
+        var x = order[idx++], a = A[x.t];
+        if (!a || !a.close) continue;
+        var b = uniBundle(x.t, bars); if (!b) continue;
+        ['trend', 'swing'].forEach(function (m) {
+          var it = b[m]; if (!it) return;
+          accAdd(accs[m], it, a.close.length - it.startIdx, bars);
+        });
+      }
+      if (idx < order.length) { setTimeout(step, 0); return; }
+      uniCache[uniKey('trend', bars)] = accEnd(accs.trend);
+      uniCache[uniKey('swing', bars)] = accEnd(accs.swing);
+      delete uniRunning[key];
+      if (btBars() === bars) renderStrategy();
+      waits.forEach(function (f) { try { f(); } catch (e) {} });
+    }
+    setTimeout(step, 0);
+  }
+  function universeStats(mode) {
+    var bars = btBars();
+    var key = uniKey(mode, bars);
+    if (uniCache[key]) return uniCache[key];
+    if (bars >= 1255) return (uniCache[key] = computeUniNow(mode, bars));
+    startUniJob(bars);                     /* 계산 중에는 null — 화면은 '집계 중' 표시 */
+    return null;
+  }
+  /* 부팅 뒤 나머지 기간(3M·6M·1Y·2Y)을 놀고 있는 시간에 미리 계산해 둔다 */
+  function prefetchPeriods() {
+    var mine = btBars();
+    var list = [mine].concat([63, 126, 252, 504].filter(function (b) { return b !== mine; }));
+    (function next() {
+      if (!list.length) return;
+      var bars = list.shift();
+      if (uniCache[uniKey('trend', bars)]) { setTimeout(next, 0); return; }
+      startUniJob(bars, next);
+    })();
   }
   function renderStrategy() {
     var info = STRAT[stratKey()];
@@ -527,15 +661,18 @@
     var ti = $('#stratTitle'); if (ti) ti.textContent = info.title + ' (' + info.sub + ')';
     var de = $('#stratDesc'); if (de) de.textContent = info.desc;
     var el = $('#stratUni'), u = universeStats(info.key), ua = A[state.cur];
-    if (el && u.n) {
+    if (el && u && u.n) {
       el.innerHTML =
+        '<span class="uni-per">' + btTag() + '</span>' +
         '<span><b>' + u.n + '종목 평균</b> <b class="' + cls(u.mean) + '">' + pct(u.mean, 2) + '</b></span>' +
         '<span>중앙 <b class="' + cls(u.med) + '">' + pct(u.med, 2) + '</b></span>' +
         '<span>보유 초과 <b>' + u.beat + '/' + u.n + '</b></span>' +
         '<span>평균 MDD <b class="neg">' + pct(u.mdd, 2) + '</b></span>' +
         '<span>승률 <b class="' + (u.win >= 0.5 ? 'pos' : '') + '">' + (u.win == null ? '—' : (u.win * 100).toFixed(1) + '%') + '</b></span>';
-      el.title = u.n + '종목 단순보유 평균 ' + pct(u.bh, 2) + ' · 5년(1,255거래일) 구간 · 워밍업 250거래일' +
+      el.title = u.n + '종목 단순보유 평균 ' + pct(u.bh, 2) + ' · ' + btName() + '(' + btBars() + '거래일) 구간 · 워밍업 250거래일' +
         (ua ? ' (' + (ua.close.length - ua.startIdx) + '거래일)' : '');
+    } else if (el) {
+      el.innerHTML = '<span class="uni-calc"><i></i>' + btName() + ' · 99종목 집계 중…</span>';
     }
   }
   function setStrategy(mode) {
@@ -545,7 +682,15 @@
     stratPersist();
     renderStrategy();
     renderScanner();
-    if (state.cur && A[state.cur]) select(state.cur, true);
+    if (state.cur && A[state.cur]) select(state.cur, true);   /* 선택 기간은 그대로 유지 */
+  }
+  /* 차트 기간 버튼 → 아래 백테스트 재계산 (현재 종목은 즉시, 99종목 평균은 백그라운드 집계) */
+  function applyBtPeriod() {
+    var t = state.cur;
+    if (!t || !A[t]) return;
+    var v = stratView(viewOf(t));
+    renderKpis(v); renderBtPeriod(v); renderEquity(v); renderTrades(v); renderRecent(v);
+    renderStrategy();
   }
 
   /* ---------------- selection ---------------- */
@@ -562,6 +707,7 @@
     renderHero(v);
     renderFund(v);
     renderKpis(v);
+    renderBtPeriod(v);
     renderScoreExplain(v);
     renderElliott(v);
     renderEquity(v);
@@ -576,6 +722,8 @@
 
   /* ---------------- hero ---------------- */
   function renderHero(a) {
+    var ew = $('#earnSlot');
+    if (ew) ew.innerHTML = earnWarnHtml(a.meta.t);
     $('#heroRank').textContent = a.meta.r ? '#' + a.meta.r : '관심';
     $('#heroTicker').textContent = a.sym;
     $('#heroName').textContent = a.meta.nk;
@@ -628,6 +776,28 @@
       if (lvRL) lvRL.textContent = '손익비 (R:R)';
       $('#lvRR').textContent = '1 : ' + ((a.target - a.price) / Math.max(a.price - a.stop, 1e-9)).toFixed(2);
     }
+  }
+
+  /* ---------------- 백테스트 집계 기간 표시 ---------------- */
+  function renderBtPeriod(a) {
+    var el = $('#btPeriod');
+    if (!el) return;
+    if (!a || !a.stats || !a.dates) { el.classList.remove('on'); return; }
+    el.classList.add('on');
+    var bars = a.replay ? 0 : btBars();
+    var i0 = a.startIdx, i1 = a.dates.length - 1, cov = i1 - i0 + 1;
+    var tag = $('#bpTag'); if (tag) tag.textContent = a.replay ? '리플레이' : btTag();
+    var nm = $('#bpName'); if (nm) nm.textContent = a.replay ? '시점 리플레이' : btName();
+    var rg = $('#bpRange'); if (rg) rg.textContent = a.dates[i0] + ' ~ ' + a.dates[i1];
+    var bs = $('#bpBars'); if (bs) bs.textContent = cov.toLocaleString('en-US') + '거래일';
+    var nt = $('#bpNote');
+    if (nt) {
+      var short = bars && !a.replay && cov < bars - 2;
+      nt.innerHTML = short
+        ? '<b class="warn">이 종목은 ' + cov + '거래일 이력</b> — 선택 기간(' + btTag() + ')보다 짧아 있는 만큼만 집계'
+        : '차트 기간 버튼(3M~5Y)과 연동 · 지표 워밍업은 전체 이력 사용 · 미래참조 없음';
+    }
+    el.title = '아래 KPI·자산곡선·트레이드 로그·99종목 평균이 모두 이 기간으로 다시 계산됩니다';
   }
 
   /* ---------------- 기간 라벨 ---------------- */
@@ -965,9 +1135,35 @@
     var mmdd = pad2(dt.getUTCMonth() + 1) + '/' + pad2(dt.getUTCDate());
     var soon = dd >= 0 && dd <= 7;
     var lab = dd === 0 ? 'D-DAY' : (dd > 0 ? 'D-' + dd : '지남');
-    return '<span class="fund-pill earn' + (soon ? ' soon' : (dd < 0 ? ' past' : '')) + '"' +
+    return '<span class="fund-pill earn' + (soon ? (dd <= 3 ? ' soon crit' : ' soon') : (dd < 0 ? ' past' : '')) + '"' +
       ' title="' + (soon ? '실적 발표가 ' + dd + '일 앞으로 다가왔습니다 · ' : '다음 실적 발표일 ') +
       f.earningsDate + '">다음 실적발표 <b>' + mmdd + '</b><em class="earn-dd">' + lab + '</em></span>';
+  }
+  /* 실적 발표 임박 경고 — D-0~D-3 이면 스윙 진입 시 밤사이 갭하락 위험을 표시 (표시 전용) */
+  function earnDays(t) {
+    var f = fundOf(t);
+    if (!f) return null;
+    if (String(f.quoteType || '').toUpperCase() === 'ETF') return null;   /* ETF 는 실적 발표 없음 */
+    var ed = ymdNum(f.earningsDate);
+    if (!ed) return null;
+    return { dd: Math.round((ed - earnBase()) / 86400000), date: f.earningsDate };
+  }
+  function earnLabel(dd) { return dd === 0 ? 'D-DAY' : 'D-' + dd; }
+  function earnChip(t) {                     /* 스캐너 행의 작은 경고칩 */
+    var e = earnDays(t);
+    if (!e || e.dd < 0 || e.dd > 3) return '';
+    return '<i class="edot" title="실적 ' + earnLabel(e.dd) + ' (' + e.date + ') · 발표 전 갭하락 주의">' + earnLabel(e.dd) + '</i>';
+  }
+  function earnWarnHtml(t) {                 /* 히어로 영역의 앰버 경고 배지 */
+    var e = earnDays(t);
+    if (!e || e.dd < 0 || e.dd > 3) return '';
+    return '<div class="earn-warn on">' +
+      '<span class="ew-ico" aria-hidden="true">⚠</span>' +
+      '<b>실적 ' + earnLabel(e.dd) + '</b>' +
+      '<span class="ew-sep">·</span>' +
+      '<span class="ew-t">갭하락 주의</span>' +
+      '<span class="ew-sub">' + e.date + ' 실적 발표 — 발표 전날 밤사이 갭으로 -10% 손절 상한을 넘길 수 있습니다. 스윙 신규 진입은 발표 이후로 미루는 편이 안전합니다.</span>' +
+      '</div>';
   }
   var REC_KO = { strong_buy: '적극 매수', buy: '매수', hold: '보유', underperform: '시장 하회', sell: '매도', strong_sell: '적극 매도' };
   function renderFund(a) {
@@ -1034,8 +1230,11 @@
     var tagEl = $('#kpis .kpi .lab .tag');
     if (tagEl) {
       var bars = a.close.length - a.startIdx;
-      tagEl.textContent = a.replay ? '리플레이'
-        : ((a.stratKey === 'swing' ? '스윙 ' : '') + periodTag(bars));
+      var want = a.btBars || 1255;
+      /* 선택 기간을 다 못 채운 종목은 실제 거래일 기준 라벨로 */
+      var tagTxt = a.replay ? '리플레이'
+        : (bars < want - 2 ? periodTag(bars) : (BT_TAG[want] || periodTag(bars)));
+      tagEl.textContent = (a.stratKey === 'swing' ? '스윙 ' : '') + tagTxt;
       tagEl.title = '백테스트 구간 ' + bars + '거래일' + (a.dates && a.dates[a.startIdx] ? ' · ' + a.dates[a.startIdx] + ' ~ ' + a.dates[a.dates.length - 1] : '') +
         (a.dates && a.dates[a.startIdx] && a.dates[a.startIdx] <= '2022-12-30' && a.dates[a.dates.length - 1] >= '2022-01-03'
           ? ' · 2022년 하락장 포함' : '');
@@ -1440,7 +1639,7 @@
     ctx.fillText(a.dates[i0], padL + 2, h - 4);
     ctx.textAlign = 'right';
     ctx.fillText(a.dates[i1], w - padR - 2, h - 4);
-    $('#eqSub').textContent = '전략 ' + pct(lastEq - 1, 1) + ' vs 보유 ' + pct(cl[i1] / cl[i0] - 1, 1) +
+    $('#eqSub').textContent = (a.replay ? '리플레이' : btName()) + ' · 전략 ' + pct(lastEq - 1, 1) + ' vs 보유 ' + pct(cl[i1] / cl[i0] - 1, 1) +
       (window.innerWidth > 640 ? ' · ' + a.dates[i0] + ' ~ ' + a.dates[i1] : '');
   }
 
@@ -1459,7 +1658,11 @@
   function renderTrades(a) {
     $('#logTicker').textContent = a.sym;
     var sub = $('#logSub');
-    if (sub) sub.textContent = STRAT[a.stratKey || 'trend'].logSub;
+    if (sub) {
+      var per = a.replay ? '리플레이'
+        : (btName() + ' · ' + a.dates[a.startIdx] + ' ~ ' + a.dates[a.dates.length - 1] + ' · ' + (a.dates.length - a.startIdx) + '거래일');
+      sub.innerHTML = STRAT[a.stratKey || 'trend'].logSub + ' · <b class="bt-chip">' + per + '</b>';
+    }
     var s = a.stats;
     $('#logStats').innerHTML = s && !a.limited ?
       '<span>' + s.trades + ' trades</span><span>평균 보유 ' + s.avgHold.toFixed(0) + '일</span><span>노출 ' + (s.exposure * 100).toFixed(0) + '%</span>' : '';
@@ -3103,6 +3306,8 @@
       b.classList.add('on');
       state.range = parseInt(b.dataset.n, 10);
       chart.setRange(state.range);
+      applyBtPeriod();          /* 차트 기간 = 백테스트 집계 기간 */
+      prefetchPeriods();
     };
     $('#toggles').onclick = function (e) {
       var b = e.target.closest('button'); if (!b) return;

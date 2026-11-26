@@ -417,11 +417,15 @@
      늘어나도 백테스트 창은 5년으로 고정된다.
      ============================================================ */
   var BT_BARS = 1255, WARMUP = 250, MIN_WARM = 60;
-  function btFirst(n, warm) {
-    var f = n - BT_BARS;
+  /* 차트 기간 버튼 ↔ 백테스트 집계 기간 (3M·6M·1Y·2Y·5Y) */
+  var BT_PERIODS = { '3M': 63, '6M': 126, '1Y': 252, '2Y': 504, '5Y': BT_BARS };
+  function btFirst(n, warm, bars) {
+    /* 지표는 전체 이력으로 계산하고 거래 시작 인덱스만 기간만큼 뒤로 민다 */
+    var f = n - (bars && bars > 0 ? bars : BT_BARS);
     /* 5년 이력이 있으면 언제나 최근 1,255봉(앞쪽은 워밍업). 상장이 늦은 종목은
        60봉 이상 확보되면 자기 이력 기준 최근 1,255봉에서 시작한다 */
     if (f >= MIN_WARM) return f;
+    if (f > 0) return f;      /* 이력이 짧은 종목: 남은 봉을 모두 집계 (예: 116봉 종목의 3M) */
     return Math.min(Math.max(warm == null ? WARMUP : warm, 1), Math.max(n - 2, 1));
   }
 
@@ -690,7 +694,7 @@
     var map = swingMarketMap(o);
     var w = (o.wRoute || o.wRoute === undefined) ? (wsig || wSignals(series)) : null;
     var wb = w ? w.wbreak : null;
-    var first = btFirst(n, o.warmup);
+    var first = btFirst(n, o.warmup, o.bars);
     var cash = 1, pos = null, pendEntry = false, pendExit = null, pendKind = null;
     var trades = [], equity = new Array(n).fill(null), bars = 0, inMkt = 0;
 
@@ -803,7 +807,7 @@
     var S = sc.score, A = ind.atr;
     var RM = USE_REGIME ? (opts.regime || marketRegimeMap()) : null;
 
-    var first = btFirst(n, WARM);
+    var first = btFirst(n, WARM, opts.bars);
     var equity = new Array(n).fill(null), trades = [];
     var cash = 1, pos = null, i;
     var pendEntry = false, pendExit = null, pendW = 1, targetW = 1, bars = 0, inMarket = 0;
@@ -2066,6 +2070,123 @@
 
 
   /* ============================================================
+     미너비니 Trend Template + VCP(변동성 축소) 스캔
+     ------------------------------------------------------------
+       work/stock/v5_upgrade/vcplib.py · REPORT_VCP.md 이식
+       · 스캐너 필터/표시 **전용** — 매매 전략·백테스트 규칙은 건드리지 않는다
+       · 판정은 당일(i) 종가까지의 데이터만 사용한다 (미래참조 없음)
+       TT: 종가>150·200일선, 150>200, 200일선 상승(20봉 전 대비),
+           50일선>150·200 & 종가>50일선, 52주 저점 대비 +30%, 52주 고점 대비 -25% 이내
+       VCP: 직전 60봉 최고가(피벗) → 베이스 12~60봉 · 깊이 40% 이내 ·
+            전/후반 변동폭 0.6배 이하 축소 또는 최근 10일 박스 8% 이내
+     ============================================================ */
+  var VCP_P = {
+    baseMin: 12, baseMax: 60, contr: 0.60, tight: 0.08, tightDays: 10,
+    depthMax: 0.40, extMax: 0.06, volx: 1.2, near: 0.05, lookback: 252
+  };
+  function smaAt(a, i, p) {
+    if (i - p + 1 < 0) return null;
+    var s = 0;
+    for (var k = i - p + 1; k <= i; k++) s += a[k];
+    return s / p;
+  }
+  function hiLoAt(h, l, i, p) {
+    if (i - p + 1 < 0) return null;
+    var hi = -Infinity, lo = Infinity;
+    for (var k = i - p + 1; k <= i; k++) { if (h[k] > hi) hi = h[k]; if (l[k] < lo) lo = l[k]; }
+    return { hi: hi, lo: lo };
+  }
+  function trendTemplate(series, i) {
+    var c = series.c, p = VCP_P.lookback;
+    if (i < p) return false;
+    var C = c[i];
+    var m50 = smaAt(c, i, 50), m150 = smaAt(c, i, 150), m200 = smaAt(c, i, 200), m200p = smaAt(c, i - 20, 200);
+    if (m50 == null || m150 == null || m200 == null || m200p == null) return false;
+    var hl = hiLoAt(series.h, series.l, i, p);
+    if (!hl) return false;
+    if (!(C > m150 && C > m200)) return false;
+    if (!(m150 > m200)) return false;
+    if (!(m200 > m200p)) return false;              /* 200일선 상승 (20거래일 전 대비) */
+    if (!(m50 > m150 && m50 > m200 && C > m50)) return false;
+    if (!(C >= hl.lo * 1.30)) return false;         /* 52주 신저가 대비 +30% 이상 */
+    if (!(C >= hl.hi * 0.75)) return false;         /* 52주 신고가 대비 -25% 이내 */
+    return true;
+  }
+  function vcpSetup(series, i, prm) {
+    var P = prm || VCP_P, H = series.h, L = series.l, C = series.c, V = series.v;
+    var out = { pivot: null, dist: null, state: '없음', baseLen: null, depth: null,
+      contracted: false, tight: false, volRatio: null, dryUp: false };
+    if (i < P.lookback || i < 1) return out;
+    var lo0 = Math.max(0, i - P.baseMax), pivot = -Infinity, p = -1, k;
+    for (k = lo0; k < i; k++) if (H[k] > pivot) { pivot = H[k]; p = k; }
+    if (p < 0) return out;
+    var bl = i - p;
+    out.pivot = pivot; out.baseLen = bl; out.dist = (pivot - C[i]) / pivot;
+    if (bl < P.baseMin || bl > P.baseMax) return out;    /* 베이스 길이 12~60봉 밖 */
+    var bh = -Infinity, bmin = Infinity;
+    for (k = p; k < i; k++) { if (H[k] > bh) bh = H[k]; if (L[k] < bmin) bmin = L[k]; }
+    out.depth = (pivot - bmin) / pivot;
+    var m = Math.floor((i - p) / 2);
+    var rng = function (a, b) {
+      var h1 = -Infinity, l1 = Infinity;
+      for (var q = a; q < b; q++) { if (H[q] > h1) h1 = H[q]; if (L[q] < l1) l1 = L[q]; }
+      return (b > a && h1 > 0) ? (h1 - l1) / h1 : null;
+    };
+    var r1 = rng(p, p + m), r2 = rng(p + m, i);
+    out.r1 = r1; out.r2 = r2;
+    out.contracted = !!(r1 && r2 && r2 <= r1 * P.contr);
+    var hh = -Infinity, ll = Infinity;
+    for (k = i - P.tightDays; k < i; k++) { if (H[k] > hh) hh = H[k]; if (L[k] < ll) ll = L[k]; }
+    out.tight = hh > 0 && (hh - ll) / hh <= P.tight;
+    var v50 = smaAt(V, i - 1, 50);
+    out.volRatio = v50 ? V[i] / v50 : null;
+    var v5 = 0;
+    if (i >= 5) { for (k = i - 5; k < i; k++) v5 += V[k]; v5 = v5 / 5; } else v5 = null;
+    out.dryUp = !!(v50 && v5 && v5 <= v50 * 0.9);
+    if (C[i] > pivot) out.state = '돌파';
+    else if (out.contracted || out.tight) out.state = (out.dist != null && out.dist <= P.near) ? '임박' : '베이스';
+    else out.state = '베이스';
+    return out;
+  }
+  function vcpScan(series) {
+    var i = series.c.length - 1;
+    var st = vcpSetup(series, i), k;
+    var r = { asOf: series.d ? series.d[i] : null, tt: trendTemplate(series, i), lookback: VCP_P.lookback, near: VCP_P.near };
+    for (k in st) r[k] = st[k];
+    /* 최근 5봉 내 돌파 이력 — 오늘 돌파가 아니어도 '막 돌파한' 종목을 보여준다 */
+    var brk = null;
+    for (var j = i; j >= Math.max(0, i - 4) && j >= VCP_P.lookback; j--) {
+      if (!trendTemplate(series, j)) continue;
+      var s2 = vcpSetup(series, j);
+      if (s2.state === '돌파') { brk = { i: j, date: series.d ? series.d[j] : null, dist: s2.dist, pivot: s2.pivot }; break; }
+    }
+    r.breakRecent = brk;
+    r.signal = (r.state === '돌파') || !!brk;
+    r.nearBreak = (r.state === '임박');
+    return r;
+  }
+
+  /* ============================================================
+     선택 기간 백테스트 (차트 3M~5Y ↔ 아래 KPI·자산곡선·로그·종목 평균)
+     ------------------------------------------------------------
+     지표·점수·W 신호는 전체 이력으로 이미 계산된 것을 그대로 쓰고,
+     거래 시작 인덱스(first)만 기간에 맞춰 자른다 — 미래참조 없음.
+     ============================================================ */
+  function strategyWindow(series, ind, sc, wsig, bars, opts) {
+    var o = opts || {};
+    function withBars(src) { var r = {}, k; for (k in src) r[k] = src[k]; r.bars = bars; return r; }
+    var bt = backtestRun(series, ind, sc, withBars(o));
+    var sw = swingBacktest(series, ind, withBars(o), wsig);
+    return {
+      bars: bars,
+      trend: { key: 'trend', title: '추세형', sub: '중기', stats: bt.stats, trades: bt.trades,
+        equity: bt.equity, startIdx: bt.startIdx, plan: null },
+      swing: { key: 'swing', title: '스윙형', sub: '단기', stats: sw.stats, trades: sw.trades,
+        equity: sw.equity, startIdx: sw.startIdx, plan: null }
+    };
+  }
+
+  /* ============================================================
      Public: analyze one ticker
      ============================================================ */
   function analyze(ticker, name, series, opts) {
@@ -2102,7 +2223,10 @@
     };
     rec.dates = series.d;
     rec.close = series.c;
+    rec.series = series;
+    rec.wsig = wsig;              /* 기간 전환 백테스트가 W 신호를 다시 계산하지 않도록 보관 */
     rec.w = wnow;                 /* 차트 오버레이·스캐너 필터용 현재 W 상태 */
+    rec.vcp = vcpScan(series);    /* 스캐너 VCP 필터 (표시 전용) */
     rec.elliott = ewAnalyze(series, ind);
     /* 두 전략을 함께 산출 — 전환 탭은 다시 계산하지 않고 이 결과를 골라 쓴다 */
     rec.strategyMode = mode;
@@ -2130,6 +2254,8 @@
     backtest: backtestRun, analyze: analyze, labelOf: labelOf, LABELS: LABELS, explain: explain,
     swingBacktest: swingBacktest, swingStatus: swingStatus, swingParams: SWING_P,
     wBottom: wSignals, wAliveAt: wAliveAt, wScan: wScan, wParams: W_P,
+    strategyWindow: strategyWindow, BT_PERIODS: BT_PERIODS, BT_BARS: BT_BARS,
+    trendTemplate: trendTemplate, vcpSetup: vcpSetup, vcpScan: vcpScan, VCP_P: VCP_P,
     clamp: clamp, elliott: ewAnalyze
   };
 

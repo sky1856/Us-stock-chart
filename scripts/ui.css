@@ -999,3 +999,87 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
   .fund-h>.acc-wrap .fund-side{width:100%;margin-left:0}
   .fund-pill.earn{font-size:10px;padding:3px 7px}
 }
+
+/* ---------- 백테스트 집계 기간 연동 (차트 3M~5Y) ---------- */
+.bt-period{
+  display:none; align-items:center; gap:9px; flex-wrap:wrap;
+  padding:7px 11px; border:1px solid rgba(56,189,248,.22); border-radius:10px;
+  background:linear-gradient(90deg,rgba(56,189,248,.09),rgba(56,189,248,.02));
+  font-size:10.5px; color:var(--txt3); font-variant-numeric:tabular-nums;
+}
+.bt-period.on{display:flex}
+.bp-tag{
+  flex:0 0 auto; font-family:var(--mono); font-size:10px; font-weight:800; letter-spacing:.03em;
+  color:#BEE9FF; background:rgba(56,189,248,.16); border:1px solid rgba(56,189,248,.42);
+  padding:2px 7px; border-radius:6px;
+}
+.bp-tx{display:flex; align-items:baseline; gap:8px; flex-wrap:wrap}
+.bp-tx b{font-size:11.5px; font-weight:750; color:var(--txt)}
+.bp-range{color:var(--txt2); font-family:var(--mono); font-size:10.5px}
+.bp-bars{color:var(--txt3)}
+.bp-note{margin-left:auto; font-size:9.6px; color:var(--txt4); letter-spacing:-.002em}
+.bp-note b.warn{color:#FCD34D; font-weight:700}
+.bt-chip{color:#BEE9FF; font-weight:650; font-family:var(--mono); font-size:10px; white-space:nowrap}
+.strat-uni .uni-per{color:#BEE9FF; font-weight:800; font-size:9.5px; letter-spacing:.03em;
+  background:rgba(56,189,248,.14); border:1px solid rgba(56,189,248,.34); border-radius:5px; padding:1px 5px}
+.strat-uni .uni-calc{color:var(--txt3); display:inline-flex; align-items:center; gap:6px}
+.strat-uni .uni-calc i{width:8px;height:8px;border-radius:50%;border:1.6px solid rgba(56,189,248,.5);
+  border-top-color:transparent; animation:unis 900ms linear infinite; display:inline-block}
+@keyframes unis{to{transform:rotate(360deg)}}
+@media (max-width:900px){
+  .bt-period{padding:6px 9px}
+  .bp-note{margin-left:0; flex-basis:100%; font-size:9.2px}
+}
+@media (prefers-reduced-motion:reduce){ .strat-uni .uni-calc i{animation:none} }
+
+/* ---------- 스캐너 VCP 배지 ---------- */
+.srow .tk b .vcpb{font-style:normal;font-size:8.5px;font-weight:800;letter-spacing:.01em;margin-left:5px;
+  padding:1px 4px;border-radius:4px;vertical-align:1px;font-family:var(--sans)}
+.srow .tk b .vcpb.near{color:#FCD34D;background:rgba(245,158,11,.14);border:1px solid rgba(245,158,11,.34)}
+.srow .tk b .vcpb.brk{color:#86EFAC;background:rgba(16,185,129,.16);border:1px solid rgba(16,185,129,.36)}
+
+/* ---------- 실적 발표 임박 (D-0~D-3) 경고 ---------- */
+.earn-slot{grid-column:1/-1}
+.earn-warn{display:none}
+.earn-warn.on{
+  display:flex; align-items:center; gap:7px; flex-wrap:wrap;
+  margin-top:11px; padding:8px 11px; border-radius:9px;
+  color:#FDE68A; background:linear-gradient(90deg,rgba(245,158,11,.16),rgba(245,158,11,.05));
+  border:1px solid rgba(245,158,11,.42); font-size:11px; line-height:1.45;
+}
+.earn-warn .ew-ico{font-size:12px; line-height:1}
+.earn-warn b{font-weight:800; color:#FCD34D; letter-spacing:.01em}
+.earn-warn .ew-sep{color:rgba(253,230,138,.55)}
+.earn-warn .ew-t{font-weight:700; color:#FDE68A}
+.earn-warn .ew-sub{flex:1 1 260px; min-width:0; font-size:10px; color:rgba(253,230,138,.82); letter-spacing:-.002em; word-break:keep-all}
+.srow .tk b .edot{font-style:normal;font-size:8.5px;font-weight:800;margin-left:4px;padding:1px 4px;border-radius:4px;
+  color:#FCD34D;background:rgba(245,158,11,.16);border:1px solid rgba(245,158,11,.4);vertical-align:1px;font-family:var(--mono)}
+.fund-pill.earn.crit{color:#FDE68A;border-color:rgba(245,158,11,.7);background:rgba(245,158,11,.22);
+  box-shadow:0 0 0 1px rgba(245,158,11,.18) inset}
+.fund-pill.earn.crit em{background:#FCD34D}
+@media (max-width:640px){
+  .earn-warn{padding:7px 9px; font-size:10.5px}
+  .earn-warn .ew-sub{flex-basis:100%}
+}
+
+/* ---------- 프리셋 필터 줄 · 차트 기간/지표 토글 줄 정돈 (1440 · 390) ---------- */
+#presetTabs{gap:4px;align-content:flex-start}
+#presetTabs button{padding:5px 9px}
+/* 사이드바 드로어 폭(352px)에서는 프리셋 4개를 2×2로 — 3+1 어긋남 방지 */
+@media (max-width:900px){
+  #presetTabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;padding:0 12px 9px}
+  #presetTabs button{justify-content:center;width:100%;padding:6px 8px;font-size:11px}
+  #presetTabs button .c{margin-left:4px}
+  /* 지표 토글은 가로 스크롤 대신 4×2 격자로 한눈에 */
+  .toggles{width:100%;margin-left:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:6px;flex-wrap:wrap;overflow:visible;padding-bottom:0}
+  .tg{flex:1 1 auto;justify-content:center;min-width:0;padding:6px 4px;gap:4px}
+  .chart-bar{gap:8px 10px}
+  .tf{width:100%;gap:2px}
+  .tf button{flex:1 1 0;text-align:center;padding:6px 0}
+}
+@media (max-width:430px){
+  .tg{font-size:10px}
+  .tg .lbs{font-size:10px}
+  .strat-uni{font-size:9.5px;gap:3px 10px}
+}
