@@ -665,7 +665,7 @@
       if (sec && !(isETF && sec === 'ETF')) parts.push(sec);
       sub.textContent = parts.join(' · ') +
         ' · ' + (isETF ? 'ETF — 개별 기업 펀더멘털 없음' : '기업 펀더멘털') +
-        ' · 기준일 ' + fd + ' <span class="nw">(Yahoo Finance)</span>';
+        ' · 기준일 ' + fd + ' (Yahoo\u00A0Finance)';
     }
     var side = $('#fundSide');
     if (side) {

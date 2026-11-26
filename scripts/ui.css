@@ -280,7 +280,6 @@ input,select{font-family:inherit;color:inherit}
 .fund-tag{font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--cyan);margin-left:6px;
   border:1px solid rgba(56,189,248,.3);background:rgba(56,189,248,.08);border-radius:5px;padding:2px 5px;vertical-align:middle}
 .fund-tt p{margin:4px 0 0;font-size:10.5px;color:var(--txt3);line-height:1.45;word-break:keep-all}
-.fund-tt .nw{white-space:nowrap}
 .fund-side{margin-left:auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .fund-pill{display:flex;align-items:center;gap:5px;font-size:10.5px;font-weight:650;
   font-variant-numeric:tabular-nums;color:var(--txt2);border:1px solid var(--line);
