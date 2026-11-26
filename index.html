@@ -842,8 +842,8 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
       </div>
       <div class="levels">
         <div><label>진입 참고 구간</label><b id="lvEntry">—</b></div>
-        <div><label>손절가 · 3.2 ATR</label><b class="neg" id="lvStop">—</b></div>
-        <div><label>목표가 · 4.5 ATR</label><b class="pos" id="lvTarget">—</b></div>
+        <div><label>손절가 · 6 ATR</label><b class="neg" id="lvStop">—</b></div>
+        <div><label>트레일 기준 · 12 ATR</label><b class="pos" id="lvTarget">—</b></div>
         <div><label>손익비 (R:R)</label><b id="lvRR">—</b></div>
       </div>
     </section>
@@ -1066,7 +1066,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
 
     <section class="card table-card">
       <div class="panel-h">
-        <div><h3>트레이드 로그 · <span id="logTicker">—</span></h3><p id="logSub">종합점수 58 상향 돌파 매수 → 45 하회·손절 시 청산</p></div>
+        <div><h3>트레이드 로그 · <span id="logTicker">—</span></h3><p id="logSub">종합점수 50 이상 매수 → 시장약세·손절(6 ATR)·트레일(12 ATR) 청산</p></div>
         <div class="legend" id="logStats"></div>
       </div>
       <div class="tbl-wrap">
@@ -1456,95 +1456,118 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
   }
 
   /* ============================================================
-     Backtest: long-only, score-cross entry, ATR risk, score exit
+     Backtest (v2 — 2026-11 개선안, bt_opt 연구 결과)
+     · 진입: 종합점수 ENTRY 이상이면 다음 거래일 시가 매수 (추세 유지형)
+     · 청산: ① 시장(QQQ) 100일선 하락 전환+종가 아래 → 전량
+             ② 샹들리에 트레일(고가 고점 - 12×ATR, +6×ATR 이익 이후)
+             ③ 손절(평단가 - 6×ATR)
+     · 미래참조 없음: 모든 판단은 당일 종가, 체결은 다음 거래일 시가
+     · 매수·매도 각 FEE(0.03%)
      ============================================================ */
+  var _regCache = null;
+  function marketRegimeMap() {
+    var MKT = (root && root.MARKET) || null;
+    if (!MKT || !MKT.series || !MKT.series.QQQ) return null;
+    var key = MKT.asOf || 'na';
+    if (_regCache && _regCache.key === key) return _regCache.map;
+    var c = MKT.series.QQQ.c, dts = MKT.dates, n = c.length, P = 100, SLP = 20, PE = 50;
+    var ma = new Array(n), s = 0, maE = new Array(n), se2 = 0, map = {};
+    for (var i = 0; i < n; i++) {
+      s += c[i];
+      if (i >= P) s -= c[i - P];
+      ma[i] = i >= P - 1 ? s / P : null;
+      se2 += c[i];
+      if (i >= PE) se2 -= c[i - PE];
+      maE[i] = i >= PE - 1 ? se2 / PE : null;
+    }
+    /* 비대칭 레짐: 느린 청산(QQQ 종가 < 100일선 그리고 100일선 하락) /
+       빠른 재진입(QQQ 종가 > 50일선) */
+    var on = true;
+    for (var j = 0; j < n; j++) {
+      if (on) {
+        if (ma[j] != null && j >= SLP && ma[j - SLP] != null && c[j] < ma[j] && ma[j] < ma[j - SLP]) on = false;
+      } else {
+        if (maE[j] != null && c[j] > maE[j]) on = true;
+      }
+      map[dts[j]] = (ma[j] == null) ? true : on;
+    }
+    _regCache = { key: key, map: map };
+    return map;
+  }
+
   function backtestRun(series, ind, sc, opts) {
     opts = opts || {};
-    var ENTRY = opts.entry !== undefined ? opts.entry : 58;
-    var EXIT = opts.exit !== undefined ? opts.exit : 45;
-    var STOP_ATR = opts.stopAtr !== undefined ? opts.stopAtr : 3.2;
-    var TAKE_ATR = opts.takeAtr !== undefined ? opts.takeAtr : 4.5;
-    var TRAIL_ATR = opts.trailAtr !== undefined ? opts.trailAtr : 99;
+    var ENTRY = opts.entry !== undefined ? opts.entry : 50;
+    var STOP_ATR = opts.stopAtr !== undefined ? opts.stopAtr : 6;
+    var TRAIL_ATR = opts.trailAtr !== undefined ? opts.trailAtr : 12;
+    var TRAIL_START = opts.trailStartAtr !== undefined ? opts.trailStartAtr : 6;
     var FEE = opts.fee !== undefined ? opts.fee : 0.0003;
     var WARM = opts.warmup !== undefined ? opts.warmup : 210;
-    var SCALE = opts.scale !== undefined ? opts.scale : 0.3;      // fraction sold at first target
-    var LOCK = opts.lockAtr !== undefined ? opts.lockAtr : 0;    // breakeven lock distance (ATR) once +N ATR in profit
-    var LOCK_TRIG = opts.lockTrig !== undefined ? opts.lockTrig : 3;
+    var USE_REGIME = opts.marketFilter !== undefined ? opts.marketFilter : true;
 
     var c = series.c, o = series.o, h = series.h, l = series.l, d = series.d;
     var n = c.length;
     var S = sc.score, A = ind.atr;
+    var rm = USE_REGIME ? marketRegimeMap() : null;
+    var reg = null;
+    if (rm) { reg = new Array(n); for (var q = 0; q < n; q++) reg[q] = rm[d[q]] !== false; }
+
     var trades = [], equity = new Array(n).fill(null);
-    var pos = null, eq = 1, i, inMarket = 0, bars = 0, startIdx = Math.min(Math.max(WARM, 60), n - 2);
+    var pos = null, eq = 1, i, inMarket = 0, bars = 0, pendEntry = false, pendExit = null;
+    var startIdx = Math.min(Math.max(WARM, 60), n - 2);
 
     for (i = startIdx; i < n; i++) {
-      if (pos) {
-        /* 0) breakeven lock */
-        if (LOCK > 0 && !pos.locked && h[i] >= pos.entry + LOCK_TRIG * pos.atr0) {
-          pos.locked = true;
-          pos.stop = Math.max(pos.stop, pos.entry + LOCK * pos.atr0);
-        }
-        /* 0b) partial scale-out at first target */
-        if (SCALE > 0 && !pos.scaled && h[i] >= pos.target) {
-          pos.scaled = true;
-          pos.partialPx = pos.target;
-          pos.partialFrac = SCALE;
-          pos.stop = Math.max(pos.stop, pos.entry);
-        }
-        /* 1) protective stop / take profit — intrabar */
-        if (l[i] <= pos.stop) {
-          var fillS = Math.min(o[i], pos.stop);
-          trades.push(finish(pos, i, fillS, fillS >= pos.entry ? '이익보전' : '손절', d[i]));
-          eq *= applyExit(pos, fillS, FEE);
-          pos = null;
-        } else if (!pos.scaled && h[i] >= pos.target) {
-          var fillT = Math.max(o[i], pos.target);
-          trades.push(finish(pos, i, fillT, '목표달성', d[i]));
-          eq *= applyExit(pos, fillT, FEE);
-          pos = null;
-        }
-      }
-      if (pos) {
-        /* 2) trailing stop once the trade is well in profit */
-        var atrNow = nz(A[i], pos.atr0);
-        if (c[i] > pos.entry + 2 * pos.atr0) {
-          var trail = c[i] - TRAIL_ATR * atrNow;
-          if (trail > pos.stop) pos.stop = trail;
-        }
-        pos.peak = Math.max(pos.peak, c[i]);
-        /* 3) signal-based exit at next open */
-        if (!pos.exitPending && S[i] < EXIT) pos.exitPending = true;
-      }
-      /* 4) execute pending signal exit at today's open */
-      if (pos && pos.exitPending && pos.entryIdx < i) {
-        trades.push(finish(pos, i, o[i], '신호청산', d[i]));
-        eq *= applyExit(pos, o[i], FEE);
+      /* 1) 전일 종가 신호 → 오늘 시가 체결 */
+      if (pos && pendExit) {
+        trades.push(finish(pos, i, o[i], pendExit, d[i], false));
+        eq *= (1 + posWeighted(pos, o[i])) * (1 - FEE) * (1 - FEE);
         pos = null;
       }
-      /* 5) entry at today's open after yesterday's bullish cross */
-      if (!pos && i > startIdx && S[i - 1] >= ENTRY && S[i - 2] < ENTRY) {
+      pendExit = null;
+      if (!pos && pendEntry) {
         var atr0 = nz(A[i - 1], 0);
         if (atr0 > 0) {
-          var entryPx = o[i];
-          pos = {
-            entry: entryPx, entryIdx: i, entryDate: d[i], atr0: atr0,
-            stop: entryPx - STOP_ATR * atr0, target: entryPx + TAKE_ATR * atr0,
-            peak: entryPx, exitPending: false, locked: false, scaled: false, partialFrac: 0, partialPx: 0
-          };
+          var px = o[i];
+          pos = { entry: px, entryIdx: i, entryDate: d[i], atr0: atr0,
+            stop: px - (STOP_ATR > 0 ? STOP_ATR * atr0 : 1e9), peakH: Math.max(h[i], px),
+            partialFrac: 0, partialPx: 0 };
+        }
+        pendEntry = false;
+      }
+      /* 2) 장중 손절 */
+      if (pos) {
+        if (l[i] <= pos.stop) {
+          var fillS = Math.min(o[i], pos.stop);
+          trades.push(finish(pos, i, fillS, fillS >= pos.entry ? '이익보전' : '손절', d[i], false));
+          eq *= (1 + posWeighted(pos, fillS)) * (1 - FEE) * (1 - FEE);
+          pos = null;
+        } else {
+          if (h[i] > pos.peakH) pos.peakH = h[i];
+          var atrNow = nz(A[i], pos.atr0);
+          if (pos.peakH > pos.entry + TRAIL_START * pos.atr0) {
+            var tr = pos.peakH - TRAIL_ATR * atrNow;
+            if (tr > pos.stop) pos.stop = tr;
+          }
         }
       }
+      /* 3) 종가 판단 */
+      if (pos) {
+        if (reg && !reg[i]) pendExit = '시장약세';
+      } else {
+        if (S[i] != null && S[i] >= ENTRY && (!reg || reg[i]) && nz(A[i], 0) > 0) pendEntry = true;
+      }
+      /* 4) 평가 */
       equity[i] = eq * (1 + (pos ? posWeighted(pos, c[i]) : 0));
       bars++;
       if (pos) inMarket++;
     }
-    /* force-close at the end */
     if (pos) {
       trades.push(finish(pos, n - 1, c[n - 1], '보유중', d[n - 1], true));
-      eq *= applyExit(pos, c[n - 1], FEE);
+      eq *= (1 + posWeighted(pos, c[n - 1])) * (1 - FEE) * (1 - FEE);
       equity[n - 1] = eq;
       pos = null;
     }
-    /* ---- stats ---- */
+    /* ---- stats (기존과 동일 필드) ---- */
     var first = startIdx;
     var bh = c[n - 1] / c[first] - 1;
     var total = eq - 1;
@@ -1560,7 +1583,6 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
       var dd = (equity[i] - peak) / peak;
       if (dd < mdd) mdd = dd;
     }
-    /* buy & hold drawdown */
     var bhmdd = 0, bpeak = 0;
     for (i = first; i < n; i++) {
       if (c[i] > bpeak) bpeak = c[i];
@@ -2764,7 +2786,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
       vol: series.v[i], volAvg: ind.volSma[i], volRatio: ind.volSma[i] ? series.v[i] / ind.volSma[i] : null,
       hi52: Math.max.apply(null, series.h.slice(Math.max(0, n - 252))),
       lo52: Math.min.apply(null, series.l.slice(Math.max(0, n - 252))),
-      stop: price - 3.2 * atrNow, target: price + 4.5 * atrNow,
+      stop: price - 6 * atrNow, target: price + 12 * atrNow,
       entryZone: [Math.max(price - 1.2 * atrNow, ind.ma20[i] || price), price + 0.3 * atrNow],
       lastDate: series.d[i],
       hist: { score: sc.score.slice(-260), dates: series.d.slice(-260) },
