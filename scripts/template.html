@@ -174,11 +174,40 @@
         </div>
         <div class="sig-meta"><b id="sigName">—</b><span id="sigSub">종합 기술 점수</span></div>
       </div>
-      <div class="levels">
-        <div><label id="lvEntryL">진입 참고 구간</label><b id="lvEntry">—</b></div>
-        <div><label id="lvStopL">손절가 · 6 ATR</label><b class="neg" id="lvStop">—</b></div>
-        <div><label id="lvTargetL">트레일 기준 · 10 ATR</label><b class="pos" id="lvTarget">—</b></div>
-        <div><label id="lvRRL">손익비 (R:R)</label><b id="lvRR">—</b></div>
+      <div class="plan-grid" id="planGrid">
+        <div class="plan-block" id="pbEntry">
+          <div class="pb-head">
+            <span class="pb-tag">신규 진입<em>New Entry</em></span>
+            <span class="pb-mode" id="peMode">추세형 (중기)</span>
+            <span class="pb-state wait" id="peState">대기</span>
+          </div>
+          <div class="pb-dual">
+            <div class="pb-cell"><span class="pb-k">기술평가</span><b id="peTech">—</b></div>
+            <div class="pb-cell"><span class="pb-k" id="peSigK">추세형 진입</span><b id="peSig">—</b></div>
+          </div>
+          <ul class="pb-why" id="peWhy"></ul>
+          <div class="pb-line"><span class="pb-k" id="peZoneK">진입 후보 구간</span><b id="peZone">—</b></div>
+          <p class="pb-foot" id="peCond">—</p>
+        </div>
+
+        <div class="plan-block" id="pbHold">
+          <div class="pb-head">
+            <span class="pb-tag">보유 중 관리<em>Position Mgmt</em></span>
+            <span class="pb-mode" id="phMode">추세형 (중기)</span>
+            <span class="pb-state none" id="phState">포지션 없음</span>
+          </div>
+          <div class="pb-rows">
+            <div class="pb-row"><span class="pb-k">초기 손절가</span><b id="phStop">—</b><span class="pb-sub" id="phStopSub">—</span></div>
+            <div class="pb-row"><span class="pb-k">트레일링 스톱 발동</span><b id="phTrail">—</b><span class="pb-sub" id="phTrailSub">—</span></div>
+            <div class="pb-row"><span class="pb-k">현재 청산 기준가</span><b id="phExit">미발동</b><span class="pb-sub" id="phExitSub">—</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rr-strip" id="rrStrip">
+        <span class="rr-k">손익비<em>신규 진입 기준 R : R</em></span>
+        <b class="rr-v" id="rrVal">—</b>
+        <span class="rr-basis" id="rrBasis">기준 진입 — · 손절 — · 목표 —</span>
       </div>
       <div class="earn-slot" id="earnSlot"></div>
     </section>

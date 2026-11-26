@@ -133,16 +133,28 @@
 
   /* ---------------- 전략 전환 (추세형 ↔ 스윙형) ---------------- */
   var STRAT_KEY = 'apex.strategy.v1';
+  /* 전략 설명은 엔진 파라미터에서 생성 — 상단 카드·백테스트와 같은 단일 소스 */
+  function trendDesc() {
+    var p = QE.trendParams || { entry: 50, stopAtr: 6, trailAtr: 10, trailStartAtr: 6 };
+    return '종합 기술점수 ' + p.entry + ' 이상 + QQQ 100일선 시장 단계(100/50/0%) → 다음 날 시가 매수 · 손절 ' +
+      p.stopAtr + ' ATR · 트레일 ' + p.trailAtr + ' ATR (진입 +' + p.trailStartAtr + ' ATR 발동)';
+  }
+  function swingDesc() {
+    var p = QE.swingParams || { rsiEntry: 15, qqqMa: 200, stopAtr: 4.5, stopCap: 0.1, ma20Gate: 0.05 };
+    return 'RSI(2) ' + p.rsiEntry + ' 미만 + QQQ ' + p.qqqMa + '일선 위 → 다음 날 시가 매수 · W 쌍바닥 넥라인 돌파 보조 · 이익 +' +
+      Math.round(p.ma20Gate * 100) + '% 이상 20일선 이탈 → 다음 날 시가 청산 · 손절 ' + p.stopAtr + ' ATR (최대 -' +
+      Math.round(p.stopCap * 100) + '%)';
+  }
   var STRAT = {
     trend: {
       key: 'trend', title: '추세형', sub: '중기',
-      desc: '종합 기술점수 50 이상 매수 · 시장 단계(100/50/0%)로 비중 조절 · 손절 6 ATR · 트레일 10 ATR 청산',
+      desc: trendDesc(),
       logSub: '종합점수 50 이상 매수 · 시장 단계(100/50/0%) 방어 · 손절 6 ATR · 트레일 10 ATR 청산'
     },
     swing: {
       key: 'swing', title: '스윙형', sub: '단기',
-      desc: 'RSI(2) 15 미만 + QQQ 200일선 위 → 다음 날 시가 매수 · W 쌍바닥 넥라인 돌파도 보조 진입(포지션 없을 때) · 이익 시(+5% 이상) 20일선 이탈 → 다음 날 시가 청산 · 손절 4.5 ATR (최대 -10%) (평균 약 41일)',
-      logSub: 'RSI(2) 15 미만 + QQQ 200일선 위 매수 · W 쌍바닥 넥라인 돌파 보조 루트 · 손절 4.5 ATR (최대 -10%) · 이익 중 20일선 이탈 시 다음 날 시가 청산 (평균 약 41일)'
+      desc: swingDesc(),
+      logSub: 'RSI(2) 15 미만 + QQQ 200일선 위 매수 · W 쌍바닥 넥라인 돌파 보조 루트 · 손절 4.5 ATR (최대 -10%) · 이익 중 20일선 이탈 시 다음 날 시가 청산'
     }
   };
   function stratKey() { return state.strategy === 'swing' ? 'swing' : 'trend'; }
@@ -759,7 +771,7 @@
     c.textContent = (a.change > 0 ? '▲ ' : a.change < 0 ? '▼ ' : '') + Math.abs(a.changeAbs).toFixed(2) + ' (' + pct(a.change) + ')';
     $('#sigName').textContent = a.label.ko;
     $('#sigName').style.color = a.label.color;
-    $('#sigSub').textContent = '종합 기술 점수 ' + a.score.toFixed(1) + ' / 100';
+    $('#sigSub').textContent = '종합 기술 점수 ' + a.score.toFixed(1) + ' / 100 · 58점↑ 매수 / 50~57 관망';
     var circ = 2 * Math.PI * 27;
     var arc = $('#gaugeArc');
     arc.style.strokeDasharray = circ;
@@ -768,38 +780,184 @@
     $('#gaugeVal').textContent = Math.round(a.score);
     $('#gaugeVal').style.color = a.label.color;
 
-    var bullish = a.score >= 45;
-    var lvEL = $('#lvEntryL'), lvSL = $('#lvStopL'), lvTL = $('#lvTargetL'), lvRL = $('#lvRRL');
-    if (a.stratKey === 'swing') {
-      /* 스윙형: 다음 시가 진입(RSI(2) 주력 · W 넥라인 돌파 보조) · 손절 4.5 ATR(최대 -10%) · 이익 중 20일선 이탈 청산 */
-      var p = a.plan || {};
-      var on = !!p.signal;
-      var wRoute = (p.route === 'W돌파');
-      if (lvEL) lvEL.textContent = on ? (wRoute ? '진입 · W 돌파 (다음 시가)' : '진입 · 다음 시가 매수')
-        : '진입 대기 · RSI(2) 15 미만' + (p.wStage ? ' · W ' + p.wStage : '');
-      $('#lvEntry').textContent = usd(p.entryRef != null ? p.entryRef : a.price);
-      if (lvSL) lvSL.textContent = '손절가 · 4.5 ATR (최대 -10%)';
-      $('#lvStop').textContent = usd(p.stopPrice);
-      if (lvTL) lvTL.textContent = '청산 기준 · 이익 중 20일선 이탈';
-      var tEl = $('#lvTarget');
-      tEl.textContent = p.ma20 != null ? usd(p.ma20) : '대기';
-      tEl.className = '';
-      if (lvRL) lvRL.textContent = 'RSI(2) · QQQ 200일선';
-      $('#lvRR').textContent = (p.rsi2 == null ? '—' : p.rsi2.toFixed(1)) + ' · ' + (p.marketOk ? 'QQQ\u2191' : 'QQQ\u2193');
-    } else {
-      var lo = bullish ? a.price - 0.6 * a.atr : a.price - 1.6 * a.atr;
-      var hi = bullish ? a.price + 0.25 * a.atr : a.price - 0.5 * a.atr;
-      if (lvEL) lvEL.textContent = bullish ? '진입 참고 구간 (분할 매수)' : '눌림 대기 구간';
-      $('#lvEntry').textContent = usd(lo) + ' ~ ' + usd(hi);
-      if (lvSL) lvSL.textContent = '손절가 · 6 ATR';
-      $('#lvStop').textContent = usd(a.stop);
-      if (lvTL) lvTL.textContent = '트레일 기준 · 10 ATR';
-      var tEl2 = $('#lvTarget');
-      tEl2.textContent = usd(a.target);
-      tEl2.className = 'pos';
-      if (lvRL) lvRL.textContent = '손익비 (R:R)';
-      $('#lvRR').textContent = '1 : ' + ((a.target - a.price) / Math.max(a.price - a.stop, 1e-9)).toFixed(2);
+    renderPlan(a);
+  }
+
+  /* ============================================================
+     상단 매매 카드 — 신규 진입 / 보유 중 관리 / 손익비
+     판정·손절·트레일 값은 엔진(trendStatus · swingStatus · 백테스트 live)에서만 받는다
+     ============================================================ */
+  function pbState(el, kind, text) {
+    if (!el) return;
+    el.className = 'pb-state ' + kind;
+    el.textContent = text;
+  }
+  function techCls(lab) {
+    var k = lab && lab.key;
+    return (k === 'strongbuy' || k === 'buy') ? 'pos' : ((k === 'sell' || k === 'strongsell') ? 'neg' : 'warn');
+  }
+  /* 목표 참고가 — 엘리어트 1차 목표 또는 52주 고점 중 진입가 바로 위(가장 가까운) 것 */
+  function refTarget(a, entry) {
+    if (!(entry > 0)) return null;
+    var out = [];
+    var ew = a.elliott && a.elliott.plan && a.elliott.plan.targets;
+    if (ew && ew.length) {
+      ew.forEach(function (t) {
+        if (!t || t.bad || t.hi == null) return;
+        var px = (t.lo != null && t.lo > entry * 1.005) ? t.lo : (t.hi > entry * 1.005 ? t.hi : null);
+        if (px != null) out.push({ price: px, name: '엘리어트 1차 목표', d: px / entry - 1 });
+      });
     }
+    if (a.hi52 && a.hi52 > entry * 1.005) out.push({ price: a.hi52, name: '52주 고점', d: a.hi52 / entry - 1 });
+    if (!out.length) return null;
+    out.sort(function (x, y) { return x.d - y.d; });
+    return out[0];
+  }
+  function pbWhy(rows) {
+    var el = $('#peWhy');
+    if (!el) return;
+    el.innerHTML = rows.map(function (r) {
+      return '<li class="' + r.cls + '">' + r.html + '</li>';
+    }).join('');
+  }
+  function renderPlan(a) {
+    var isSwing = a.stratKey === 'swing';
+    var bundle = a.strat || (a.strategy && a.strategy[a.stratKey]) || null;
+    var live = bundle ? bundle.live : null;
+    var mode = isSwing ? '스윙형 (단기)' : '추세형 (중기)';
+    var tech = $('#peTech');
+    if (!tech) return;
+    $('#peMode').textContent = mode;
+    $('#phMode').textContent = mode;
+
+    /* ---- 기술평가(종합점수 · 라벨) — 전략과 분리해 그대로 보여준다 ---- */
+    tech.className = techCls(a.label);
+    tech.textContent = a.score.toFixed(1) + '점 · ' + a.label.ko;
+
+    var entryRef = a.price, stopPrice = null;
+
+    if (isSwing) {
+      /* ================= 스윙형 ================= */
+      var sp = a.plan || a.swing || {};
+      entryRef = sp.entryRef != null ? sp.entryRef : a.price;
+      stopPrice = sp.stopPrice != null ? sp.stopPrice : entryRef * 0.9;
+      var sKind = sp.state === 'ready' ? 'ready' : (sp.state === 'blocked' ? 'blocked' : 'wait');
+      pbState($('#peState'), sKind, sp.state === 'ready' ? '조건 충족' : (sp.state === 'blocked' ? '진입 제한' : '대기'));
+      $('#peSigK').textContent = '스윙형 진입';
+      var sig = $('#peSig');
+      var spMa = (QE.swingParams && QE.swingParams.qqqMa) || 200;
+      sig.className = (sp.rsiOk || sp.wBreak) ? 'pos' : 'dim';
+      sig.textContent = (sp.rsiOk ? 'RSI 과매도 충족' : (sp.wBreak ? 'W 돌파 신호' : 'RSI 조건 미달')) +
+        ' / QQQ ' + spMa + '일선 ' + (sp.marketOk ? '위' : '아래');
+      pbWhy([
+        { cls: sp.rsiOk ? 'on' : 'off', html: 'RSI(2) <b>' + (sp.rsi2 == null ? '—' : sp.rsi2.toFixed(1)) + '</b> / 기준 ' + (sp.rsiEntry || 15) + ' 미만 — ' + (sp.rsiOk ? '충족' : '미달') },
+        { cls: sp.marketOk ? 'on' : 'off', html: 'QQQ ' + spMa + '일선 <b>' + (sp.marketOk ? '위' : '아래') + '</b>' + (sp.qqq != null && sp.qqqMa != null ? ' — $' + pxs(sp.qqq) + (sp.marketOk ? ' > ' : ' < ') + '$' + pxs(sp.qqqMa) : '') },
+        { cls: sp.wBreak ? 'on' : (sp.wStage ? 'wait' : ''), html: 'W 쌍바닥 <b>' + (sp.wStage || '없음') + '</b>' + (sp.wNeck != null ? ' — 넥라인 $' + pxs(sp.wNeck) : '') }
+      ]);
+      $('#peZoneK').textContent = '진입 시점';
+      $('#peZone').textContent = '다음 시가 (참고 ' + usd(entryRef) + ')';
+      $('#peCond').textContent = '실제 진입 조건 · ' + (sp.entryRule || 'RSI(2) 15 미만 · QQQ 200일선 위 → 다음 날 시가 매수') +
+        (live ? ' — 보유 중에는 신규 진입 신호를 쓰지 않습니다' : '');
+
+      /* 보유 중 관리 */
+      if (live) {
+        pbState($('#phState'), 'live', '보유 중');
+        $('#phStop').className = 'neg';
+        $('#phStop').textContent = usd(live.stop);
+        $('#phStopSub').textContent = '진입 ' + usd(live.entry) + ' (' + live.entryDate + ') · ' + sp.stopAtr + ' ATR / -' +
+          Math.round((sp.stopCap || 0.1) * 100) + '% 중 가까운 값';
+        $('#phTrail').className = 'mute';
+        $('#phTrail').textContent = '해당 없음';
+        $('#phTrailSub').textContent = '스윙형은 트레일링 스톱을 쓰지 않습니다 — 고정 손절 · 이익 중 20일선 이탈 청산';
+        var swExit = (live.exitActive && live.ma20 != null) ? usd(live.ma20) : null;
+        $('#phExit').className = swExit ? '' : 'mute';
+        $('#phExit').textContent = swExit || '미발동';
+        $('#phExitSub').textContent = swExit
+          ? '평가이익 ' + pct(live.ret) + ' · 종가가 20일선 아래면 다음 날 시가 청산'
+          : '이익 +' + Math.round((sp.ma20Gate || 0.05) * 100) + '% 도달 전 — 손절가만 유효 (현재 ' + pct(live.ret) + ')';
+      } else {
+        pbState($('#phState'), 'none', '포지션 없음');
+        $('#phStop').className = 'neg';
+        $('#phStop').textContent = usd(stopPrice);
+        $('#phStopSub').textContent = '신규 진입 기준 ' + usd(entryRef) + ' − ' + (sp.stopAtr || 4.5) + ' ATR / -' + Math.round((sp.stopCap || 0.1) * 100) + '% 상한';
+        $('#phTrail').className = 'mute';
+        $('#phTrail').textContent = '해당 없음';
+        $('#phTrailSub').textContent = '스윙형은 트레일링 스톱을 쓰지 않습니다 — 고정 손절로 관리';
+        $('#phExit').className = 'mute';
+        $('#phExit').textContent = '미발동';
+        $('#phExitSub').textContent = '보유 후 이익 +' + Math.round((sp.ma20Gate || 0.05) * 100) + '% 이상에서 20일선 이탈이 청산 기준이 됩니다';
+      }
+    } else {
+      /* ================= 추세형 ================= */
+      var tp = a.trendPlan || {};
+      entryRef = tp.entryRef != null ? tp.entryRef : a.price;
+      stopPrice = tp.stopPrice != null ? tp.stopPrice : a.stop;
+      var tKind = tp.state === 'ready' ? 'ready' : (tp.state === 'blocked' ? 'blocked' : 'wait');
+      pbState($('#peState'), tKind, tp.state === 'ready' ? (tp.tw < 1 ? '조건 충족 · 50% 비중' : '조건 충족')
+        : (tp.state === 'blocked' ? '진입 제한' : '대기'));
+      $('#peSigK').textContent = '추세형 진입';
+      var sig2 = $('#peSig');
+      sig2.className = tp.scoreOk ? 'pos' : 'dim';
+      sig2.textContent = (tp.scoreOk ? '점수 조건 충족' : '점수 조건 미달') + ' / 시장 ' +
+        (tp.marketOk ? tp.marketStage : '단계 위험 0%');
+      var why = [
+        { cls: tp.scoreOk ? 'on' : 'off', html: '종합점수 <b>' + (tp.score == null ? '—' : tp.score.toFixed(1)) + '</b> / 기준 ' + tp.need + ' — ' + (tp.scoreOk ? '충족' : '미달') },
+        { cls: tp.marketOk ? (tp.tw < 1 ? 'wait' : 'on') : 'off', html: '시장 단계 <b>' + tp.marketStage + '</b> — ' + (tp.marketNote || '') }
+      ];
+      if (!tp.atrOk) why.push({ cls: 'off', html: 'ATR 계산 불가 — 진입 보류' });
+      pbWhy(why);
+      $('#peZoneK').textContent = '진입 후보 구간';
+      var z = tp.entryZone || [entryRef, entryRef];
+      $('#peZone').textContent = usd(z[0]) + ' ~ ' + usd(z[1]);
+      $('#peCond').textContent = '실제 진입 조건 · ' + (tp.entryRule || '종합점수 50 이상 + 시장 단계 100/50% → 다음 날 시가 매수') +
+        ' (참고가 ' + usd(entryRef) + ')' +
+        (live ? ' — 보유 중이라 추가 진입 대신 비중 조정만 반영' : '');
+
+      /* 보유 중 관리 */
+      if (live) {
+        pbState($('#phState'), 'live', '보유 중');
+        $('#phStop').className = 'neg';
+        $('#phStop').textContent = usd(live.stop);
+        $('#phStopSub').textContent = '진입 ' + usd(live.entry) + ' (' + live.entryDate + ') · ' + tp.stopAtr + ' ATR 손절';
+        $('#phTrail').className = live.trailArmed ? '' : 'mute';
+        $('#phTrail').textContent = live.trailArmed ? '발동' : '미발동';
+        $('#phTrailSub').textContent = '진입가 +' + tp.trailStartAtr + ' ATR ' + usd(live.trailArm) + ' 도달 후 고점 - ' + tp.trailAtr + ' ATR' +
+          (live.peakH ? ' · 고점 ' + usd(live.peakH) : '');
+        var tr = live.trailStop != null ? Math.max(live.trailStop, live.stop) : null;
+        $('#phExit').className = tr != null ? '' : 'mute';
+        $('#phExit').textContent = tr != null ? usd(tr) : '미발동';
+        $('#phExitSub').textContent = tr != null
+          ? '고점 - ' + tp.trailAtr + ' ATR (손절가보다 높을 때 적용) · 평가 ' + pct(live.ret)
+          : '고점이 발동선 ' + usd(live.trailArm) + '을 넘으면 표시됩니다';
+      } else {
+        pbState($('#phState'), 'none', '포지션 없음');
+        $('#phStop').className = 'neg';
+        $('#phStop').textContent = usd(stopPrice);
+        $('#phStopSub').textContent = '신규 진입 기준 ' + usd(entryRef) + ' - ' + tp.stopAtr + ' ATR';
+        $('#phTrail').className = 'mute';
+        $('#phTrail').textContent = '발동선 ' + usd(tp.trailArmPrice);
+        $('#phTrailSub').textContent = '기준 진입가 +' + tp.trailStartAtr + ' ATR 도달 후 고점 - ' + tp.trailAtr + ' ATR';
+        $('#phExit').className = 'mute';
+        $('#phExit').textContent = '미발동';
+        $('#phExitSub').textContent = '발동 전에는 손절가만 유효 — 트레일 발동 후 청산 기준가가 표시됩니다';
+      }
+    }
+
+    /* ---- 손익비 — 기준 진입가 · 손절가 · 목표가를 함께 표시 ---- */
+    var tgt = refTarget(a, entryRef);
+    var rr = (tgt && entryRef > 0 && stopPrice != null && entryRef > stopPrice)
+      ? (tgt.price - entryRef) / (entryRef - stopPrice) : null;
+    var rrEl = $('#rrVal');
+    if (rr != null) {
+      rrEl.className = 'rr-v';
+      rrEl.textContent = '1 : ' + rr.toFixed(2);
+    } else {
+      rrEl.className = 'rr-v mute';
+      rrEl.textContent = '—';
+    }
+    var stopLab = isSwing ? (sp.stopAtr || 4.5) + ' ATR' : (a.trendPlan ? a.trendPlan.stopAtr : 6) + ' ATR';
+    $('#rrBasis').innerHTML = '기준 진입 <b>' + usd(entryRef) + '</b> · 손절 <b>' + usd(stopPrice) + '</b> <i>(' + stopLab + ')</i> · 목표 ' +
+      (tgt ? '<b>' + usd(tgt.price) + '</b> <i>(' + tgt.name + ')</i>' : '<b>—</b> <i>(목표 미산정)</i>');
   }
 
   /* ---------------- 백테스트 집계 기간 표시 ---------------- */

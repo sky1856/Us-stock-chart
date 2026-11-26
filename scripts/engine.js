@@ -442,10 +442,47 @@
         if (ma50ok) tw = 1;
         else if (streak >= 2) tw = 0.5;
       }
-      map[dts[j]] = { tw: tw, st: tw === 0 ? 'risk' : (tw < 1 ? 'caution' : 'normal') };
+      map[dts[j]] = { tw: tw, st: tw === 0 ? 'risk' : (tw < 1 ? 'caution' : 'normal'),
+        q: c[j], ma100: ma100[j], ma50: ma50[j], slope: sl };
     }
     _regCache = { key: key, map: map };
     return map;
+  }
+
+  /* ============================================================
+     추세형 진입 판정 — 백테스트와 상단 카드의 단일 소스
+     ------------------------------------------------------------
+       진입 조건 (백테스트와 완전히 같은 함수를 쓴다)
+         ① 종합 기술점수 ≥ entry(50)   ② ATR > 0   ③ 시장 단계(QQQ 100일선) 노출목표 > 0
+       노출목표 0% = 신규 진입 제한 · 50% = 절반 비중 · 100% = 전액
+     ============================================================ */
+  var TREND_P = { entry: 50, stopAtr: 6, trailAtr: 10, trailStartAtr: 6, fee: 0.0003, warmup: WARMUP };
+  function trendOpts(o) {
+    var out = {}, k;
+    for (k in TREND_P) out[k] = TREND_P[k];
+    out.marketFilter = true;
+    if (o) {
+      for (k in o) {
+        if (k === 'entry' || k === 'stopAtr' || k === 'trailAtr' || k === 'trailStartAtr' ||
+            k === 'fee' || k === 'warmup' || k === 'marketFilter' || k === 'bars' || k === 'regime') out[k] = o[k];
+      }
+    }
+    return out;
+  }
+  function marketStageText(tw) {
+    return tw === 1 ? { ko: '정상 100%', en: 'NORMAL' } : (tw > 0 ? { ko: '주의 50%', en: 'CAUTION' } : { ko: '위험 0%', en: 'RISK' });
+  }
+  /* bar i 종가 시점의 추세형 진입 상태 — rg 는 marketRegimeMap()[date] */
+  function trendEntryAt(sc, ind, i, rg, o) {
+    var score = sc.score[i];
+    var scoreOk = score != null && score >= o.entry;
+    var atrOk = nz(ind.atr[i], 0) > 0;
+    var tw = rg ? rg.tw : 1;
+    return {
+      score: score, need: o.entry, scoreOk: scoreOk, atrOk: atrOk,
+      marketOk: tw > 0, tw: tw, st: rg ? rg.st : (tw === 0 ? 'risk' : tw < 1 ? 'caution' : 'normal'),
+      ok: scoreOk && atrOk && tw > 0
+    };
   }
 
   /* ============================================================
@@ -682,6 +719,21 @@
     return null;
   }
 
+  /* bar i 종가 시점의 스윙형 진입 판정 — swingStatus(상단 카드)와 swingBacktest 가 같이 쓰는 단일 소스 */
+  function swingEntryAt(series, ind, i, o, env) {
+    var rNow = env && env.r2 ? env.r2[i] : null;
+    var mktOk = (env && env.map) ? swingMktAt(env.map, series.d, i) : true;
+    var atrOk = ind.atr[i] > 0;
+    var rsiOk = (rNow != null && rNow < o.rsiEntry);
+    var wBrk = !!(o.wRoute && env && env.wbreak && env.wbreak[i]);
+    var route = (rsiOk && atrOk) ? '스윙' : (wBrk ? 'W돌파' : null);
+    return {
+      rsi2: rNow, rsiOk: rsiOk, atrOk: atrOk, marketOk: mktOk, wBreak: !!wBrk,
+      route: route, ok: !!route && mktOk,
+      state: (route && !mktOk) ? 'blocked' : (route && mktOk ? 'ready' : 'wait')
+    };
+  }
+
   /* 마지막 봉 기준 신호 상태 · 청산 계획 (전환 탭의 손절/청산기준 안내에 사용) */
   function swingStatus(series, ind, opts, wsig) {
     var o = swingOpts(opts), n = series.c.length, i = n - 1;
@@ -689,37 +741,43 @@
     var r2 = rsi(series.c, o.rsiLen);
     var map = swingMarketMap(o);
     var rec = map ? map[series.d[i]] : null;
-    var rNow = r2[i], mktOk = swingMktAt(map, series.d, i);
     var atrNow = ind.atr[i] > 0 ? ind.atr[i] : series.c[i] * 0.02;
-    var sigRsi = (rNow != null && rNow < o.rsiEntry) && mktOk && ind.atr[i] > 0;
     var r14 = ind.rsi[i];
     /* W 쌍바닥 — 오늘 넥라인 돌파 신호인지, 아니면 어느 단계인지 */
     var w = wsig || wSignals(series);
-    var breakToday = !!(o.wRoute && w.wbreak[i] && mktOk);
+    var ent = swingEntryAt(series, ind, i, o, { r2: r2, map: map, wbreak: w.wbreak });
+    var rNow = ent.rsi2, mktOk = ent.marketOk;
+    var breakToday = ent.wBreak && mktOk;
     var wnow = wScan(series, w);
-    var sig = sigRsi || breakToday;
-    var route = sigRsi ? '스윙' : (breakToday ? 'W돌파' : null);
+    var sig = ent.ok;
+    var route = ent.route;
     var wNeck = null, wGap = null;
     if (breakToday) { wNeck = w.brkinfo[i].neck; wGap = series.c[i] / wNeck - 1; }
     else if (wnow.pat) { wNeck = wnow.pat.neck; wGap = series.c[i] / wNeck - 1; }
     return {
-      strategy: 'swing', date: series.d[i], signal: !!sig, route: route,
-      rsi2: rNow, rsi2Prev: r2[i - 1], rsi14: r14, ma5: ind.ma5[i], ma20: ind.ma20[i],
+      strategy: 'swing', date: series.d[i], signal: !!sig, route: route, state: ent.state,
+      rsi2: rNow, rsi2Prev: r2[i - 1], r14: r14, rsiOk: ent.rsiOk, ma5: ind.ma5[i], ma20: ind.ma20[i],
       qqq: rec ? rec.qqq : null, qqqMa: rec ? rec.ma : null, marketOk: mktOk,
       wStage: wnow.stage, wBreak: breakToday, wNeck: wNeck, wGap: wGap, wPat: wnow.pat,
       entryRef: series.c[i],                 /* 다음 거래일 시가 체결 — 참고가는 당일 종가 */
       stopPrice: Math.max(series.c[i] - o.stopAtr * atrNow, series.c[i] * (1 - o.stopCap)),
-      stopCap: o.stopCap,
+      stopAtrPrice: series.c[i] - o.stopAtr * atrNow,
+      stopCapPrice: series.c[i] * (1 - o.stopCap),
+      stopCap: o.stopCap, scoreGate: null,
       stopAtr: o.stopAtr, atr: atrNow, target: null,
+      ma20Gate: o.ma20Gate, rsiEntry: o.rsiEntry,
       exitNow: null,                          /* 보유 중일 때만 — 이익 상태 & 종가<20일선 */
       exitRule: '손절 min(' + o.stopAtr + ' ATR, -' + Math.round(o.stopCap * 100) + '%) · 이익(+' + Math.round(o.ma20Gate * 100) + '% 이상) 중 20일선 이탈 → 다음 날 시가 청산 (고정 보유기간 없음 · 평균 42일)',
       entryRule: 'RSI(2) ' + o.rsiEntry + ' 미만 (주력) · W 쌍바닥 넥라인 돌파 (보조) · 둘 다 QQQ ' + o.qqqMa + '일선 위 — 다음 날 시가 매수',
-      reason: sigRsi
-        ? 'RSI(2) ' + rNow.toFixed(1) + ' — 과매도 극단 · QQQ 200일선 위 (다음 시가 매수)'
-        : breakToday
+      reason: sig
+        ? (route === 'W돌파'
           ? 'W 쌍바닥 넥라인 ' + usdNeck(wNeck) + ' 상향 돌파 — 보조 루트 (다음 시가 매수)'
-          : 'RSI(2) ' + (rNow == null ? '—' : rNow.toFixed(1)) +
-            (mktOk ? '' : ' · QQQ 200일선 아래(진입 금지)') + ' — 진입 조건 미충족'
+          : 'RSI(2) ' + rNow.toFixed(1) + ' — 과매도 극단 · QQQ 200일선 위 (다음 시가 매수)')
+        : (ent.state === 'blocked'
+          ? (route === 'W돌파' ? 'W 넥라인 돌파는 나왔지만 QQQ 200일선 아래 — 진입 제한'
+            : 'RSI(2) ' + (rNow == null ? '—' : rNow.toFixed(1)) + ' 과매도이나 QQQ 200일선 아래 — 진입 제한')
+          : 'RSI(2) ' + (rNow == null ? '—' : rNow.toFixed(1)) + ' — 기준 ' + o.rsiEntry + ' 미만 대기' +
+            (mktOk ? ' · QQQ 200일선 위' : ' · QQQ 200일선 아래'))
     };
   }
   function usdNeck(v) {
@@ -771,15 +829,20 @@
         var why = swingExitAt(series, ind, i, pos, o);
         if (why) pendExit = why;
       } else if (i < n - 1) {
-        if (swingMktAt(map, D, i)) {
-          /* 주력: RSI(2) 과매도 · 보조: W 쌍바닥 넥라인 돌파 (포지션이 없을 때만) */
-          if (r2[i] != null && r2[i] < o.rsiEntry && A[i] > 0) { pendEntry = true; pendKind = '스윙'; }
-          else if (wb && wb[i]) { pendEntry = true; pendKind = 'W돌파'; }
-        }
+        /* 진입 판정은 상단 카드와 같은 함수(swingEntryAt) — 단일 소스 */
+        var se = swingEntryAt(series, ind, i, o, { r2: r2, map: map, wbreak: wb });
+        if (se.ok) { pendEntry = true; pendKind = se.route === 'W돌파' ? 'W돌파' : '스윙'; }
       }
       equity[i] = cash + (pos ? pos.shares * c[i] : 0);
       bars++; if (pos) inMkt++;
     }
+    /* 마지막 봉 기준 보유 스냅숏 — 상단 '보유 중 관리' 표시용 */
+    var liveSw = pos ? {
+      entry: pos.entry, entryDate: pos.entryDate, entryIdx: pos.entryIdx, atr0: pos.atr0, kind: pos.kind,
+      stop: Math.max(pos.entry - o.stopAtr * pos.atr0, pos.entry * (1 - o.stopCap)),
+      ma20: ind.ma20[n - 1], last: c[n - 1], ret: c[n - 1] / pos.entry - 1,
+      exitActive: (c[n - 1] / pos.entry - 1) >= o.ma20Gate, date: D[n - 1]
+    } : null;
     if (pos) { closeAt(c[n - 1], n - 1, '보유중'); equity[n - 1] = cash; }
 
     /* ---- stats (추세형과 같은 필드) ---- */
@@ -819,7 +882,7 @@
     var wr2 = wt.length ? wt.reduce(function (a, t) { return a + t.ret; }, 0) / wt.length : null;
 
     return {
-      trades: trades, equity: equity, startIdx: first, reasons: reasons,
+      trades: trades, equity: equity, startIdx: first, reasons: reasons, live: liveSw,
       stats: {
         totalReturn: total, bhReturn: bh, alpha: total - bh,
         winRate: trades.length ? wins.length / trades.length : 0,
@@ -834,21 +897,16 @@
   }
 
   function backtestRun(series, ind, sc, opts) {
-    opts = opts || {};
-    var ENTRY = opts.entry !== undefined ? opts.entry : 50;
-    var STOP_ATR = opts.stopAtr !== undefined ? opts.stopAtr : 6;
-    var TRAIL_ATR = opts.trailAtr !== undefined ? opts.trailAtr : 10;
-    var TRAIL_START = opts.trailStartAtr !== undefined ? opts.trailStartAtr : 6;
-    var FEE = opts.fee !== undefined ? opts.fee : 0.0003;
-    var WARM = opts.warmup !== undefined ? opts.warmup : WARMUP;
-    var USE_REGIME = opts.marketFilter !== undefined ? opts.marketFilter : true;
+    var opt = trendOpts(opts);
+    var ENTRY = opt.entry, STOP_ATR = opt.stopAtr, TRAIL_ATR = opt.trailAtr, TRAIL_START = opt.trailStartAtr;
+    var FEE = opt.fee, WARM = opt.warmup, USE_REGIME = opt.marketFilter;
 
     var c = series.c, o = series.o, h = series.h, l = series.l, d = series.d;
     var n = c.length;
     var S = sc.score, A = ind.atr;
-    var RM = USE_REGIME ? (opts.regime || marketRegimeMap()) : null;
+    var RM = USE_REGIME ? (opt.regime || marketRegimeMap()) : null;
 
-    var first = btFirst(n, WARM, opts.bars);
+    var first = btFirst(n, WARM, opt.bars);
     var equity = new Array(n).fill(null), trades = [];
     var cash = 1, pos = null, i;
     var pendEntry = false, pendExit = null, pendW = 1, targetW = 1, bars = 0, inMarket = 0;
@@ -917,13 +975,26 @@
         if (rg.tw === 0) pendExit = '시장약세';
         else targetW = rg.tw;
       } else {
-        if (S[i] != null && S[i] >= ENTRY && nz(A[i], 0) > 0 && rg.tw > 0) { pendEntry = true; pendW = rg.tw; }
+        /* 진입 판정은 상단 카드와 같은 함수(trendEntryAt)를 쓴다 — 단일 소스 */
+        var ent = trendEntryAt(sc, ind, i, rg, opt);
+        if (ent.ok) { pendEntry = true; pendW = ent.tw; }
       }
       equity[i] = eqAt(c[i]);
       bars++;
     }
+    /* 마지막 봉 기준 보유 스냅숏 — 상단 '보유 중 관리'가 실제 적용 중인 기준가를 쓰도록 */
+    var live = pos ? {
+      entry: pos.entry, entryDate: pos.entryDate, entryIdx: pos.entryIdx, atr0: pos.atr0,
+      stop: pos.stop, trailStop: pos.trailStop, peakH: pos.peakH, w: pos.w, shares: pos.shares,
+      trailArm: pos.entry + TRAIL_START * pos.atr0, trailArmed: pos.trailStop != null,
+      last: c[n - 1], ret: c[n - 1] / pos.entry - 1, date: d[n - 1]
+    } : null;
     if (pos) closePos(c[n - 1], n - 1, '보유중');
     equity[n - 1] = cash;
+
+    /* 마지막 봉 종가 기준 진입 판정 — 백테스트 루프와 같은 함수 */
+    var rgNow = (RM && RM[d[n - 1]]) || { tw: 1, st: 'normal', q: null, ma100: null, slope: null };
+    var entryNow = trendEntryAt(sc, ind, n - 1, rgNow, opt);
 
     /* ---- stats (기존과 동일 필드) ---- */
     var bh = c[n - 1] / c[first] - 1;
@@ -960,7 +1031,7 @@
     var holdAvg = trades.length ? trades.reduce(function (a, t) { return a + t.hold; }, 0) / trades.length : 0;
 
     return {
-      trades: trades, equity: equity, startIdx: first,
+      trades: trades, equity: equity, startIdx: first, live: live, entryNow: entryNow,
       stats: {
         totalReturn: total, bhReturn: bh, alpha: total - bh,
         winRate: trades.length ? wins.length / trades.length : 0,
@@ -970,6 +1041,47 @@
         avgLoss: losses.length ? -gl / losses.length : 0,
         exposure: bars ? inMarket / bars : 0
       }
+    };
+  }
+
+  /* ============================================================
+     추세형 진입·관리 계획 — 상단 카드 표시용
+       판정은 trendEntryAt 하나(백테스트와 동일)에서만 나온다.
+     ============================================================ */
+  function trendStatus(series, ind, sc, opts) {
+    var o = trendOpts(opts), n = series.c.length, i = n - 1;
+    if (i < 2) return null;
+    var RM = o.marketFilter ? marketRegimeMap() : null;
+    var rg = (RM && RM[series.d[i]]) || { tw: 1, st: 'normal', q: null, ma100: null, slope: null };
+    var e = trendEntryAt(sc, ind, i, rg, o);
+    var price = series.c[i];
+    var atr = ind.atr[i] > 0 ? ind.atr[i] : price * 0.02;
+    var stop = price - o.stopAtr * atr;
+    var stage = marketStageText(e.tw);
+    var slopeTxt = rg.slope == null ? '' : (rg.slope < 0 ? ' · 100일선 20일 하락' : ' · 100일선 20일 상승');
+    var marketNote = rg.ma100 == null ? 'QQQ 100일선 데이터 없음'
+      : (rg.q > rg.ma100
+        ? 'QQQ $' + px(rg.q) + ' > 100일선 $' + px(rg.ma100) + ' — 시장 상승 국면'
+        : 'QQQ $' + px(rg.q) + ' < 100일선 $' + px(rg.ma100) + slopeTxt);
+    var state = e.ok ? 'ready' : (e.scoreOk ? 'blocked' : 'wait');
+    return {
+      strategy: 'trend', date: series.d[i], state: state, signal: e.ok,
+      score: e.score, need: e.need, scoreOk: e.scoreOk, atrOk: e.atrOk,
+      marketOk: e.marketOk, tw: e.tw, marketSt: e.st, marketStage: stage.ko, marketStageEn: stage.en,
+      marketNote: marketNote, qqq: rg.q, qqqMa: rg.ma100, qqqSlope: rg.slope,
+      entryRef: price, entryZone: [price - 0.6 * atr, price + 0.25 * atr],
+      atr: atr, atrPct: atr / price, stopPrice: stop, stopAtr: o.stopAtr,
+      trailStartAtr: o.trailStartAtr, trailAtr: o.trailAtr,
+      trailArmPrice: price + o.trailStartAtr * atr,
+      entryRule: '종합점수 ' + o.entry + ' 이상 + 시장 단계(QQQ 100일선) 100/50% → 다음 날 시가 매수',
+      stopRule: '기준 진입가 − ' + o.stopAtr + ' ATR',
+      trailRule: '진입가 +' + o.trailStartAtr + ' ATR 도달 후 고점 − ' + o.trailAtr + ' ATR',
+      reason: e.ok
+        ? (e.tw < 1 ? '종합점수 ' + e.score.toFixed(1) + ' ≥ ' + e.need + ' · 시장 주의(' + stage.ko + ') — 절반 비중 진입'
+          : '종합점수 ' + e.score.toFixed(1) + ' ≥ ' + e.need + ' · 시장 정상(' + stage.ko + ') — 진입 조건 충족')
+        : (e.scoreOk
+          ? '종합점수 ' + e.score.toFixed(1) + ' ≥ ' + e.need + ' 충족했지만 시장 단계 ' + stage.ko + ' — 신규 진입 제한'
+          : '종합점수 ' + (e.score == null ? '—' : e.score.toFixed(1)) + ' < 기준 ' + e.need + ' — 진입 대기')
     };
   }
 
@@ -2221,9 +2333,9 @@
     return {
       bars: bars,
       trend: { key: 'trend', title: '추세형', sub: '중기', stats: bt.stats, trades: bt.trades,
-        equity: bt.equity, startIdx: bt.startIdx, plan: null },
+        equity: bt.equity, startIdx: bt.startIdx, plan: null, live: bt.live, entryNow: bt.entryNow },
       swing: { key: 'swing', title: '스윙형', sub: '단기', stats: sw.stats, trades: sw.trades,
-        equity: sw.equity, startIdx: sw.startIdx, plan: null }
+        equity: sw.equity, startIdx: sw.startIdx, plan: null, live: sw.live }
     };
   }
 
@@ -2271,11 +2383,12 @@
     rec.elliott = ewAnalyze(series, ind);
     /* 두 전략을 함께 산출 — 전환 탭은 다시 계산하지 않고 이 결과를 골라 쓴다 */
     rec.strategyMode = mode;
+    rec.trendPlan = trendStatus(series, ind, sc, opts);
     rec.strategy = {
       trend: { key: 'trend', title: '추세형', sub: '중기', stats: bt.stats, trades: bt.trades,
-        equity: bt.equity, startIdx: bt.startIdx, plan: null },
+        equity: bt.equity, startIdx: bt.startIdx, plan: null, live: bt.live, entryNow: bt.entryNow },
       swing: { key: 'swing', title: '스윙형', sub: '단기', stats: sw.stats, trades: sw.trades,
-        equity: sw.equity, startIdx: sw.startIdx, plan: swPlan }
+        equity: sw.equity, startIdx: sw.startIdx, plan: swPlan, live: sw.live }
     };
     rec.swing = swPlan;
     /* 상위 필드는 요청한 모드의 전략 결과 (기본 'trend' — 기존 호출부와 호환) */
@@ -2296,6 +2409,8 @@
     swingBacktest: swingBacktest, swingStatus: swingStatus, swingParams: SWING_P,
     wBottom: wSignals, wAliveAt: wAliveAt, wScan: wScan, wParams: W_P,
     strategyWindow: strategyWindow, BT_PERIODS: BT_PERIODS, BT_BARS: BT_BARS,
+    trendStatus: trendStatus, trendEntryAt: trendEntryAt, trendParams: TREND_P,
+    swingEntryAt: swingEntryAt, marketRegimeMap: marketRegimeMap, marketStageText: marketStageText,
     trendTemplate: trendTemplate, vcpSetup: vcpSetup, vcpScan: vcpScan, VCP_P: VCP_P,
     clamp: clamp, elliott: ewAnalyze
   };
