@@ -426,12 +426,157 @@
   }
 
   /* ============================================================
+     W 쌍바닥(이중 바닥) 탐지 — work/stock/v5_upgrade/wlib.py 이식
+     ------------------------------------------------------------
+       L1  좌우 3봉 최저 & 직전 40봉 최저 & 직전 40봉 고점 대비 -8% 이상 하락 후
+       N   넥라인 — L1 이후 확인된 고점(좌우 3봉), L1 대비 +5% 이상 반등
+       L2  넥라인 이후 최저점(신호 시점에 관측 가능), L1 대비 -3% ~ +5%
+       간격 L1~L2 15~60봉, L1→N 5봉 이상, L2 후 25봉 내 종가가 N 상향 돌파
+       무효화 돌파 전 종가가 min(L1,L2) × 0.97 아래로 이탈
+     모든 값은 그 봉까지의 정보만 사용 — 미래참조 없음 (wlib.py 미래참조 감사 통과 로직)
+     ============================================================ */
+  var W_P = {
+    k: 3, spanMin: 15, spanMax: 60, wait: 25,
+    loTol: -0.03, hiTol: 0.05, minRise: 0.05, inval: 0.03,
+    activeBars: 20, preLook: 40, preDecline: 0.08, cool: 5,
+    nearGap: 0.05, breakBars: 5
+  };
+  function wParams(prm) {
+    var p = {}, k;
+    for (k in W_P) p[k] = W_P[k];
+    if (prm) for (k in prm) p[k] = prm[k];
+    return p;
+  }
+  /* 좌우 k봉 극값(동률이면 한쪽만 사용) */
+  function wPivots(a, k) {
+    var out = [], n = a.length, j, m, v, ok;
+    for (j = k; j < n - k; j++) {
+      v = a[j]; ok = true;
+      for (m = 1; m <= k; m++) {
+        if (v > a[j - m] || v > a[j + m]) { ok = false; break; }
+      }
+      if (!ok) continue;
+      if (v < a[j - 1] || v < a[j + 1]) out.push(j);
+    }
+    return out;
+  }
+  /* (L1, N) 후보 — L1=직전 구간 최저점 + 선행 하락, N=그 뒤 확인된 고점 */
+  function wPairs(s, p) {
+    var h = s.h, l = s.l;
+    var L = wPivots(l, p.k), H = wPivots(h, p.k);
+    var out = [], i, j, p1, p2, lo0, mn, mx;
+    for (i = 0; i < L.length; i++) {
+      p1 = L[i];
+      lo0 = Math.max(0, p1 - p.preLook);
+      if (lo0 < p1) {
+        mn = Infinity;
+        for (j = lo0; j <= p1; j++) if (l[j] < mn) mn = l[j];
+        if (l[p1] > mn) continue;                       /* 직전 40봉 최저점이어야 L1 */
+        mx = -Infinity;
+        for (j = lo0; j < p1; j++) if (h[j] > mx) mx = h[j];
+        if (!(mx > 0) || mx / l[p1] - 1 < p.preDecline) continue;   /* 선행 하락 8% 이상 */
+      }
+      for (j = 0; j < H.length; j++) {
+        p2 = H[j];
+        if (p2 - p1 < 5) continue;
+        if (p2 - p1 > p.spanMax) break;
+        if (h[p2] / l[p1] - 1 < p.minRise) continue;    /* 넥라인 +5% 이상 반등 */
+        out.push({ p1: p1, p2: p2, neck: h[p2] });
+      }
+    }
+    return out;
+  }
+  /* 넥라인 상향 돌파 신호 배열 — 돌파 5봉 쿨다운 */
+  var _wCache = (typeof WeakMap !== 'undefined') ? new WeakMap() : null;
+  function wSignals(s, prm) {
+    if (!prm && _wCache && _wCache.has(s)) return _wCache.get(s);
+    var p = wParams(prm);
+    var n = s.c.length, c = s.c, l = s.l, d = s.d;
+    var pairs = wPairs(s, p);
+    var wbreak = new Array(n), brkinfo = {}, best = {}, i, j;
+    for (i = 0; i < n; i++) wbreak[i] = false;
+    for (j = 0; j < pairs.length; j++) {
+      var pr = pairs[j], low = Infinity, p3 = -1;
+      var end = Math.min(n - 1, pr.p2 + p.spanMax);
+      for (i = pr.p2 + 2; i <= end; i++) {
+        var v = l[i - 1];
+        if (v <= low) { low = v; p3 = i - 1; }
+        if (p3 < 0) continue;
+        var span = p3 - pr.p1;
+        if (span < p.spanMin || span > p.spanMax) continue;
+        if (i - p3 > p.wait) continue;
+        var r = low / l[pr.p1] - 1;
+        if (r < p.loTol || r > p.hiTol) continue;
+        if (c[i] > pr.neck && c[i - 1] <= pr.neck) {
+          if (!best[i] || pr.neck > best[i].neck) {       /* 같은 봉은 넥라인 높은 구조 채택 */
+            best[i] = { p1: pr.p1, p2: pr.p2, p3: p3, neck: pr.neck, brk: i,
+              L1: l[pr.p1], L2: low, rise: pr.neck / l[pr.p1] - 1, l2r: r,
+              L1date: d[pr.p1], Ndate: d[pr.p2], L2date: d[p3], brkDate: d[i],
+              barsSinceL2: i - p3 };
+          }
+        }
+      }
+    }
+    var last = -1e9, keys = Object.keys(best).map(Number).sort(function (a, b) { return a - b; });
+    for (j = 0; j < keys.length; j++) {
+      var b = keys[j];
+      if (b - last >= p.cool) { wbreak[b] = true; brkinfo[b] = best[b]; last = b; }
+    }
+    var out = { wbreak: wbreak, brkinfo: brkinfo, pairs: pairs, p: p };
+    if (!prm && _wCache) _wCache.set(s, out);
+    return out;
+  }
+  /* i번째 봉 종가 시점에 '형성됐지만 아직 넥라인 위가 아닌' W 구조 (넥라인에 가까운 순) */
+  function wAliveAt(s, i, wsig) {
+    if (!wsig) return [];
+    var p = wsig.p, pairs = wsig.pairs, c = s.c, l = s.l, d = s.d;
+    var out = [], j, t;
+    for (j = 0; j < pairs.length; j++) {
+      var pr = pairs[j];
+      if (i - 1 <= pr.p2) continue;
+      var p3 = -1, lowv = Infinity;
+      for (t = pr.p2 + 1; t < i; t++) if (l[t] < lowv) { lowv = l[t]; p3 = t; }
+      if (p3 < 0) continue;
+      var span = p3 - pr.p1;
+      if (span < p.spanMin || span > p.spanMax) continue;
+      if (i - p3 > p.wait) continue;
+      var r = l[p3] / l[pr.p1] - 1;
+      if (r < p.loTol || r > p.hiTol) continue;
+      if (c[i] > pr.neck) continue;                      /* 이미 넥라인 위 = 돌파(또는 그 이후) */
+      out.push({ p1: pr.p1, p2: pr.p2, p3: p3, neck: pr.neck, brk: null,
+        L1: l[pr.p1], L2: l[p3], rise: pr.neck / l[pr.p1] - 1, l2r: r,
+        L1date: d[pr.p1], Ndate: d[pr.p2], L2date: d[p3], brkDate: null,
+        barsSinceL2: i - p3, toNeck: pr.neck / c[i] - 1 });
+    }
+    out.sort(function (a, b) { return a.toNeck - b.toNeck; });
+    return out;
+  }
+  /* 마지막 종가 기준 W 상태 — 돌파(최근 5봉) / 임박(넥라인 5% 이내) / 진행(베이스 형성) */
+  function wScan(s, wsig) {
+    if (!wsig) wsig = wSignals(s);
+    var p = wsig.p || wParams(), n = s.c.length, last = n - 1, i;
+    for (i = Math.max(0, n - p.breakBars); i < n; i++) {
+      if (wsig.wbreak[i]) {
+        var q = wsig.brkinfo[i], fail = s.c[last] <= q.neck;
+        return { stage: fail ? '실패' : '돌파', pat: q, fail: !!fail,
+          toNeck: q.neck / s.c[last] - 1, bars: last - i, asOf: s.d[last] };
+      }
+    }
+    var al = wAliveAt(s, last, wsig);
+    if (!al.length) return { stage: null, pat: null, fail: false, toNeck: null, bars: null, asOf: s.d[last] };
+    var a0 = al[0];
+    return { stage: a0.toNeck <= p.nearGap ? '임박' : '진행', pat: a0, fail: false,
+      toNeck: a0.toNeck, bars: a0.barsSinceL2, asOf: s.d[last] };
+  }
+
+  /* ============================================================
      Swing strategy — 중간 길이 눌림 반등 (RSI(2) 과매도 · QQQ 200일선 · 20일선 이탈 청산)
      --------------------------------------------
      work/stock/v5_upgrade/longlib.py (REPORT_LONG_SWING.md '중간 길이' 안) 을 이 엔진에 이식.
-       진입 ① RSI(2) < 15
-            ② QQQ 종가 > QQQ 200일 단순이동평균
-             → 신호 다음 거래일 시가 매수
+       진입 ① RSI(2) < 15                          (주력)
+            ② W 쌍바닥 넥라인 상향 돌파              (보조 — REPORT_W_BOTTOM.md 권고안)
+               전일 종가 ≤ N, 당일 종가 > N → 신호, 다음 거래일 시가 매수
+            ① ② 모두 QQQ 종가 > QQQ 200일 단순이동평균 조건에서만
        청산 고정 보유기간 없음 — 종가에 아래 조건을 확인해 다음 날 시가 매도
             ① 손절  min(진입가 − 4.5 × ATR(14), 진입가 −10%)  (장중 지정가, 갭이면 시가)
             ② 이익 상태(평가수익 +5% 이상)에서 종가가 20일 단순이동평균 아래로
@@ -439,7 +584,9 @@
      지표·신호는 당일 종가까지만 사용 — 미래참조 없음
      손절 상한: 진입가 −10% (4.5 ATR 손절선이 그보다 멀 때만 적용) — 대형 손절 방어
      백테스트 (99종목, 2021-11-26~2026-11-25 5년, 2022년 하락장 포함): 이익 +5% 게이트 + -10% 상한 기준
-       평균 +87.37% · 중앙 +60.34% · 승률 57.6% · 보유초과 35/99 · 평균 MDD -36.90% · 평균 보유 41.5일
+       W 보조 루트 포함 평균 +91.33% · 중앙 +58.23% · 승률 57.5% · 보유초과 35/99 · 평균 MDD -36.96% · 평균 보유 41.4일
+       (W 루트가 추가로 잡은 거래 33건 · 스윙 포지션이 없는 날만)
+       (W 루트 없던 직전 기준: 평균 +87.37% · 중앙 +60.34% · 승률 57.6% · 보유초과 35/99 · 평균 MDD -36.90% · 평균 보유 41.5일)
        (상한 없던 직전 기준: 평균 +90.98% · 중앙 +54.46% · 승률 62.1% · 평균 MDD -38.62% · 평균 보유 48.7일)
        (직전 +1% 게이트: 평균 +81.87% · 중앙 +53.21% · 승률 77.1% · 평균 보유 21.8일)
        (직전 단기 청산 G3는 +41.19% · 중앙 +26.29% · 승률 80.1% · 평균 보유 11.2일)
@@ -450,6 +597,7 @@
     ma20Gate: 0.05,            /* '이익 상태' = 평가수익 +5% 이상 (99종목 5년 -10% 상한 기준 평균 +87.4% · 승률 57.6% · 평균 보유 41.5일) */
     stopAtr: 4.5,              /* 진입가 − 4.5 × ATR */
     stopCap: 0.10,             /* 손절 상한 — 4.5 ATR이 −10%보다 멀면 −10%에서 먼저 청산 (대형 손절 방어) */
+    wRoute: true,              /* W 쌍바닥 넥라인 돌파 보조 루트 (포지션이 없을 때만 — 스윙 신호가 먼저) */
     fee: 0.0003, warmup: WARMUP
   };
   var _swingMap = null;
@@ -490,7 +638,7 @@
   }
 
   /* 마지막 봉 기준 신호 상태 · 청산 계획 (전환 탭의 손절/청산기준 안내에 사용) */
-  function swingStatus(series, ind, opts) {
+  function swingStatus(series, ind, opts, wsig) {
     var o = swingOpts(opts), n = series.c.length, i = n - 1;
     if (i < 1) return null;
     var r2 = rsi(series.c, o.rsiLen);
@@ -498,46 +646,66 @@
     var rec = map ? map[series.d[i]] : null;
     var rNow = r2[i], mktOk = swingMktAt(map, series.d, i);
     var atrNow = ind.atr[i] > 0 ? ind.atr[i] : series.c[i] * 0.02;
-    var sig = (rNow != null && rNow < o.rsiEntry) && mktOk && ind.atr[i] > 0;
+    var sigRsi = (rNow != null && rNow < o.rsiEntry) && mktOk && ind.atr[i] > 0;
     var r14 = ind.rsi[i];
+    /* W 쌍바닥 — 오늘 넥라인 돌파 신호인지, 아니면 어느 단계인지 */
+    var w = wsig || wSignals(series);
+    var breakToday = !!(o.wRoute && w.wbreak[i] && mktOk);
+    var wnow = wScan(series, w);
+    var sig = sigRsi || breakToday;
+    var route = sigRsi ? '스윙' : (breakToday ? 'W돌파' : null);
+    var wNeck = null, wGap = null;
+    if (breakToday) { wNeck = w.brkinfo[i].neck; wGap = series.c[i] / wNeck - 1; }
+    else if (wnow.pat) { wNeck = wnow.pat.neck; wGap = series.c[i] / wNeck - 1; }
     return {
-      strategy: 'swing', date: series.d[i], signal: !!sig,
+      strategy: 'swing', date: series.d[i], signal: !!sig, route: route,
       rsi2: rNow, rsi2Prev: r2[i - 1], rsi14: r14, ma5: ind.ma5[i], ma20: ind.ma20[i],
       qqq: rec ? rec.qqq : null, qqqMa: rec ? rec.ma : null, marketOk: mktOk,
+      wStage: wnow.stage, wBreak: breakToday, wNeck: wNeck, wGap: wGap, wPat: wnow.pat,
       entryRef: series.c[i],                 /* 다음 거래일 시가 체결 — 참고가는 당일 종가 */
       stopPrice: Math.max(series.c[i] - o.stopAtr * atrNow, series.c[i] * (1 - o.stopCap)),
       stopCap: o.stopCap,
       stopAtr: o.stopAtr, atr: atrNow, target: null,
       exitNow: null,                          /* 보유 중일 때만 — 이익 상태 & 종가<20일선 */
       exitRule: '손절 min(' + o.stopAtr + ' ATR, -' + Math.round(o.stopCap * 100) + '%) · 이익(+' + Math.round(o.ma20Gate * 100) + '% 이상) 중 20일선 이탈 → 다음 날 시가 청산 (고정 보유기간 없음 · 평균 42일)',
-      reason: sig
+      entryRule: 'RSI(2) ' + o.rsiEntry + ' 미만 (주력) · W 쌍바닥 넥라인 돌파 (보조) · 둘 다 QQQ ' + o.qqqMa + '일선 위 — 다음 날 시가 매수',
+      reason: sigRsi
         ? 'RSI(2) ' + rNow.toFixed(1) + ' — 과매도 극단 · QQQ 200일선 위 (다음 시가 매수)'
-        : 'RSI(2) ' + (rNow == null ? '—' : rNow.toFixed(1)) +
-          (mktOk ? '' : ' · QQQ 200일선 아래(진입 금지)') + ' — 진입 조건 미충족'
+        : breakToday
+          ? 'W 쌍바닥 넥라인 ' + usdNeck(wNeck) + ' 상향 돌파 — 보조 루트 (다음 시가 매수)'
+          : 'RSI(2) ' + (rNow == null ? '—' : rNow.toFixed(1)) +
+            (mktOk ? '' : ' · QQQ 200일선 아래(진입 금지)') + ' — 진입 조건 미충족'
     };
   }
+  function usdNeck(v) {
+    if (v == null || isNaN(v)) return '—';
+    return '$' + (Math.abs(v) >= 1000 ? v.toFixed(0) : v.toFixed(2));
+  }
 
-  function swingBacktest(series, ind, opts) {
+  function swingBacktest(series, ind, opts, wsig) {
     var o = swingOpts(opts);
     var c = series.c, O = series.o, H = series.h, L = series.l, D = series.d, n = c.length;
     var A = ind.atr;
     var r2 = rsi(c, o.rsiLen);
     var map = swingMarketMap(o);
+    var w = (o.wRoute || o.wRoute === undefined) ? (wsig || wSignals(series)) : null;
+    var wb = w ? w.wbreak : null;
     var first = btFirst(n, o.warmup);
-    var cash = 1, pos = null, pendEntry = false, pendExit = null;
+    var cash = 1, pos = null, pendEntry = false, pendExit = null, pendKind = null;
     var trades = [], equity = new Array(n).fill(null), bars = 0, inMkt = 0;
 
-    function openAt(px, i) {
+    function openAt(px, i, kind) {
       if (!(px > 0)) return;
       var a0 = A[i - 1] > 0 ? A[i - 1] : A[i];
       if (!(a0 > 0)) return;
-      pos = { entry: px, entryIdx: i, entryDate: D[i], atr0: a0, shares: cash / (px * (1 + o.fee)) };
+      pos = { entry: px, entryIdx: i, entryDate: D[i], atr0: a0, shares: cash / (px * (1 + o.fee)), kind: kind || '스윙' };
       cash = 0;
     }
     function closeAt(px, i, reason) {
       cash += pos.shares * px * (1 - o.fee);
       trades.push({ entryDate: pos.entryDate, entry: pos.entry, exitDate: D[i], exit: px,
-        ret: cash / (pos.shares * pos.entry) - 1, hold: i - pos.entryIdx, reason: reason, atr0: pos.atr0 });
+        ret: cash / (pos.shares * pos.entry) - 1, hold: i - pos.entryIdx, reason: reason,
+        atr0: pos.atr0, kind: pos.kind });
       pos = null;
     }
 
@@ -545,8 +713,8 @@
       /* 1) 시가 집행 — 직전 종가에 정해진 주문 */
       if (pos && pendExit) closeAt(O[i], i, pendExit);
       pendExit = null;
-      if (!pos && pendEntry) openAt(O[i], i);
-      pendEntry = false;
+      if (!pos && pendEntry) openAt(O[i], i, pendKind);
+      pendEntry = false; pendKind = null;
       /* 2) 장중 손절 (지정가, 갭 하락이면 시가) */
       if (pos) {
         /* 손절 = min(진입가 − 4.5 ATR, 진입가 −10%) — 두 선 중 더 가까운(높은) 가격에서 먼저 청산 */
@@ -558,7 +726,11 @@
         var why = swingExitAt(series, ind, i, pos, o);
         if (why) pendExit = why;
       } else if (i < n - 1) {
-        if (swingMktAt(map, D, i) && r2[i] != null && r2[i] < o.rsiEntry && A[i] > 0) pendEntry = true;
+        if (swingMktAt(map, D, i)) {
+          /* 주력: RSI(2) 과매도 · 보조: W 쌍바닥 넥라인 돌파 (포지션이 없을 때만) */
+          if (r2[i] != null && r2[i] < o.rsiEntry && A[i] > 0) { pendEntry = true; pendKind = '스윙'; }
+          else if (wb && wb[i]) { pendEntry = true; pendKind = 'W돌파'; }
+        }
       }
       equity[i] = cash + (pos ? pos.shares * c[i] : 0);
       bars++; if (pos) inMkt++;
@@ -598,6 +770,8 @@
     var sh = Math.sqrt(varr) > 0 ? mean / Math.sqrt(varr) * Math.sqrt(252) : 0;
     var holdAvg = trades.length ? trades.reduce(function (a, t) { return a + t.hold; }, 0) / trades.length : 0;
     var reasons = {}; trades.forEach(function (t) { reasons[t.reason] = (reasons[t.reason] || 0) + 1; });
+    var wt = trades.filter(function (t) { return t.kind === 'W돌파'; });
+    var wr2 = wt.length ? wt.reduce(function (a, t) { return a + t.ret; }, 0) / wt.length : null;
 
     return {
       trades: trades, equity: equity, startIdx: first, reasons: reasons,
@@ -608,7 +782,8 @@
         avgHold: holdAvg, cagr: cagr, sharpe: sh,
         avgWin: wins.length ? gp / wins.length : 0,
         avgLoss: losses.length ? -gl / losses.length : 0,
-        exposure: bars ? inMkt / bars : 0
+        exposure: bars ? inMkt / bars : 0,
+        wTrades: wt.length, wAvgRet: wr2
       }
     };
   }
@@ -1897,8 +2072,10 @@
     var ind = computeIndicators(series);
     var sc = scoreSeries(series, ind);
     var bt = backtestRun(series, ind, sc, opts);
-    var sw = swingBacktest(series, ind, opts);
-    var swPlan = swingStatus(series, ind, opts);
+    var wsig = wSignals(series);
+    var sw = swingBacktest(series, ind, opts, wsig);
+    var swPlan = swingStatus(series, ind, opts, wsig);
+    var wnow = wScan(series, wsig);
     var mode = (opts && opts.strategyMode === 'swing') ? 'swing' : 'trend';
     var n = series.c.length;
     var i = n - 1;
@@ -1925,6 +2102,7 @@
     };
     rec.dates = series.d;
     rec.close = series.c;
+    rec.w = wnow;                 /* 차트 오버레이·스캐너 필터용 현재 W 상태 */
     rec.elliott = ewAnalyze(series, ind);
     /* 두 전략을 함께 산출 — 전환 탭은 다시 계산하지 않고 이 결과를 골라 쓴다 */
     rec.strategyMode = mode;
@@ -1951,6 +2129,7 @@
     computeIndicators: computeIndicators, scoreSeries: scoreSeries,
     backtest: backtestRun, analyze: analyze, labelOf: labelOf, LABELS: LABELS, explain: explain,
     swingBacktest: swingBacktest, swingStatus: swingStatus, swingParams: SWING_P,
+    wBottom: wSignals, wAliveAt: wAliveAt, wScan: wScan, wParams: W_P,
     clamp: clamp, elliott: ewAnalyze
   };
 

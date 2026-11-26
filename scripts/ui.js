@@ -81,13 +81,31 @@
   var cache = new Map();
   var state = {
     cur: 'NVDA', range: 128, filter: 'all', sort: 'mc', q: '', listQ: '',
-    show: { ma: true, ichi: true, bb: true, sig: true, rsi: true, macd: true, ew: true },
+    show: { ma: true, ichi: true, bb: true, sig: true, rsi: true, macd: true, ew: true, w: true },
     maOn: { 5: true, 20: true, 60: true, 120: true, 240: true },
     simIdx: 0, tool: 'cursor', ewMode: 0,
     ewShow: { sub: true, ch: true, clu: true },
     watch: [], strategy: 'trend'
   };
   watchRestore();
+
+  /* ---------------- W 쌍바닥 지표 토글 (기본 ON · 개인 브라우저 localStorage 저장) ---------------- */
+  var WTOG_KEY = 'apex.wbottom.v1';
+  function wRestore() {
+    try {
+      var v = localStorage.getItem(WTOG_KEY);
+      if (v === '0') state.show.w = false;
+      else if (v === '1') state.show.w = true;
+    } catch (e) { /* 저장소 차단 환경에서는 기본 ON */ }
+  }
+  function wPersist() {
+    try { localStorage.setItem(WTOG_KEY, state.show.w ? '1' : '0'); } catch (e) {}
+  }
+  function wSyncToggle() {
+    var b = $('.tg[data-t=w]');
+    if (b) b.classList.toggle('on', !!state.show.w);
+  }
+  wRestore();
 
   /* ---------------- 전략 전환 (추세형 ↔ 스윙형) ---------------- */
   var STRAT_KEY = 'apex.strategy.v1';
@@ -99,8 +117,8 @@
     },
     swing: {
       key: 'swing', title: '스윙형', sub: '단기',
-      desc: 'RSI(2) 15 미만 + QQQ 200일선 위 → 다음 날 시가 매수 · 이익 시(+5% 이상) 20일선 이탈 → 다음 날 시가 청산 · 손절 4.5 ATR (최대 -10%) (평균 약 42일)',
-      logSub: 'RSI(2) 15 미만 + QQQ 200일선 위 매수 · 손절 4.5 ATR (최대 -10%) · 이익 중 20일선 이탈 시 다음 날 시가 청산 (평균 약 42일)'
+      desc: 'RSI(2) 15 미만 + QQQ 200일선 위 → 다음 날 시가 매수 · W 쌍바닥 넥라인 돌파도 보조 진입(포지션 없을 때) · 이익 시(+5% 이상) 20일선 이탈 → 다음 날 시가 청산 · 손절 4.5 ATR (최대 -10%) (평균 약 41일)',
+      logSub: 'RSI(2) 15 미만 + QQQ 200일선 위 매수 · W 쌍바닥 넥라인 돌파 보조 루트 · 손절 4.5 ATR (최대 -10%) · 이익 중 20일선 이탈 시 다음 날 시가 청산 (평균 약 41일)'
     }
   };
   function stratKey() { return state.strategy === 'swing' ? 'swing' : 'trend'; }
@@ -269,6 +287,7 @@
     setTimeout(fgRealtime, 500);
     var t0 = performance.now();
     M.tickers.forEach(function (x) { A[x.t] = get(x.t); });
+    wSyncToggle();
     $('#uniCount').textContent = M.tickers.filter(function (x) { return x.r; }).length;
     var cf = $('#cFav'); if (cf) cf.textContent = state.watch.length;
     renderFavs();
@@ -349,6 +368,22 @@
     };
     return presetCache;
   }
+  /* W 쌍바닥 프리셋 — 마지막 종가 기준 단계별 종목 수와 집합 (돌파/임박/진행만, 돌파 실패는 제외) */
+  var wCountCache = null;
+  function wCounts() {
+    if (wCountCache) return wCountCache;
+    var cnt = { '돌파': 0, '임박': 0, '진행': 0 }, set = {}, total = 0, asOf = M.asOf;
+    M.tickers.forEach(function (x) {
+      var a = A[x.t];
+      if (!a || !a.w || !a.w.stage) return;
+      if (a.w.stage === '실패') { cnt['실패'] = (cnt['실패'] || 0) + 1; return; }
+      cnt[a.w.stage] = (cnt[a.w.stage] || 0) + 1;
+      set[x.t] = 1; total++;
+      if (a.w.asOf) asOf = a.w.asOf;
+    });
+    wCountCache = { cnt: cnt, set: set, total: total, asOf: asOf };
+    return wCountCache;
+  }
   function presetNoteHtml(shown) {
     var pd = presetData();
     if (state.filter === 'top30') {
@@ -357,6 +392,12 @@
     if (state.filter === 'quality') {
       return '<b>실적 우량주</b> · EPS 흑자 + 매출성장 5% 초과 + 순이익률 15% 초과 · ' + pd.asOf + ' 실적 기준 · 지금 ' + shown + '종목 표시';
     }
+    if (state.filter === 'w') {
+      var wc = wCounts();
+      return '<b>W 쌍바닥</b> · 넥라인 돌파 ' + wc.cnt['돌파'] + ' · 임박 ' + wc.cnt['임박'] + ' · 진행 ' + wc.cnt['진행'] +
+        ' · ' + wc.asOf + ' 종가 기준 · 지금 ' + shown + '종목 표시' +
+        (wc.cnt['실패'] ? ' (돌파 후 넥라인 아래로 내려온 ' + wc.cnt['실패'] + '종목 제외)' : '');
+    }
     return '프리셋을 누르면 목록이 그 기준으로 좁혀집니다 · 검색·정렬과 함께 적용됩니다';
   }
   function matchesFilter(a, rv) {
@@ -364,6 +405,7 @@
     if (state.filter === 'sell') return rv.score < 45;
     if (state.filter === 'fav') return isWatch(a.sym);
     if (state.filter === 'top30' || state.filter === 'quality') return !!presetData()[state.filter][a.sym];
+    if (state.filter === 'w') return !!wCounts().set[a.sym];
     return true;
   }
   function spark(a, upto) {
@@ -415,10 +457,11 @@
     var pd = presetData();
     var cTop = $('#cTop30'); if (cTop) cTop.textContent = pd.nTop;
     var cQual = $('#cQual'); if (cQual) cQual.textContent = pd.nQual;
+    var cW = $('#cW'); if (cW) cW.textContent = wCounts().total;
     var pn = $('#presetNote');
     if (pn) {
       pn.innerHTML = presetNoteHtml(rows.length);
-      pn.classList.toggle('on', state.filter === 'top30' || state.filter === 'quality');
+      pn.classList.toggle('on', state.filter === 'top30' || state.filter === 'quality' || state.filter === 'w');
     }
 
     $('#scanList').innerHTML = rows.length ? rows.map(function (a) {
@@ -556,10 +599,12 @@
     var bullish = a.score >= 45;
     var lvEL = $('#lvEntryL'), lvSL = $('#lvStopL'), lvTL = $('#lvTargetL'), lvRL = $('#lvRRL');
     if (a.stratKey === 'swing') {
-      /* 스윙형: 다음 시가 진입 · 손절 4.5 ATR(최대 -10%) · 고정 보유기간 없이 이익 중 20일선 이탈 청산 */
+      /* 스윙형: 다음 시가 진입(RSI(2) 주력 · W 넥라인 돌파 보조) · 손절 4.5 ATR(최대 -10%) · 이익 중 20일선 이탈 청산 */
       var p = a.plan || {};
       var on = !!p.signal;
-      if (lvEL) lvEL.textContent = on ? '진입 · 다음 시가 매수' : '진입 대기 · RSI(2) 15 미만';
+      var wRoute = (p.route === 'W돌파');
+      if (lvEL) lvEL.textContent = on ? (wRoute ? '진입 · W 돌파 (다음 시가)' : '진입 · 다음 시가 매수')
+        : '진입 대기 · RSI(2) 15 미만' + (p.wStage ? ' · W ' + p.wStage : '');
       $('#lvEntry').textContent = usd(p.entryRef != null ? p.entryRef : a.price);
       if (lvSL) lvSL.textContent = '손절가 · 4.5 ATR (최대 -10%)';
       $('#lvStop').textContent = usd(p.stopPrice);
@@ -1407,7 +1452,7 @@
       return '<div class="it"><span class="d">' + x.exitDate.slice(2) + '</span>' +
         '<div class="m"><b style="color:' + (open ? '#38BDF8' : (x.reason === '손절' ? '#FB7185' : (x.reason === '이익보전' || x.reason === '트레일') ? '#34D399' : '#9BA6BA')) + '">' +
         (open ? '보유 중' : x.reason) + '</b>' +
-        '<span>' + usd(x.entry) + ' → ' + usd(x.exit) + ' · ' + Math.round(x.hold || 0) + '일</span></div>' +
+        '<span>' + usd(x.entry) + (x.kind === 'W돌파' ? '<i class="wtag" title="W 쌍바닥 보조 루트">W</i>' : '') + ' → ' + usd(x.exit) + ' · ' + Math.round(x.hold || 0) + '일</span></div>' +
         '<span class="r ' + cls(x.ret) + '">' + pct(x.ret, 1) + '</span></div>';
     }).join('') : '<div class="empty">거래 내역이 없습니다</div>';
   }
@@ -1424,7 +1469,7 @@
       var hold = Math.round(x.hold || 0);   /* 거래일 기준 — 상단 '평균 보유'와 같은 값 */
       return '<tr>' +
         '<td data-l="진입일">' + x.entryDate + '</td>' +
-        '<td data-l="진입가">' + usd(x.entry) + '</td>' +
+        '<td data-l="진입가">' + usd(x.entry) + (x.kind === 'W돌파' ? '<i class="wtag" title="W 쌍바닥 넥라인 돌파 보조 루트 진입">W</i>' : '') + '</td>' +
         '<td data-l="청산일">' + (open ? '—' : x.exitDate) + '</td>' +
         '<td class="cm" data-l="청산가">' + (open ? usd(a.price) + ' <span style="color:#4A5468">*</span>' : usd(x.exit)) + '</td>' +
         '<td class="cm hold' + (open ? ' live' : '') + '" data-l="보유기간">' + hold + '일' + (open ? '<i>진행</i>' : '') + '</td>' +
@@ -1830,7 +1875,9 @@
     }
 
     /* last price tag */
+    this.drawWBottom(ctx, a, L, Y, i0, i1, bw, 'line');
     if (state.show.ew) this.drawWave(ctx, a, L, Y, i0, i1, bw);
+    this.drawWBottom(ctx, a, L, Y, i0, i1, bw, 'label');
     this.drawUser(ctx, a, L, Y, i0, i1);
     ctx.restore();
     var lastC = c[i1], lastY = Y(lastC);
@@ -2072,6 +2119,122 @@
     ctx.restore();
   };
 
+  /* ---------------- W 쌍바닥 오버레이 (L1 → 넥라인 N → L2 → 돌파/현재) ----------------
+     'line' 단계는 캔들·지표 위, 라벨 단계는 엘리어트 라벨 뒤(위)에서 그려
+     서로의 라벨 사각형(_wBoxes / _ewBoxes / _tagRects)을 피해 배치한다. */
+  Chart.prototype.drawWBottom = function (ctx, a, L, Y, i0, i1, bw, phase) {
+    var self = this, xr = L.padL + L.plotW;
+    var pTop = L.price.y + 1, pBot = L.price.y + L.price.h;
+
+    if (phase !== 'label') {
+      this._wBoxes = [];
+      this._wGeo = null;
+      if (!state.show.w) return;
+      var w = a.w;
+      if (!w || !w.stage || w.stage === '실패') return;
+      var q = w.pat;
+      if (!q) return;
+      var c = a.close, n = c.length, last = n - 1;
+      var endI = (q.brk != null) ? q.brk : last;
+      var endP = (q.brk != null) ? c[q.brk] : c[last];
+      if (this.x(Math.max(q.p1, q.p3)) > xr + 2) return;        /* 패턴이 화면 오른쪽 밖 */
+      if (this.x(endI) < L.padL - 2) return;                    /* 패턴이 화면 왼쪽 밖 */
+      var g = {
+        x0: this.x(q.p1), x1: this.x(q.p2), x2: this.x(q.p3), x3: this.x(endI),
+        yL1: Y(q.L1), yN: Y(q.neck), yL2: Y(q.L2), yE: Y(endP),
+        neck: q.neck, brk: q.brk != null, p3i: q.p3,
+        col: '#E2E8F0',                                   /* 구조선은 중립 색 — 이동평균·엘리어트와 구분 */
+        stageCol: w.stage === '돌파' ? '#34D399' : (w.stage === '임박' ? '#FBBF24' : '#38BDF8'),
+        stage: w.stage
+      };
+      g.spanPx = g.x3 - g.x0;
+      g.nx0 = Math.max(L.padL, Math.min(g.x1, g.x2) - bw * 0.6);
+      g.nx1 = Math.min(xr, Math.max(g.x3, g.x2) + Math.max(bw * 2, 10));
+      this._wGeo = g;
+      this._wBoxes = [];
+
+      ctx.save();
+      /* 넥라인(N) 수평 점선 — L2 오른쪽에서 돌파 지점까지 연장 */
+      ctx.setLineDash([5, 4]);
+      ctx.strokeStyle = 'rgba(203,213,225,.55)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(g.nx0, g.yN); ctx.lineTo(g.nx1, g.yN); ctx.stroke();
+      ctx.setLineDash([]);
+      /* W자 폴리라인 — 어두운 테두리 위에 단계별 색 */
+      var pts = [[g.x0, g.yL1], [g.x1, g.yN], [g.x2, g.yL2], [g.x3, g.yE]];
+      var drawPath = function () {
+        ctx.beginPath();
+        ctx.moveTo(pts[0][0], pts[0][1]);
+        for (var k = 1; k < pts.length; k++) ctx.lineTo(pts[k][0], pts[k][1]);
+      };
+      ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+      drawPath(); ctx.strokeStyle = 'rgba(11,14,20,.85)'; ctx.lineWidth = 4.8; ctx.stroke();
+      drawPath(); ctx.strokeStyle = g.col; ctx.lineWidth = 2.1; ctx.stroke();
+      /* 변곡점 L1 · N · L2 */
+      [[g.x0, g.yL1], [g.x1, g.yN], [g.x2, g.yL2]].forEach(function (pt) {
+        ctx.beginPath(); ctx.arc(pt[0], pt[1], 2.8, 0, Math.PI * 2);
+        ctx.fillStyle = '#0B0E14'; ctx.fill();
+        ctx.strokeStyle = g.col; ctx.lineWidth = 1.6; ctx.stroke();
+      });
+      /* 넥라인 돌파 봉 — 단계 색으로 채운 점 */
+      if (g.brk) {
+        ctx.beginPath(); ctx.arc(g.x3, g.yE, 3.4, 0, Math.PI * 2);
+        ctx.fillStyle = g.stageCol; ctx.fill();
+        ctx.strokeStyle = '#0B0E14'; ctx.lineWidth = 1.2; ctx.stroke();
+      }
+      ctx.restore();
+      return;
+    }
+
+    /* ---- 라벨 ---- */
+    var gg = this._wGeo;
+    if (!gg || !state.show.w || this._wLabeled === gg) return;
+    this._wLabeled = gg;
+    var boxes = (this._ewBoxes || []).concat(this._tagRects || []).concat(this._wBoxes || []);
+    var hit = function (r) {
+      for (var k = 0; k < boxes.length; k++) {
+        var b = boxes[k];
+        if (!(r.x + r.w < b.x - 1 || r.x > b.x + b.w + 1 || r.y + r.h < b.y - 1 || r.y > b.y + b.h + 1)) return true;
+      }
+      return false;
+    };
+    var tag = function (px, py, text, align, tone) {
+      ctx.font = '700 9px ui-monospace,SFMono-Regular,monospace';
+      var tw = Math.round(ctx.measureText(text).width) + 9;
+      var baseX = align === 'right' ? px - tw : (align === 'center' ? px - tw / 2 : px);
+      baseX = Math.max(L.padL + 1, Math.min(baseX, xr - tw - 1));
+      var dy = [py - 7, py + 2, py - 21, py + 16, py - 35, py + 30];
+      var cands = [];
+      dy.forEach(function (y) { [0, -46, -92, 46].forEach(function (dx) { cands.push([baseX + dx, y]); }); });
+      for (var k = 0; k < cands.length; k++) {
+        var tx = Math.max(L.padL + 1, Math.min(cands[k][0], xr - tw - 1));
+        if (cands[k][1] + 14 < pTop || cands[k][1] > pBot - 2) continue;
+        var rect = { x: tx, y: Math.max(pTop, Math.min(cands[k][1], pBot - 15)), w: tw, h: 14 };
+        if (hit(rect)) continue;
+        boxes.push(rect);
+        if (!self._tagRects) self._tagRects = [];
+        self._tagRects.push(rect);
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(rect.x, rect.y, rect.w, rect.h, 3); else ctx.rect(rect.x, rect.y, rect.w, rect.h);
+        ctx.fillStyle = 'rgba(11,14,20,.92)'; ctx.fill();
+        ctx.strokeStyle = tone; ctx.globalAlpha = .6; ctx.lineWidth = 1; ctx.stroke(); ctx.globalAlpha = 1;
+        ctx.fillStyle = tone; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        ctx.fillText(text, rect.x + 4.5, rect.y + 7.5);
+        return true;
+      }
+      return false;
+    };
+    var stageTxt = gg.stage === '돌파' ? 'W돌파' : (gg.stage === '임박' ? 'W임박' : 'W진행');
+    var neutral = '#DDE3EC';
+    /* 패턴이 화면에서 충분히 넓을 때만 변곡점 라벨 (5년 전체 보기에서는 배지만) */
+    if (gg.spanPx >= 58) {
+      if (gg.x0 >= L.padL - 2) tag(gg.x0, gg.yL1 + 14, 'L1', 'center', neutral);
+      tag(gg.x2, gg.yL2 + 14, 'L2', 'center', neutral);
+      tag((gg.x1 + gg.x2) / 2, gg.yN - 3, '넥라인', 'center', neutral);
+    }
+    tag(gg.x3, (gg.brk ? Math.min(gg.yE, gg.yN) - 9 : gg.yE + 14), stageTxt, 'center', gg.stageCol);
+  };
+
   /* ---------------- 엘리어트 파동 오버레이 ---------------- */
   Chart.prototype.drawWave = function (ctx, a, L, Y, i0, i1, bw) {
     if (!state.show.ew) return;
@@ -2083,7 +2246,7 @@
     var colOf = function (s) { return (s === 'cor' || s === 'subcor') ? corC : impC; };
     var xr = L.padL + L.plotW;
     var path = e.path || [];
-    var boxes = [];
+    var boxes = (this._wBoxes || []).slice();
     ctx.save();
     ctx.lineJoin = 'round'; ctx.lineCap = 'round';
 
@@ -2266,6 +2429,7 @@
       });
     }
 
+    this._ewBoxes = boxes;
     /* 태그가 서로 겹치면 아래로 밀어 배치 */
     tags.sort(function (b1, b2) { return b1.y - b2.y; });
     var lastY = -1e9;
@@ -2945,6 +3109,7 @@
       var k = b.dataset.t;
       state.show[k] = !state.show[k];
       b.classList.toggle('on', state.show[k]);
+      if (k === 'w') wPersist();
       chart.resize(); chart.draw();
     };
     var gs = $('#globalSearch');
