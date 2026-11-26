@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
-"""미국주식 차트분석기 데이터 갱신 스크립트 (v2 — 5년 + 거시지표 + 펀더멘털).
+"""미국주식 차트분석기 데이터 갱신 스크립트 (v3 — 5년 백테스트 + 워밍업 + 거시지표 + 펀더멘털).
 
 Yahoo Finance 에서 top100.json 에 정의된 102종목(100 + NKE, QQQ)의
-최근 5년 일봉과 거시 지표(^VIX, ^TNX), 종목별 펀더멘털(quoteSummary)을
-내려받아 scripts/data.js 를 다시 생성한다.
+10년 일봉을 내려받아 그중 최근 KEEP_BARS(1,505)봉만 남기고,
+거시 지표(^VIX, ^TNX), 종목별 펀더멘털(quoteSummary)과 함께
+scripts/data.js 를 다시 생성한다.
+
+1,505봉 = 백테스트 5년(1,255거래일) + 워밍업 250봉.
+엔진(engine.js)은 최근 1,255봉만 백테스트 구간으로 쓰므로, 매일 갱신해도
+백테스트 창은 항상 정확히 5년으로 유지된다.
 
   window.MARKET = {asOf, dates[], tickers[], series{}, fundamentals{}}
     series       : 종목 102 + ^VIX + ^TNX  (off,o,h,l,c,v — 거래일 캘린더 정렬)
@@ -39,7 +44,10 @@ TOP100 = os.path.join(HERE, 'top100.json')
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36")
 YAHOO = ("https://query1.finance.yahoo.com/v8/finance/chart/{t}"
-         "?range=5y&interval=1d&includePrePost=false&events=div%2Csplit")
+         "?range=10y&interval=1d&includePrePost=false&events=div%2Csplit")
+# data.js 에 담는 봉 수 = 백테스트 5년(1,255거래일) + 앞쪽 워밍업 250봉
+KEEP_BARS = 1505
+BT_BARS = 1255
 FUND_MODULES = 'price,summaryDetail,defaultKeyStatistics,financialData'
 # data.js 에 내장할 펀더멘털 필드 (UI 표시 + 참고 지표)
 FUND_FIELDS = (
@@ -362,6 +370,10 @@ def build_payload(base, tickers, charts_ok, prev):
     if not alld:
         return None, 'no price data'
     dates = sorted(alld)
+    if len(dates) < KEEP_BARS:
+        return None, 'calendar too short: %d bars (need %d)' % (len(dates), KEEP_BARS)
+    # 최근 KEEP_BARS봉만 남긴다 — 백테스트 5년 + 워밍업 250봉
+    dates = dates[-KEEP_BARS:]
 
     series = {}
     for t in tickers:
@@ -482,8 +494,8 @@ def _stable(payload):
 def sanity(payload):
     """치명적 결함이면 문자열 반환 (data.js 를 덮어쓰지 않는다)."""
     dates = payload['dates']
-    if len(dates) < 1100:
-        return 'dates too short: %d' % len(dates)
+    if len(dates) != KEEP_BARS:
+        return 'dates %d (need %d)' % (len(dates), KEEP_BARS)
     for t, s in payload['series'].items():
         if len(s['c']) + s['off'] != len(dates):
             return 'alignment %s' % t

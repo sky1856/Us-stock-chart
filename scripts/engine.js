@@ -408,6 +408,24 @@
   }
 
   /* ============================================================
+     백테스트 공통 창
+     ------------------------------------------------------------
+     data.js 는 최근 1,505봉(2020-11-30~2026-11-25)을 담는다.
+       · 앞쪽 250봉 = 지표 워밍업
+       · 뒤쪽 1,255봉 = 백테스트 구간 (2021-11-26~2026-11-25, 정확히 5년 · 2022년 하락장 포함)
+     이력이 5년보다 길면 언제나 최근 1,255봉만 거래하므로, 매일 데이터가
+     늘어나도 백테스트 창은 5년으로 고정된다.
+     ============================================================ */
+  var BT_BARS = 1255, WARMUP = 250, MIN_WARM = 60;
+  function btFirst(n, warm) {
+    var f = n - BT_BARS;
+    /* 5년 이력이 있으면 언제나 최근 1,255봉(앞쪽은 워밍업). 상장이 늦은 종목은
+       60봉 이상 확보되면 자기 이력 기준 최근 1,255봉에서 시작한다 */
+    if (f >= MIN_WARM) return f;
+    return Math.min(Math.max(warm == null ? WARMUP : warm, 1), Math.max(n - 2, 1));
+  }
+
+  /* ============================================================
      Swing strategy — 단기 눌림 반등 (RSI(2) 과매도 + 시장 필터)
      --------------------------------------------
      work/stock/bt_opt/swing/best_swing_chart_exit.js 를 이 엔진에서 그대로 돌도록 이식.
@@ -421,15 +439,17 @@
             ④ 이익 +1% 이상에서 종가가 5일선 아래로
        비용  매수·매도 각 0.03%
      지표·신호는 당일 종가까지만 사용 — 미래참조 없음
-     백테스트 (100종목, 2025-10~2026-11): 평균 +17.35% · 중앙 +15.99% ·
-       보유초과 51/100 · 평균 MDD -19.87% · 승률 83.9% · 평균 보유 11.8일
+     백테스트 (99종목, 2021-11-26~2026-11-25 5년, 2022년 하락장 포함): 평균 +41.19% · 중앙 +26.29% ·
+       보유초과 21/99 · 평균 MDD -31.16% · 승률 80.1% · 평균 보유 11.2일 · 노출 37.0%
+       (REPORT_5Y.md 하네스 기준 +41.40% · 중앙 +31.75% — 워밍업·거래시작점 차이로 소폭 다름)
+       2022년 하락장 -8.47% (보유 -14.04%) — QQQ 100일선 필터로 1년 중 노출 10%대
      ============================================================ */
   var SWING_P = {
     rsiLen: 2, rsiEntry: 15, qqqMa: 100, useMarketFilter: true,
     rsi2Exit: 90, rsi14Exit: 70, useRsi14Exit: true,
     profitGate: 0.01,          /* ②는 이 수익률 이상일 때만 (0.01 = +1%) */
     maProtect: 0.01,           /* ④는 이 수익률 이상 & 종가 < 5일선 (0 = 끔) */
-    stopAtr: 4.5, fee: 0.0003, warmup: 210
+    stopAtr: 4.5, fee: 0.0003, warmup: WARMUP
   };
   var _swingMap = null;
   function swingOpts(o) {
@@ -518,7 +538,7 @@
     var A = ind.atr;
     var r2 = rsi(c, o.rsiLen);
     var map = swingMarketMap(o);
-    var first = Math.min(Math.max(o.warmup, 1), Math.max(n - 2, 1));
+    var first = btFirst(n, o.warmup);
     var cash = 1, pos = null, pendEntry = false, pendExit = null;
     var trades = [], equity = new Array(n).fill(null), bars = 0, inMkt = 0;
 
@@ -614,7 +634,7 @@
     var TRAIL_ATR = opts.trailAtr !== undefined ? opts.trailAtr : 10;
     var TRAIL_START = opts.trailStartAtr !== undefined ? opts.trailStartAtr : 6;
     var FEE = opts.fee !== undefined ? opts.fee : 0.0003;
-    var WARM = opts.warmup !== undefined ? opts.warmup : 210;
+    var WARM = opts.warmup !== undefined ? opts.warmup : WARMUP;
     var USE_REGIME = opts.marketFilter !== undefined ? opts.marketFilter : true;
 
     var c = series.c, o = series.o, h = series.h, l = series.l, d = series.d;
@@ -622,7 +642,7 @@
     var S = sc.score, A = ind.atr;
     var RM = USE_REGIME ? (opts.regime || marketRegimeMap()) : null;
 
-    var first = Math.min(Math.max(WARM, 60), n - 2);
+    var first = btFirst(n, WARM);
     var equity = new Array(n).fill(null), trades = [];
     var cash = 1, pos = null, i;
     var pendEntry = false, pendExit = null, pendW = 1, targetW = 1, bars = 0, inMarket = 0;

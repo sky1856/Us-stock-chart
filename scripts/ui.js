@@ -404,15 +404,16 @@
     return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2;
   }
   var uniCache = {};
-  /* 백테스트 표본이 충분한 100종목의 전략 성과 분포 (워밍업 210 + 80봉 미만 제외) */
+  /* 5년 백테스트 창을 온전히 채운 종목의 전략 성과 분포 (상장 초기·표본 부족 제외) */
   function universeStats(mode) {
     if (uniCache[mode]) return uniCache[mode];
     var rets = [], mdds = [], bhs = [], wrs = [], beat = 0, ntr = 0;
     M.tickers.forEach(function (x) {
       var a = A[x.t];
-      if (!a || !a.strategy || !a.close || a.close.length < 290) return;
+      if (!a || !a.strategy || !a.close) return;
       var b = a.strategy[mode];
       if (!b || !b.stats) return;
+      if (a.close.length - b.startIdx < 1250) return;   /* 5년(1,255거래일) 창을 다 채우지 못한 종목 제외 */
       rets.push(b.stats.totalReturn); mdds.push(b.stats.mdd); bhs.push(b.stats.bhReturn);
       if (b.stats.totalReturn > b.stats.bhReturn) beat++;
       if (b.stats.trades > 0) { wrs.push(b.stats.winRate); ntr += b.stats.trades; }
@@ -439,7 +440,7 @@
         '<span>보유 초과 <b>' + u.beat + '/' + u.n + '</b></span>' +
         '<span>평균 MDD <b class="neg">' + pct(u.mdd, 2) + '</b></span>' +
         '<span>승률 <b class="' + (u.win >= 0.5 ? 'pos' : '') + '">' + (u.win == null ? '—' : (u.win * 100).toFixed(1) + '%') + '</b></span>';
-      el.title = u.n + '종목 단순보유 평균 ' + pct(u.bh, 2) + ' · 워밍업 210거래일 이후 구간' +
+      el.title = u.n + '종목 단순보유 평균 ' + pct(u.bh, 2) + ' · 5년(1,255거래일) 구간 · 워밍업 250거래일' +
         (ua ? ' (' + (ua.close.length - ua.startIdx) + '거래일)' : '');
     }
   }
@@ -536,7 +537,7 @@
   /* ---------------- 기간 라벨 ---------------- */
   function periodTag(bars) {
     if (bars >= 1200) return '5Y';
-    if (bars >= 850) return (bars / 252).toFixed(1) + 'Y';   /* 워밍업 210 이후 ≈ 4.1Y */
+    if (bars >= 850) return (bars / 252).toFixed(1) + 'Y';   /* 워밍업 250 이후 = 1,255봉이면 5Y */
     if (bars >= 400) return '2Y';
     if (bars >= 180) return '1Y';
     if (bars >= 60) return '3M';
@@ -691,7 +692,9 @@
       var bars = a.close.length - a.startIdx;
       tagEl.textContent = a.replay ? '리플레이'
         : ((a.stratKey === 'swing' ? '스윙 ' : '') + periodTag(bars));
-      tagEl.title = '백테스트 구간 ' + bars + '거래일' + (a.dates && a.dates[a.startIdx] ? ' · ' + a.dates[a.startIdx] + ' ~ ' + a.dates[a.dates.length - 1] : '');
+      tagEl.title = '백테스트 구간 ' + bars + '거래일' + (a.dates && a.dates[a.startIdx] ? ' · ' + a.dates[a.startIdx] + ' ~ ' + a.dates[a.dates.length - 1] : '') +
+        (a.dates && a.dates[a.startIdx] && a.dates[a.startIdx] <= '2022-12-30' && a.dates[a.dates.length - 1] >= '2022-01-03'
+          ? ' · 2022년 하락장 포함' : '');
     }
     if (a.limited || !s) {
       $('#k1').textContent = '—'; $('#k2').textContent = '—'; $('#k3').textContent = '—';
