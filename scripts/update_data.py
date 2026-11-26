@@ -4,6 +4,7 @@
 Yahoo Finance 에서 top100.json 에 정의된 102종목(100 + NKE, QQQ)의
 10년 일봉을 내려받아 그중 최근 KEEP_BARS(1,505)봉만 남기고,
 거시 지표(^VIX, ^TNX), 종목별 펀더멘털(quoteSummary)과 함께
+다음 실적 발표일(calendarEvents.earnings.earningsDate)까지 모아
 scripts/data.js 를 다시 생성한다.
 
 1,505봉 = 백테스트 5년(1,255거래일) + 워밍업 250봉.
@@ -12,7 +13,7 @@ scripts/data.js 를 다시 생성한다.
 
   window.MARKET = {asOf, dates[], tickers[], series{}, fundamentals{}, fearGreed{}}
     series       : 종목 102 + ^VIX + ^TNX  (off,o,h,l,c,v — 거래일 캘린더 정렬)
-    fundamentals : {asOf, fetchedAt, tickers{t:{...}}}
+    fundamentals : {asOf, fetchedAt, tickers{t:{...}}}   # t.earningsDate = 다음 실적 발표일 YYYY-MM-DD (없으면 생략)
     fearGreed    : CNN 공포·탐욕 지수 {score, rating, previousClose, previous1Week,
                    previous1Month, previous1Year, timestamp, fetchedAt, source}
 
@@ -51,7 +52,7 @@ YAHOO = ("https://query1.finance.yahoo.com/v8/finance/chart/{t}"
 # data.js 에 담는 봉 수 = 백테스트 5년(1,255거래일) + 앞쪽 워밍업 250봉
 KEEP_BARS = 1505
 BT_BARS = 1255
-FUND_MODULES = 'price,summaryDetail,defaultKeyStatistics,financialData'
+FUND_MODULES = 'price,summaryDetail,defaultKeyStatistics,financialData,calendarEvents'
 # data.js 에 내장할 펀더멘털 필드 (UI 표시 + 참고 지표)
 FUND_FIELDS = (
     'forwardPE', 'trailingPE', 'revenueGrowth', 'earningsGrowth',
@@ -60,7 +61,7 @@ FUND_FIELDS = (
     'recommendationKey', 'recommendationMean', 'numberOfAnalystOpinions',
     'profitMargins', 'returnOnEquity', 'beta', 'priceToBook',
     'trailingEps', 'forwardEps', 'freeCashflow', 'totalRevenue',
-    'quoteType',
+    'quoteType', 'earningsDate',
 )
 INDICES = {'^VIX': 'VIX', '^TNX': 'US 10Y'}
 # CNN 공포·탐욕 지수 (dataviz JSON API) — 브라우저에서 Referer 없이도 열리도록 CORS *
@@ -281,6 +282,57 @@ def _raw(ms):
     return ms.get('raw') if isinstance(ms, dict) else None
 
 
+_TODAY_ET = None
+
+
+def today_et():
+    """미국 동부 기준 오늘 (실적 발표일이 지났는지 판단하는 기준)."""
+    global _TODAY_ET
+    if _TODAY_ET is None:
+        try:
+            from zoneinfo import ZoneInfo
+            _TODAY_ET = datetime.now(ZoneInfo('America/New_York')).date()
+        except Exception:
+            _TODAY_ET = datetime.now(timezone.utc).date()
+    return _TODAY_ET
+
+
+def next_earnings_date(ce):
+    """calendarEvents → 다음 실적 발표일 'YYYY-MM-DD'.
+
+    · 복수 날짜(발표 예정 범위)면 가장 이른 날짜를 쓴다
+    · 전부 지난 날짜면 None (지난 실적은 표시하지 않는다)
+    · ETF·미제공 종목은 None
+    """
+    e = (ce or {}).get('earnings') or {}
+    dates = []
+    for x in (e.get('earningsDate') or []):
+        d = None
+        if isinstance(x, dict):
+            fmt = x.get('fmt')
+            if isinstance(fmt, str) and re.match(r'^\d{4}-\d{2}-\d{2}$', fmt):
+                d = fmt
+            else:
+                raw = x.get('raw')
+                if isinstance(raw, (int, float)):
+                    try:
+                        d = datetime.fromtimestamp(raw, timezone.utc).strftime('%Y-%m-%d')
+                    except Exception:
+                        d = None
+        elif isinstance(x, str) and re.match(r'^\d{4}-\d{2}-\d{2}$', x):
+            d = x
+        if d and d not in dates:
+            dates.append(d)
+    if not dates:
+        return None
+    dates.sort()
+    today = today_et().strftime('%Y-%m-%d')
+    for d in dates:
+        if d >= today:
+            return d
+    return None
+
+
 def parse_fund(t):
     d = json.load(open(os.path.join(RAW_FUND, t + '.json'), encoding='utf-8'))['quoteSummary']['result'][0]
     p = d.get('price', {}) or {}
@@ -312,6 +364,7 @@ def parse_fund(t):
         'totalRevenue': _raw(fd.get('totalRevenue')),
         'currentPrice': _raw(p.get('regularMarketPrice')),
         'quoteType': p.get('quoteType'),
+        'earningsDate': next_earnings_date(d.get('calendarEvents')),
     }
 
 

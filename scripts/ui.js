@@ -99,8 +99,8 @@
     },
     swing: {
       key: 'swing', title: '스윙형', sub: '단기',
-      desc: 'RSI(2) 15 미만 + QQQ 200일선 위 → 다음 날 시가 매수 · 이익 시(+1% 이상) 20일선 이탈 → 다음 날 시가 청산 · 손절 4.5 ATR (평균 약 22일)',
-      logSub: 'RSI(2) 15 미만 + QQQ 200일선 위 매수 · 손절 4.5 ATR · 이익 중 20일선 이탈 시 다음 날 시가 청산 (평균 약 22일)'
+      desc: 'RSI(2) 15 미만 + QQQ 200일선 위 → 다음 날 시가 매수 · 이익 시(+5% 이상) 20일선 이탈 → 다음 날 시가 청산 · 손절 4.5 ATR (평균 약 49일)',
+      logSub: 'RSI(2) 15 미만 + QQQ 200일선 위 매수 · 손절 4.5 ATR · 이익 중 20일선 이탈 시 다음 날 시가 청산 (평균 약 49일)'
     }
   };
   function stratKey() { return state.strategy === 'swing' ? 'swing' : 'trend'; }
@@ -850,6 +850,35 @@
     if (v <= 0) return '무배당';
     return (v * 100).toFixed(2) + '%';
   }
+  /* 실적 발표일 D-day — 'YYYY-MM-DD' 를 UTC 자정 기준 일수로 계산 (시간대 영향 없음) */
+  function ymdNum(s) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || ''));
+    return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) : null;
+  }
+  function todayNum() {
+    var d = new Date();
+    return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+  function earnBase() {
+    /* 기준일 = 장마감일(asOf)과 오늘 중 늦은 쪽 — 데이터가 하루 이틀 늦어도 D-day 가 어긋나지 않게 */
+    var a = ymdNum(M.asOf), t = todayNum();
+    return (a && a > t) ? a : t;
+  }
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function earnPill(f, isETF) {
+    if (isETF) return '';                       /* ETF 는 개별 실적 발표일이 없다 — 생략 */
+    var ed = ymdNum(f.earningsDate);
+    if (!ed) return '<span class="fund-pill earn none" title="Yahoo Finance 에 다음 실적 발표일이 없습니다">' +
+      '다음 실적발표 <b>—</b></span>';
+    var dd = Math.round((ed - earnBase()) / 86400000);
+    var dt = new Date(ed);
+    var mmdd = pad2(dt.getUTCMonth() + 1) + '/' + pad2(dt.getUTCDate());
+    var soon = dd >= 0 && dd <= 7;
+    var lab = dd === 0 ? 'D-DAY' : (dd > 0 ? 'D-' + dd : '지남');
+    return '<span class="fund-pill earn' + (soon ? ' soon' : (dd < 0 ? ' past' : '')) + '"' +
+      ' title="' + (soon ? '실적 발표가 ' + dd + '일 앞으로 다가왔습니다 · ' : '다음 실적 발표일 ') +
+      f.earningsDate + '">다음 실적발표 <b>' + mmdd + '</b><em class="earn-dd">' + lab + '</em></span>';
+  }
   var REC_KO = { strong_buy: '적극 매수', buy: '매수', hold: '보유', underperform: '시장 하회', sell: '매도', strong_sell: '적극 매도' };
   function renderFund(a) {
     var grid = $('#fundGrid');
@@ -894,6 +923,8 @@
     var side = $('#fundSide');
     if (side) {
       var pills = [];
+      var ep = earnPill(f, isETF);
+      if (ep) pills.push(ep);
       var rk = f.recommendationKey;
       if (rk && REC_KO[rk]) {
         pills.push('<span class="fund-pill ' + (/buy/.test(rk) ? 'buy' : (/sell|underperform/.test(rk) ? 'sell' : 'hold')) + '">' +
@@ -2907,9 +2938,117 @@
     });
   }
 
+  /* ============================================================
+     큰 카드 접기/펼치기 (아코디언) — 상태는 localStorage 에 기억
+     ============================================================ */
+  var ACC_KEY = 'apex.collapse.v1';
+  var ACC_CARDS = [
+    ['fundCard', '기업 펀더멘털'],
+    ['seCard', '종합 기술점수 산출 근거'],
+    ['ewCard', '엘리어트 파동 분석'],
+    ['paperCard', '가상투자 · 모의매매'],
+    ['logCard', '트레이드 로그']
+  ];
+  var accState = {};
+  var accReduced = false;
+  try { accReduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) {}
+
+  function accLoad() {
+    accState = {};
+    try {
+      var o = JSON.parse(localStorage.getItem(ACC_KEY) || '{}');
+      if (o && typeof o === 'object' && !Array.isArray(o)) accState = o;
+    } catch (e) { accState = {}; }
+  }
+  function accSave() {
+    try { localStorage.setItem(ACC_KEY, JSON.stringify(accState)); } catch (e) {}
+  }
+  function kidByClass(el, cls) {
+    var kids = el ? el.children : [];
+    for (var i = 0; i < kids.length; i++) if (kids[i].classList.contains(cls)) return kids[i];
+    return null;
+  }
+  /* 접힘/펼침 적용 — animate 면 높이 트랜지션, 아니면 즉시(새로고침 복원용) */
+  function accSet(card, closed, animate) {
+    var body = kidByClass(card, 'acc-body');
+    if (!body) return;
+    var btn = kidByClass(card, 'acc-head') ? card.querySelector('.acc-btn') : null;
+    card.classList.toggle('acc-closed', !!closed);
+    if (btn) {
+      btn.setAttribute('aria-expanded', closed ? 'false' : 'true');
+      var tx = btn.querySelector('.acc-tx');
+      if (tx) tx.textContent = closed ? '펼치기' : '접기';
+      btn.setAttribute('aria-label', (btn.getAttribute('data-name') || '카드') + (closed ? ' 펼치기' : ' 접기'));
+    }
+    if (!animate || accReduced) {
+      body.style.height = '';
+      body.style.display = closed ? 'none' : '';
+      return;
+    }
+    if (closed) {
+      body.style.display = '';
+      body.style.height = body.scrollHeight + 'px';
+      void body.offsetHeight;                    /* 리플로우 — 0px 로 줄어드는 애니메이션 시작점 */
+      body.style.height = '0px';
+      setTimeout(function () {
+        if (card.classList.contains('acc-closed')) { body.style.display = 'none'; body.style.height = ''; }
+      }, 300);
+    } else {
+      body.style.display = '';
+      body.style.height = '0px';
+      void body.offsetHeight;
+      body.style.height = body.scrollHeight + 'px';
+      setTimeout(function () {
+        if (!card.classList.contains('acc-closed')) body.style.height = '';
+      }, 300);
+    }
+  }
+  function accToggle(id) {
+    var card = document.getElementById(id);
+    if (!card) return;
+    var closed = !card.classList.contains('acc-closed');
+    accState[id] = closed;
+    accSave();
+    accSet(card, closed, true);
+  }
+  /* 헤더 우측에 토글 버튼을 붙이고, 헤더 뒤 본문을 .acc-body 로 감싼다 */
+  function accBuild() {
+    accLoad();
+    ACC_CARDS.forEach(function (c) {
+      var id = c[0], name = c[1];
+      var card = document.getElementById(id);
+      if (!card || kidByClass(card, 'acc-body')) return;
+      var head = kidByClass(card, 'fund-h') || kidByClass(card, 'panel-h');
+      if (!head || head.children.length < 2) return;
+      var kids = Array.prototype.slice.call(head.children);
+      var wrap = document.createElement('div');
+      wrap.className = 'acc-wrap';
+      for (var i = 1; i < kids.length; i++) wrap.appendChild(kids[i]);
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'acc-btn';
+      btn.setAttribute('data-name', name);
+      btn.innerHTML = '<span class="acc-tx">접기</span>' +
+        '<svg class="acc-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" ' +
+        'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9.5l6 6 6-6"/></svg>';
+      btn.addEventListener('click', function () { accToggle(id); });
+      wrap.appendChild(btn);
+      head.appendChild(wrap);
+      head.classList.add('acc-head');
+      var body = document.createElement('div');
+      body.className = 'acc-body';
+      var nodes = [];
+      for (var n = head.nextSibling; n; n = n.nextSibling) nodes.push(n);
+      nodes.forEach(function (nd) { body.appendChild(nd); });
+      card.appendChild(body);
+      accSet(card, !!accState[id], false);      /* 저장된 상태 복원 (기본은 펼침) */
+    });
+  }
+
   /* ---------------- go ---------------- */
   function start() {
     var h = (location.hash || '').replace('#', '');   /* boot()이 기본 종목을 고르기 전에 딥링크 보관 */
+    accBuild();                                       /* 접힘 상태를 먼저 복원해 화면 깜빡임 방지 */
     wire();
     boot();
     if (h && A[h]) select(h);
