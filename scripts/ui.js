@@ -1343,16 +1343,17 @@
     var rows = (a.trades || []).slice().reverse();
     $('#tradeBody').innerHTML = rows.length ? rows.map(function (x) {
       var open = x.reason === '보유중';
+      var hold = Math.round(x.hold || 0);   /* 거래일 기준 — 상단 '평균 보유'와 같은 값 */
       return '<tr>' +
-        '<td>' + x.entryDate + '</td>' +
-        '<td>' + usd(x.entry) + '</td>' +
-        '<td>' + (open ? '—' : x.exitDate) + '</td>' +
-        '<td class="cm">' + (open ? usd(a.price) + ' <span style="color:#4A5468">*</span>' : usd(x.exit)) + '</td>' +
-        '<td class="cm">' + (x.hold || 0) + '일</td>' +
-        '<td class="' + cls(x.ret) + '">' + pct(x.ret, 1) + '</td>' +
-        '<td><span class="r-badge">' + (open ? '보유중' : x.reason) + '</span></td>' +
+        '<td data-l="진입일">' + x.entryDate + '</td>' +
+        '<td data-l="진입가">' + usd(x.entry) + '</td>' +
+        '<td data-l="청산일">' + (open ? '—' : x.exitDate) + '</td>' +
+        '<td class="cm" data-l="청산가">' + (open ? usd(a.price) + ' <span style="color:#4A5468">*</span>' : usd(x.exit)) + '</td>' +
+        '<td class="cm hold' + (open ? ' live' : '') + '" data-l="보유기간">' + hold + '일' + (open ? '<i>진행</i>' : '') + '</td>' +
+        '<td class="' + cls(x.ret) + '" data-l="수익률">' + pct(x.ret, 1) + '</td>' +
+        '<td class="rs" data-l="청산 사유"><span class="r-badge">' + (open ? '보유중' : x.reason) + '</span></td>' +
         '</tr>';
-    }).join('') : '<tr><td colspan="5" style="text-align:center;color:#6B7689;padding:22px">백테스트 거래가 없습니다 (조건 미충족)</td></tr>';
+    }).join('') : '<tr><td class="rs" colspan="7" style="text-align:center;color:#6B7689;padding:22px">백테스트 거래가 없습니다 (조건 미충족)</td></tr>';
   }
 
   /* ---------------- 이동평균 · 일목균형표 범례 ---------------- */

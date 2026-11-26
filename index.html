@@ -639,6 +639,9 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
 .tbl .tk{font-family:var(--mono);color:var(--txt);font-weight:600}
 .tbl .r-badge{font-size:9.5px;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,.05);color:var(--txt2)}
 .tbl .pos{color:var(--up2)} .tbl .neg{color:var(--dn2)}
+.tbl td.hold{color:var(--txt);font-weight:600}
+.tbl td.hold i{font-style:normal;font-weight:600;font-size:8.5px;letter-spacing:.04em;color:#38BDF8;
+  background:rgba(56,189,248,.12);border-radius:3px;padding:1px 4px;margin-left:4px;vertical-align:1px}
 .foot-note{padding:11px 15px;border-top:1px solid var(--line2);font-size:10px;color:var(--txt4);line-height:1.6}
 
 /* ---------- misc ---------- */
@@ -933,9 +936,19 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
   .draw-actions button{padding:5px 7px}
   .ew-leg .vv{font-size:9.2px}
   .tg{padding:5px 8px}
-  table.tbl{min-width:0}
-  .tbl .cm,.tbl th.cm{display:none}
-  .tbl th,.tbl td{padding:7px 6px;font-size:10.5px}
+  /* 트레이드 로그 — 모바일은 라벨 붙은 3열 카드로 재배치해 가로 잘림·겹침 없이 7개 항목을 모두 보여준다 */
+  table.tbl{min-width:0;display:block}
+  .tbl-wrap{overflow:visible}
+  table.tbl thead{display:none}
+  table.tbl tbody{display:block}
+  table.tbl tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:8px;row-gap:8px;
+    padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.045)}
+  table.tbl tr:last-child{border-bottom:0}
+  table.tbl td{display:block;padding:0;border:0;text-align:left;font-size:11.5px}
+  .tbl td:first-child,.tbl td:last-child{padding:0}
+  table.tbl td::before{content:attr(data-l);display:block;font-size:8.5px;letter-spacing:.07em;color:var(--txt4);margin-bottom:2px}
+  table.tbl td.rs{grid-column:1/-1;display:flex;align-items:center;gap:7px}
+  table.tbl td.rs::before{margin:0}
   #chart{height:392px}
   .hero-price .px{font-size:25px}
 }
@@ -1348,7 +1361,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
       <div class="tbl-wrap">
         <table class="tbl">
           <thead><tr>
-            <th>진입일</th><th>진입가</th><th>청산일</th><th class="cm">청산가</th><th class="cm">보유</th><th>수익률</th><th>청산 사유</th>
+            <th>진입일</th><th>진입가</th><th>청산일</th><th class="cm">청산가</th><th class="cm hold">보유기간</th><th>수익률</th><th>청산 사유</th>
           </tr></thead>
           <tbody id="tradeBody"></tbody>
         </table>
@@ -4650,16 +4663,17 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:660px}
     var rows = (a.trades || []).slice().reverse();
     $('#tradeBody').innerHTML = rows.length ? rows.map(function (x) {
       var open = x.reason === '보유중';
+      var hold = Math.round(x.hold || 0);   /* 거래일 기준 — 상단 '평균 보유'와 같은 값 */
       return '<tr>' +
-        '<td>' + x.entryDate + '</td>' +
-        '<td>' + usd(x.entry) + '</td>' +
-        '<td>' + (open ? '—' : x.exitDate) + '</td>' +
-        '<td class="cm">' + (open ? usd(a.price) + ' <span style="color:#4A5468">*</span>' : usd(x.exit)) + '</td>' +
-        '<td class="cm">' + (x.hold || 0) + '일</td>' +
-        '<td class="' + cls(x.ret) + '">' + pct(x.ret, 1) + '</td>' +
-        '<td><span class="r-badge">' + (open ? '보유중' : x.reason) + '</span></td>' +
+        '<td data-l="진입일">' + x.entryDate + '</td>' +
+        '<td data-l="진입가">' + usd(x.entry) + '</td>' +
+        '<td data-l="청산일">' + (open ? '—' : x.exitDate) + '</td>' +
+        '<td class="cm" data-l="청산가">' + (open ? usd(a.price) + ' <span style="color:#4A5468">*</span>' : usd(x.exit)) + '</td>' +
+        '<td class="cm hold' + (open ? ' live' : '') + '" data-l="보유기간">' + hold + '일' + (open ? '<i>진행</i>' : '') + '</td>' +
+        '<td class="' + cls(x.ret) + '" data-l="수익률">' + pct(x.ret, 1) + '</td>' +
+        '<td class="rs" data-l="청산 사유"><span class="r-badge">' + (open ? '보유중' : x.reason) + '</span></td>' +
         '</tr>';
-    }).join('') : '<tr><td colspan="5" style="text-align:center;color:#6B7689;padding:22px">백테스트 거래가 없습니다 (조건 미충족)</td></tr>';
+    }).join('') : '<tr><td class="rs" colspan="7" style="text-align:center;color:#6B7689;padding:22px">백테스트 거래가 없습니다 (조건 미충족)</td></tr>';
   }
 
   /* ---------------- 이동평균 · 일목균형표 범례 ---------------- */
