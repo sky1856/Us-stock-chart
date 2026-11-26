@@ -405,7 +405,7 @@
   /* 백테스트 표본이 충분한 100종목의 전략 성과 분포 (워밍업 210 + 80봉 미만 제외) */
   function universeStats(mode) {
     if (uniCache[mode]) return uniCache[mode];
-    var rets = [], mdds = [], bhs = [], beat = 0, wins = 0, ntr = 0;
+    var rets = [], mdds = [], bhs = [], wrs = [], beat = 0, ntr = 0;
     M.tickers.forEach(function (x) {
       var a = A[x.t];
       if (!a || !a.strategy || !a.close || a.close.length < 290) return;
@@ -413,10 +413,10 @@
       if (!b || !b.stats) return;
       rets.push(b.stats.totalReturn); mdds.push(b.stats.mdd); bhs.push(b.stats.bhReturn);
       if (b.stats.totalReturn > b.stats.bhReturn) beat++;
-      if (b.stats.trades > 0) { ntr += b.stats.trades; wins += b.stats.winRate * b.stats.trades; }
+      if (b.stats.trades > 0) { wrs.push(b.stats.winRate); ntr += b.stats.trades; }
     });
     var r = { n: rets.length, mean: meanOf(rets), med: medianOf(rets), beat: beat, mdd: meanOf(mdds), bh: meanOf(bhs),
-      win: ntr > 0 ? wins / ntr : null, trades: ntr };
+      win: wrs.length ? meanOf(wrs) : null, trades: ntr };
     if (r.n) uniCache[mode] = r;
     return r;
   }
