@@ -685,10 +685,10 @@
     var g = sigOf(a, key);
     if (g.sell && g.kind === 'blocked') return { tx: '시장대기', cls: 'n', why: g.why };
     if (g.sell && g.kind === 'cool') return { tx: '손절대기', cls: 'n', why: g.why };
-    if (g.sell) return { tx: '청산', cls: 's', why: g.why };
-    if (g.buy) return { tx: g.held ? '보유' : '진입', cls: g.held ? 'b' : 'sb', why: g.why };
+    if (g.sell) return { tx: '매도', cls: 's', why: g.why };
+    if (g.buy) return { tx: g.held ? '홀드' : '매수', cls: g.held ? 'b' : 'sb', why: g.why };
     var st = swing ? a.swing : a.trendPlan;
-    return { tx: '대기', cls: 'w', why: (st && st.reason) || '진입 조건 미충족 — 신규 진입 신호 없음' };
+    return { tx: '관망', cls: 'w', why: (st && st.reason) || '진입 조건 미충족 — 신규 진입 신호 없음' };
   }
   /* 행의 전략 상태 표기 — 활성 전략은 채운 칩, 다른 전략은 아래 줄에 작은 글씨로 */
   function stratTagHtml(a, key, active) {
@@ -775,8 +775,8 @@
     var bits = [];
     if (presetActive()) {
       bits.push(presetText());
-      bits.push('<b>' + stratName + ' 기준</b> · 이 프리셋 안 진입 조건 충족 <b>' + c.entry + '</b>건 · 보유 중 <b>' + c.held +
-        '</b>건 → 진입/보유 가능 <b>' + (c.entry + c.held) + '</b>건');
+      bits.push('<b>' + stratName + ' 기준</b> · 이 프리셋 안 매수 조건 충족 <b>' + c.entry + '</b>건 · 홀드 중 <b>' + c.held +
+        '</b>건 → 매수/홀드 가능 <b>' + (c.entry + c.held) + '</b>건');
       if (state.filter !== 'all') bits.push(filterName() + ' 교집합 <b>' + shown + '</b>종목');
       return bits.join(' · ');
     }
@@ -831,12 +831,12 @@
   function rankTierText(a, r) {
     if (state.strategy === 'swing') {
       if (r.tier === 3) return r.route === 'W돌파' ? 'W 넥라인 돌파 진입' : 'RSI(2) 과매도 진입';
-      if (r.tier === 2) return '스윙 보유 중';
+      if (r.tier === 2) return '스윙 홀드';
       if (r.tier === 1) return r.cool ? '손절 후 재진입 대기 (' + r.cool + '/' + (r.coolTotal || 10) + '일)' : '진입 제한 · QQQ 200일선 아래';
       return '스윙 신호 대기';
     }
     if (r.tier === 3) return '진입 조건 충족';
-    if (r.tier === 2) return '추세 보유 중';
+    if (r.tier === 2) return '추세 홀드';
     if (r.tier === 1) return '점수 충족 · 시장 단계 대기';
     return '진입 대기';
   }
@@ -1220,7 +1220,7 @@
       stopPrice = sp.stopPrice != null ? sp.stopPrice : entryRef * 0.9;
       var sCool = sp.state === 'cool';
       var sKind = sp.state === 'ready' ? 'ready' : ((sp.state === 'blocked' || sCool) ? 'blocked' : 'wait');
-      pbState($('#peState'), sKind, sp.state === 'ready' ? '조건 충족' : (sCool ? '손절 후 대기' : (sp.state === 'blocked' ? '진입 제한' : '대기')));
+      pbState($('#peState'), sKind, sp.state === 'ready' ? '매수' : (sCool ? '손절대기' : (sp.state === 'blocked' ? '시장대기' : '관망')));
       $('#peSigK').textContent = '스윙형 진입';
       var sig = $('#peSig');
       var spMa = (QE.swingParams && QE.swingParams.qqqMa) || 200;
@@ -1240,11 +1240,11 @@
       $('#peZoneK').textContent = '진입 시점';
       $('#peZone').textContent = '다음 시가 (참고 ' + usd(entryRef) + ')';
       $('#peCond').textContent = '실제 진입 조건 · ' + (sp.entryRule || 'RSI(2) 10 미만 · QQQ 200일선 위 → 다음 날 시가 매수 · 손절 후 10거래일 재진입 금지') +
-        (live ? ' — 보유 중에는 신규 진입 신호를 쓰지 않습니다' : '');
+        (live ? ' — 홀드 중에는 신규 진입 신호를 쓰지 않습니다' : '');
 
       /* 보유 중 관리 */
       if (live) {
-        pbState($('#phState'), 'live', '보유 중');
+        pbState($('#phState'), 'live', '홀드 중');
         $('#phStop').className = 'neg';
         $('#phStop').textContent = usd(live.stop);
         $('#phStopSub').textContent = '진입 ' + usd(live.entry) + ' (' + live.entryDate + ') · ' + sp.stopAtr + ' ATR / -' +
@@ -1281,8 +1281,8 @@
       entryRef = tp.entryRef != null ? tp.entryRef : a.price;
       stopPrice = tp.stopPrice != null ? tp.stopPrice : a.stop;
       var tKind = tp.state === 'ready' ? 'ready' : (tp.state === 'blocked' ? 'blocked' : 'wait');
-      pbState($('#peState'), tKind, tp.state === 'ready' ? (tp.tw < 1 ? '조건 충족 · 50% 비중' : '조건 충족')
-        : (tp.state === 'blocked' ? '진입 제한' : '대기'));
+      pbState($('#peState'), tKind, tp.state === 'ready' ? '매수'
+        : (tp.state === 'blocked' ? '시장대기' : '관망'));
       $('#peSigK').textContent = '추세형 진입';
       var sig2 = $('#peSig');
       sig2.className = tp.scoreOk ? 'pos' : 'dim';
@@ -1299,11 +1299,11 @@
       $('#peZone').textContent = usd(z[0]) + ' ~ ' + usd(z[1]);
       $('#peCond').textContent = '실제 진입 조건 · ' + (tp.entryRule || '종합점수 50 이상 + 시장 단계 100/50% → 다음 날 시가 매수') +
         ' (참고가 ' + usd(entryRef) + ')' +
-        (live ? ' — 보유 중이라 추가 진입 대신 비중 조정만 반영' : '');
+        (live ? ' — 홀드 중이라 추가 진입 대신 비중 조정만 반영' : '');
 
       /* 보유 중 관리 */
       if (live) {
-        pbState($('#phState'), 'live', '보유 중');
+        pbState($('#phState'), 'live', '홀드 중');
         $('#phStop').className = 'neg';
         $('#phStop').textContent = usd(live.stop);
         $('#phStopSub').textContent = '진입 ' + usd(live.entry) + ' (' + live.entryDate + ') · ' + tp.stopAtr + ' ATR 손절';
@@ -2512,6 +2512,8 @@
   function Chart(cv, hud) {
     this.cv = cv; this.hud = hud; this.ctx = cv.getContext('2d');
     this.a = null; this.i0 = 0; this.i1 = 0; this.hover = null; this.drag = null; this.pinching = null;
+    /* Y축 자유 이동 — 자동 맞춤 위에 얹는 사용자 보정값(픽셀 오프셋 · 세로 배율). 기본은 0 / 1 = 자동. */
+    this.yOffPx = 0; this.yZoomF = 1; this.axisDrag = null; this.hoverY = null;
     this.dpr = window.devicePixelRatio || 1;
     var self = this;
     window.addEventListener('resize', function () { self.resize(); self.draw(); });
@@ -2529,7 +2531,20 @@
     want = Math.min(want, total);
     this.i1 = total - 1;
     this.i0 = Math.max(0, this.i1 - want + 1);
+    this.resetY();                       /* 기간·종목·더블클릭 → Y축도 자동 맞춤으로 복귀 */
     this.draw();
+  };
+  /* Y축 보정 초기화 — 수직 오프셋 0, 세로 배율 1(=자동 맞춤, 상단 15% 여백) */
+  Chart.prototype.resetY = function () {
+    this.yOffPx = 0; this.yZoomF = 1; this.axisDrag = null;
+  };
+  /* Y축 보정값 클램프 — 가격 범위의 ±150%까지만 밀리고, 배율은 0.35~4배 */
+  Chart.prototype.clampY = function () {
+    var p = this._pt || (this._L && this._L.price);
+    if (!p) return;
+    this.yZoomF = QE.clamp(this.yZoomF || 1, 0.35, 4);
+    var lim = 1.5 * this.yZoomF * p.h;
+    this.yOffPx = QE.clamp(this.yOffPx || 0, -lim, lim);
   };
   Chart.prototype.resize = function () {
     var rect = this.cv.getBoundingClientRect();
@@ -2582,34 +2597,60 @@
     cv.addEventListener('mousemove', function (e) {
       if (state.tool !== 'cursor') { drawMove(e); return; }
       var r = cv.getBoundingClientRect();
-      if (self.drag) {
-        var bw = self._L.plotW / (self.i1 - self.i0 + 1);
-        var shift = Math.round((self.drag.x - (e.clientX - r.left)) / bw);
-        self.slide(self.drag.i0 + shift, self.drag.i1 + shift);
-        self.drag.moved = true;
+      var px = e.clientX - r.left, py = e.clientY - r.top, L = self._L;
+      /* 오른쪽 가격 눈금을 위아래로 끌면 세로 가격폭(배율)이 바뀐다 — 트레이딩뷰 방식 */
+      if (self.axisDrag) {
+        self.yZoomF = self.axisDrag.zoom * Math.exp((self.axisDrag.y - e.clientY) / 180);
+        self.clampY();
+        self.draw();
         return;
       }
-      self.hover = self.idxAt(e.clientX - r.left);
+      if (self.drag) {
+        var bw = self._L.plotW / (self.i1 - self.i0 + 1);
+        var shift = Math.round((self.drag.x - px) / bw);
+        /* 좌우(X)와 위아래(Y)를 같은 드래그로 함께 민다 — 아래로 끌면 위쪽에 빈 공간이 열린다 */
+        self.yOffPx = self.drag.yOff + (e.clientY - self.drag.y0);
+        self.clampY();
+        self.drag.moved = true;
+        if (shift !== 0) self.slide(self.drag.i0 + shift, self.drag.i1 + shift);
+        else self.draw();
+        return;
+      }
+      if (L) {
+        var onAxis = px > L.padL + L.plotW - 1;
+        cv.style.cursor = onAxis ? 'ns-resize' : 'crosshair';
+        self.hoverY = (py >= L.price.y && py <= L.price.y + L.price.h) ? py : null;
+      }
+      self.hover = self.idxAt(px);
       self.hudPos(e);
       self.draw();
     });
     cv.addEventListener('mouseleave', function () {
       if (state.tool !== 'cursor') return;
-      self.hover = null; self.hud.classList.remove('on'); self.draw();
+      self.hover = null; self.hoverY = null; self.hud.classList.remove('on'); self.draw();
     });
     cv.addEventListener('mousedown', function (e) {
       if (state.tool !== 'cursor') { e.preventDefault(); drawDown(e); return; }
       var r = cv.getBoundingClientRect();
-      self.drag = { x: e.clientX - r.left, i0: self.i0, i1: self.i1, moved: false };
+      var px = e.clientX - r.left, py = e.clientY - r.top, L = self._L;
+      /* 가격 눈금 영역에서 시작한 드래그는 좌우 팬이 아니라 세로 배율 조절로 */
+      if (L && px > L.padL + L.plotW - 1 && py >= L.price.y - 4 && py <= L.price.y + L.price.h) {
+        self.axisDrag = { y: e.clientY, zoom: self.yZoomF };
+        cv.style.cursor = 'ns-resize';
+        e.preventDefault();
+        return;
+      }
+      self.drag = { x: px, y0: e.clientY, yOff: self.yOffPx, i0: self.i0, i1: self.i1, moved: false };
       cv.style.cursor = 'grabbing';
     });
     window.addEventListener('mouseup', function (e) {
       if (state.tool !== 'cursor') { drawUp(e); return; }
+      if (self.axisDrag) { self.axisDrag = null; cv.style.cursor = 'ns-resize'; }
       if (self.drag) { self.drag = null; cv.style.cursor = 'crosshair'; }
     });
     cv.addEventListener('dblclick', function () {
       if (state.tool !== 'cursor') return;
-      self.setRange(state.range);
+      self.setRange(state.range);        /* X 기간·Y 배율·오프셋 모두 기본(자동 맞춤)으로 */
     });
     cv.addEventListener('wheel', function (e) {
       e.preventDefault();
@@ -2634,7 +2675,7 @@
         self.drag = null;
       } else {
         var r = cv.getBoundingClientRect();
-        self.drag = { x: e.clientX - r.left, i0: self.i0, i1: self.i1, moved: false };
+        self.drag = { x: e.clientX - r.left, y0: e.clientY, yOff: self.yOffPx, i0: self.i0, i1: self.i1, moved: false };
         self.hover = self.idxAt(e.clientX - r.left);
         self.draw();
       }
@@ -2660,7 +2701,10 @@
       if (self.drag) {
         var bw = self._L.plotW / (self.i1 - self.i0 + 1);
         var shift = Math.round((self.drag.x - (e.clientX - cv.getBoundingClientRect().left)) / bw);
+        self.yOffPx = self.drag.yOff + (e.clientY - self.drag.y0);   /* 터치도 세로로 함께 이동 */
+        self.clampY();
         if (Math.abs(shift) > 0) { self.slide(self.drag.i0 + shift, self.drag.i1 + shift); self.drag.moved = true; }
+        else self.draw();
       }
       if (e.cancelable) e.preventDefault();
     }, { passive: false });
@@ -2766,10 +2810,21 @@
     var padB = (hi - lo) * (zoomed ? 0.045 : 0.06);
     var padT = (hi - lo) * (zoomed ? 0.155 : 0.15);
     lo -= padB; hi += padT;
+    /* Y축 자유 이동 — 자동 맞춤 범위(위 15% 여백) 위에 사용자가 얹은 세로 배율·오프셋만 더한다.
+       기간·종목이 바뀌면 이 기준값이 새로 계산되므로 보정이 화면 밖으로 캔들을 밀어내지 않는다. */
+    var baseLo = lo, baseHi = hi, baseSpan = Math.max(hi - lo, 1e-9), baseMid = (lo + hi) / 2;
+    var spanY = baseSpan / QE.clamp(this.yZoomF || 1, 0.35, 4);
+    var midY = baseMid + (this.yOffPx || 0) * (spanY / Math.max(p.h, 1));
+    var limY = baseSpan * 1.5;
+    if (midY - baseMid > limY) midY = baseMid + limY;
+    if (baseMid - midY > limY) midY = baseMid - limY;
+    lo = midY - spanY / 2; hi = midY + spanY / 2;
     if (lo < 0) lo = 0;                       /* 주가축이 음수로 내려가지 않게 (5년 장기 범위) */
+    if (!(hi > lo)) { lo = baseLo; hi = baseHi; }   /* 어떤 경우에도 축이 뒤집히지 않게 */
     var Y = function (v) { return p.y + (1 - (v - lo) / (hi - lo)) * p.h; };
     this._lo = lo; this._hi = hi; this._pt = p;
     this._cLo = cLo; this._cHi = cHi; this._zoomed = zoomed;
+    this._yBaseLo = baseLo; this._yBaseHi = baseHi;
 
     this._tagRects = [];
 
@@ -3084,6 +3139,27 @@
       ctx.strokeStyle = hovData ? 'rgba(255,255,255,.22)' : 'rgba(255,255,255,.13)'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
       ctx.beginPath(); ctx.moveTo(cx, L.price.y); ctx.lineTo(cx, H - L.padB); ctx.stroke();
       ctx.setLineDash([]);
+      /* 가로 크로스헤어 + 오른쪽 축 가격 라벨 — Y축을 옮기거나 배율을 바꿔도 커서 밑의 실제 가격을 그대로 보여준다 */
+      if (this.hoverY != null && this.hoverY >= L.price.y && this.hoverY <= L.price.y + L.price.h) {
+        var hy = this.hoverY, hpv = this.priceAt(hy);
+        ctx.strokeStyle = 'rgba(255,255,255,.2)'; ctx.setLineDash([3, 3]);
+        ctx.beginPath(); ctx.moveTo(L.padL, hy); ctx.lineTo(L.padL + L.plotW, hy); ctx.stroke();
+        ctx.setLineDash([]);
+        if (hpv != null) {
+          var htx = hpv >= 1000 ? hpv.toFixed(0) : hpv.toFixed(2);
+          ctx.font = '600 9.5px ui-monospace,SFMono-Regular,monospace';
+          var htw = ctx.measureText(htx).width + 10;
+          ctx.fillStyle = 'rgba(30,41,59,.92)';
+          ctx.strokeStyle = 'rgba(203,213,225,.38)'; ctx.lineWidth = 1;
+          ctx.beginPath();
+          if (ctx.roundRect) ctx.roundRect(L.padL + L.plotW + 3, hy - 7.5, htw, 15, 3);
+          else ctx.rect(L.padL + L.plotW + 3, hy - 7.5, htw, 15);
+          ctx.fill(); ctx.stroke();
+          ctx.fillStyle = '#E2E8F0'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+          ctx.fillText(htx, L.padL + L.plotW + 8, hy);
+          ctx.textBaseline = 'alphabetic';
+        }
+      }
       if (hovData) {
       /* highlight candle */
       ctx.strokeStyle = 'rgba(255,255,255,.35)';
@@ -4298,6 +4374,16 @@
           volH: L.vol ? L.vol.h : null, rsiH: L.rsi ? L.rsi.h : null, macdH: L.macd ? L.macd.h : null
         };
       },
+      /* Y축 자유 이동 검증용 — 사용자 보정(오프셋·배율)과 실제 축 범위 */
+      yaxis: function () {
+        var L = chart._L || {};
+        return { offPx: chart.yOffPx, zoom: chart.yZoomF, lo: chart._lo, hi: chart._hi,
+          baseLo: chart._yBaseLo, baseHi: chart._yBaseHi, priceH: L.price ? L.price.h : null,
+          priceY: L.price ? L.price.y : null,
+          axisW: L.padR || 0, plotR: (L.padL || 0) + (L.plotW || 0), W: chart.W,
+          dragging: !!chart.drag, axisDragging: !!chart.axisDrag };
+      },
+      priceAt: function (py) { return chart.priceAt(py); },
       state: function () { return { clean: !!state.clean, show: JSON.parse(JSON.stringify(state.show)), cur: state.cur, range: state.range }; },
       /* 엔벨로프 검증용 — 마지막 봉의 20일선·상/하한과 배율(±8% 인지) */
       env: function () {
