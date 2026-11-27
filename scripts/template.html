@@ -77,15 +77,15 @@
     <div class="preset-note" id="presetNote">프리셋을 누르면 목록이 그 기준으로 좁혀집니다 · 검색·정렬과 함께 적용됩니다</div>
     <div class="side-tools">
       <input id="listSearch" type="text" placeholder="목록 내 검색" autocomplete="off" spellcheck="false">
-      <select id="sortSel">
+      <select id="sortSel" title="정렬 기준 · 상단 추세형/스윙형 전략 버튼을 누르면 그 전략의 추천 순위로 자동 전환됩니다">
+        <option value="rec">추천순(점수)</option>
         <option value="mc">시총순</option>
-        <option value="score">점수 높은순</option>
         <option value="ret">수익률순</option>
         <option value="rsi">RSI 낮은순</option>
         <option value="chg">등락률순</option>
       </select>
     </div>
-    <div class="scan-head"><span>#</span><span>종목</span><span>추세</span><span>현재가</span><span>시그널</span></div>
+    <div class="scan-head"><span id="scanRankHead">#</span><span>종목</span><span>추세</span><span>현재가</span><span>시그널</span></div>
     <div class="scan-list" id="scanList"></div>
     <div class="side-foot">데이터: Yahoo Finance 일봉 · <span id="footAsOf">—</span> 종가 기준<br>기술적 분석 참고용, 투자 권유가 아닙니다.</div>
   </aside>
@@ -557,7 +557,7 @@
       </div>
     </section>
 
-    <footer style="font-size:10.5px;color:var(--txt4);line-height:1.7;padding:2px 4px 10px">
+    <footer style="font-size:12px;color:var(--txt4);line-height:1.7;padding:2px 4px 10px">
       APEX QUANT — 멀티팩터 기술적 분석 엔진 (추세·모멘텀·반전·거래량·가격구조 5축 스코어) ·
       데이터 Yahoo Finance 일봉, <span id="footAsOf2">—</span> 종가 기준 · 지표 이동평균 5·20·60·120·240일(단순) / 일목균형표(9·26·52) 선행스팬·구름대 / 볼린저 / RSI / MACD / ATR (표준 파라미터)
     </footer>

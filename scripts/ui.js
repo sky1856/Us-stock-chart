@@ -628,6 +628,58 @@
       '<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="1.3" stroke-linejoin="round"/>' +
       '<circle cx="' + w + '" cy="' + (h - 1 - ((seg[k - 1] - lo) / Math.max(hi - lo, 1e-9)) * (h - 2)).toFixed(1) + '" r="1.6" fill="' + col + '"/></svg>';
   }
+  /* ---------------- 전략 추천 순위 (상단 전략 버튼 → 좌측 스캐너 자동 정렬) ----------------
+     추세형: 진입 조건 충족/보유 우선 → 종합 기술점수 내림차순
+     스윙형: 스윙 진입/보유 우선 → 스윙 적합도(RSI(2) 과매도 깊이 · W 단계 · 종합점수) 내림차순 */
+  function trendRankOf(a) {
+    var st = a.trendPlan, live = a.strategy && a.strategy.trend && a.strategy.trend.live;
+    var sc = rowOf(a).score;
+    var tier = (st && st.signal) ? 3 : (live ? 2 : (st && st.scoreOk ? 1 : 0));
+    return { tier: tier, fit: Math.round(sc), score: sc };
+  }
+  function swingRankOf(a) {
+    var st = a.swing, live = a.strategy && a.strategy.swing && a.strategy.swing.live;
+    var sc = rowOf(a).score;
+    var thr = (QE.swingParams && QE.swingParams.rsiEntry) || 15;
+    var r2 = st ? st.rsi2 : null, w = st ? st.wStage : null;
+    var rsiComp = 0;
+    if (r2 != null) rsiComp = r2 <= thr ? 45 - Math.max(0, r2) * 0.6 : Math.max(0, 45 - (r2 - thr) * 1.6);
+    var wComp = w === '돌파' ? 25 : w === '임박' ? 20 : w === '진행' ? 12 : 0;
+    var fit = Math.max(0, Math.min(100, Math.round(rsiComp + wComp + sc * 0.3)));
+    var tier = (st && st.signal) ? 3 : (live ? 2 : (st && st.state === 'blocked' ? 1 : 0));
+    return { tier: tier, fit: fit, score: sc, rsi2: r2, w: w, route: st ? st.route : null };
+  }
+  function rankInfo(a) { return state.strategy === 'swing' ? swingRankOf(a) : trendRankOf(a); }
+  function rankTierText(a, r) {
+    if (state.strategy === 'swing') {
+      if (r.tier === 3) return r.route === 'W돌파' ? 'W 넥라인 돌파 진입' : 'RSI(2) 과매도 진입';
+      if (r.tier === 2) return '스윙 보유 중';
+      if (r.tier === 1) return '진입 제한 · QQQ 200일선 아래';
+      return '스윙 신호 대기';
+    }
+    if (r.tier === 3) return '진입 조건 충족';
+    if (r.tier === 2) return '추세 보유 중';
+    if (r.tier === 1) return '점수 충족 · 시장 단계 대기';
+    return '진입 대기';
+  }
+  function rankTip(a, r, n) {
+    var s = '추천 ' + n + '위 · ' + rankTierText(a, r);
+    if (state.strategy === 'swing') {
+      s += ' · 스윙 적합도 ' + r.fit + '점';
+      if (r.rsi2 != null) s += ' · RSI(2) ' + r.rsi2.toFixed(1);
+      if (r.w) s += ' · W ' + r.w;
+    }
+    s += ' · 종합점수 ' + Math.round(r.score);
+    return s;
+  }
+  function syncSortUi() {
+    var ss = $('#sortSel'); if (ss) ss.value = state.sort;
+    var h = $('#scanRankHead'); if (h) h.textContent = state.sort === 'rec' ? '추천' : '#';
+  }
+  function adoptRecSort() {
+    state.sort = 'rec';
+    syncSortUi();
+  }
   function renderScanner() {
     var q = state.listQ.trim().toLowerCase();
     var rows = M.tickers.map(function (x) { return A[x.t]; }).filter(function (a) {
@@ -639,6 +691,12 @@
     });
     var cmp = {
       mc: function (a, b) { return (b.meta.mc || 0) - (a.meta.mc || 0); },
+      rec: function (a, b) {
+        var ar = rankInfo(a), br = rankInfo(b);
+        if (br.tier !== ar.tier) return br.tier - ar.tier;
+        if (br.fit !== ar.fit) return br.fit - ar.fit;
+        return br.score - ar.score;
+      },
       score: function (a, b) { return rowOf(b).score - rowOf(a).score; },
       ret: function (a, b) {
         var av = stratBundle(a), bv = stratBundle(b);
@@ -648,6 +706,7 @@
       chg: function (a, b) { return rowOf(b).change - rowOf(a).change; }
     }[state.sort] || function (a, b) { return (b.meta.mc || 0) - (a.meta.mc || 0); };
     rows.sort(cmp);
+    syncSortUi();
     var counts = scanCounts();
     $('#cAll').textContent = counts.all;
     $('#cBuy').textContent = counts.buy;
@@ -664,17 +723,25 @@
       pn.classList.toggle('on', state.filter === 'top30' || state.filter === 'quality' || state.filter === 'w' || state.filter === 'vcp' || state.filter === 'tri' || state.filter === 'buy' || state.filter === 'sell');
     }
 
-    var listHtml = rows.length ? rows.map(function (a) {
+    var recMode = state.sort === 'rec', recSwing = recMode && state.strategy === 'swing';
+    var listHtml = rows.length ? rows.map(function (a, ri) {
       var x = a.meta, rv = rowOf(a), ew = a.elliott;
       var ewb = (ew && ew.ok) ? '<i class="ewb ' + (ew.dir > 0 ? 'up' : 'dn') + '">' + ew.badge + '</i>' : '';
-      return '<div class="srow' + (state.cur === x.t ? ' on' : '') + '" data-t="' + x.t + '">' +
-        '<div class="rk">' + (x.r || '·') + '</div>' +
+      var rk = recMode ? rankInfo(a) : null;
+      var rkCls = 'rk' + (recMode ? ' rec' + (ri < 3 ? ' top' + (ri + 1) : '') : '');
+      var rkTx = recMode ? (ri + 1) : (x.r || '·');
+      var rkTt = recMode ? ' title="' + rankTip(a, rk, ri + 1) + '"' : '';
+      var scTx = recSwing ? rk.fit : Math.round(rv.score);
+      var scTt = recSwing ? ' title="' + rankTip(a, rk, ri + 1) + '"' : '';
+      return '<div class="srow' + (state.cur === x.t ? ' on' : '') + '" data-t="' + x.t + '"' +
+        (recMode ? ' data-tier="' + rk.tier + '" data-fit="' + rk.fit + '"' : '') + '>' +
+        '<div class="' + rkCls + '"' + rkTt + '>' + rkTx + '</div>' +
         '<div class="tk"><b><i class="fstar' + (isWatch(x.t) ? ' on' : '') + '" data-f="' + x.t + '" role="button" title="' + (isWatch(x.t) ? '관심종목에서 제거' : '관심종목에 추가') + '">' + (isWatch(x.t) ? '★' : '☆') + '</i>' + x.t + ewb + vcpBadge(a) + sigBadge(a) + earnChip(x.t) + '</b><span>' + x.nk + '</span></div>' +
         spark(a, rv.i) +
         '<div class="px"><b>' + (rv.price >= 1000 ? rv.price.toFixed(0) : rv.price.toFixed(2)) + '</b>' +
         '<span class="' + cls(rv.change) + '">' + pct(rv.change, 2) + '</span></div>' +
         '<div class="sg"><span class="chip ' + signalCls(rv.label.key) + '">' + rv.label.ko + '</span>' +
-        '<span class="sc">' + Math.round(rv.score) + '</span></div>' +
+        '<span class="sc' + (recSwing ? ' fit' : '') + '"' + scTt + '>' + scTx + '</span></div>' +
         '</div>';
     }).join('') : ((state.filter === 'buy' || state.filter === 'sell')
       ? '<div class="scan-note">' + marketNoteHtml() + '</div>'
@@ -782,6 +849,7 @@
   }
   function renderStrategy() {
     var info = STRAT[stratKey()];
+    var bar = $('#stratBar'); if (bar) bar.setAttribute('data-m', info.key);
     $$('#stratSeg button').forEach(function (b) {
       var on = b.getAttribute('data-m') === info.key;
       b.classList.toggle('on', on);
@@ -810,12 +878,13 @@
   }
   function setStrategy(mode) {
     if (mode !== 'swing' && mode !== 'trend') return;
-    if (state.strategy === mode) return;
+    var changed = state.strategy !== mode;
     state.strategy = mode;
     stratPersist();
+    adoptRecSort();                                           /* 전략 버튼 → 좌측 스캐너 추천 순위로 자동 전환 */
     renderStrategy();
-    renderScanner();                                          /* 좌측 스캐너 신호를 새 전략 기준으로 즉시 재집계 */
-    if (state.cur && A[state.cur]) select(state.cur, true);   /* 선택 기간은 그대로 유지 */
+    renderScanner();                                          /* 좌측 스캐너 신호·순위를 새 전략 기준으로 즉시 재집계 */
+    if (changed && state.cur && A[state.cur]) select(state.cur, true);   /* 선택 기간은 그대로 유지 */
   }
   /* 백테스트 기간 버튼(#btf) → 아래 KPI·자산곡선·트레이드 로그·종목 평균 재계산. 차트 표시 기간은 건드리지 않는다. */
   function applyBtPeriod() {
@@ -1324,7 +1393,7 @@
     /* 구간 이름 */
     FG_BANDS.forEach(function (x, i) {
       var on = i === bi, narrowSeg = (x.max - x.min) < 20;
-      out.push('<text fill="' + (on ? x.color : '#5c6a80') + '" font-size="' + (narrowSeg ? 9.5 : 10.5) +
+      out.push('<text fill="' + (on ? x.color : '#5c6a80') + '" font-size="' + (narrowSeg ? 10.5 : 11) +
         '" font-weight="' + (on ? 600 : 500) + '" letter-spacing=".02em" text-anchor="middle">' +
         '<textPath href="#fgL' + i + '" startOffset="50%">' + x.ko + '</textPath></text>');
     });
@@ -1339,7 +1408,7 @@
     /* 기준 숫자 0 · 25 · 50 · 75 · 100 */
     [[0, '0'], [25, '25'], [50, '50'], [75, '75'], [100, '100']].forEach(function (n) {
       var q = fgPt(FGG.num, fgAng(n[0]));
-      out.push('<text x="' + q[0].toFixed(1) + '" y="' + q[1].toFixed(1) + '" fill="#64748b" font-size="10.5"' +
+      out.push('<text x="' + q[0].toFixed(1) + '" y="' + q[1].toFixed(1) + '" fill="#64748b" font-size="11.5"' +
         ' font-weight="500" text-anchor="middle" dominant-baseline="middle">' + n[1] + '</text>');
     });
     /* 가운데 원 + 점수 + 등급 (숫자는 항상 맨 위 레이어) */
