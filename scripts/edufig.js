@@ -693,14 +693,14 @@ var EDUFIG = (function () {
     for (i = 0; i < n; i++) pts.push([K.cx(i), K.Y(ma[i])]);
     s += poly(pts, { c: C.am, w: 2 });
     s += chip(X0 + 4, 56, '위 = 스윙 ON', { c: C.up, bd: 'rgba(47,217,166,.45)' });
-    s += legend([{ t: 'QQQ 100일선', c: C.am }], 196);
+    s += legend([{ t: 'QQQ 200일선', c: C.am }], 196);
     var cx0 = K.cx(27), cx1 = K.cx(35);
     s += rectW(cx0, y0, cx1 - cx0, y1 - y0, { f: 'rgba(251,113,133,.10)', c: 'rgba(251,113,133,.35)', w: 1, rx: 3, dash: '3 3' });
     s += T((cx0 + cx1) / 2, y0 + 12, '진입 금지', { a: 'middle', c: C.dn, fs: 8, w: 600 });
     s += chip(X1 - 6, 200, '아래 = 스윙 OFF', { a: 'end', c: C.dn, bd: 'rgba(251,113,133,.45)' });
     s += T(x0 + 2, 40, '개별 종목 신호보다 시장이 먼저', { c: C.mu, fs: 7.8 });
     return { svg: wrap(s, { label: '시장 레짐 필터 도해' }),
-      cap: 'QQQ가 <b>100일선 위일 때만 스윙 진입</b>. 필터는 수익을 늘리는 장치가 아니라 <b>큰 손실을 막는 장치</b>' };
+      cap: 'QQQ가 <b>200일선 위일 때만 스윙 진입</b>. 필터는 수익을 늘리는 장치가 아니라 <b>큰 손실을 막는 장치</b>' };
   };
 
   /* 23. 시총 Top 30 + 실적 우량주 ------------------------------ */

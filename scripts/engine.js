@@ -409,9 +409,11 @@
          - 0% 구간에서 QQQ가 50일선 회복       → 100%,
            또는 20일선 2일 연속 상회           → 50%
      · 진입: 종합점수 ENTRY(50) 이상이면 다음 거래일 시가, 비중은 노출목표 비례
-     · 청산: ① 손절(평단가 - 6×ATR)
-             ② 샹들리에 트레일(고가 고점 - 10×ATR, +6×ATR 이익 이후 작동)
-             ③ 시장 단계 0%(전량 청산)
+     · 청산: ① 손절(평단가 - 6×ATR) — 즉시
+             ② 샹들리에 트레일(고가 고점 - 10×ATR, +6×ATR 이익 이후 작동) — 즉시
+             ③ 시장 단계 0%(전량 청산) — 보유 3거래일(minHold) 미만은 보류
+       (99종목 5년: 1~2일 시장약세 청산 0건 · 중앙 +63.62% · 평균 MDD -35.15%
+        — work/stock/v5_upgrade/REPORT_TREND_BUFFER.md T6)
      · 미래참조 없음: 모든 판단은 당일 종가, 체결은 다음 거래일 시가
      · 매수·매도 각 FEE(0.03%)
      ============================================================ */
@@ -456,14 +458,14 @@
          ① 종합 기술점수 ≥ entry(50)   ② ATR > 0   ③ 시장 단계(QQQ 100일선) 노출목표 > 0
        노출목표 0% = 신규 진입 제한 · 50% = 절반 비중 · 100% = 전액
      ============================================================ */
-  var TREND_P = { entry: 50, stopAtr: 6, trailAtr: 10, trailStartAtr: 6, fee: 0.0003, warmup: WARMUP };
+  var TREND_P = { entry: 50, stopAtr: 6, trailAtr: 10, trailStartAtr: 6, minHold: 3, fee: 0.0003, warmup: WARMUP };
   function trendOpts(o) {
     var out = {}, k;
     for (k in TREND_P) out[k] = TREND_P[k];
     out.marketFilter = true;
     if (o) {
       for (k in o) {
-        if (k === 'entry' || k === 'stopAtr' || k === 'trailAtr' || k === 'trailStartAtr' ||
+        if (k === 'entry' || k === 'stopAtr' || k === 'trailAtr' || k === 'trailStartAtr' || k === 'minHold' ||
             k === 'fee' || k === 'warmup' || k === 'marketFilter' || k === 'bars' || k === 'regime') out[k] = o[k];
       }
     }
@@ -662,21 +664,19 @@
        청산 고정 보유기간 없음 — 종가에 아래 조건을 확인해 다음 날 시가 매도
             ① 손절  min(진입가 − 4.5 × ATR(14), 진입가 −10%)  (장중 지정가, 갭이면 시가)
             ② 이익 상태(평가수익 +5% 이상)에서 종가가 20일 단순이동평균 아래로
+               **2거래일 연속** 마감했을 때 (하루 이탈은 다음 날 회복 여지를 보고 넘긴다)
        비용  매수·매도 각 0.03%
      지표·신호는 당일 종가까지만 사용 — 미래참조 없음
      손절 상한: 진입가 −10% (4.5 ATR 손절선이 그보다 멀 때만 적용) — 대형 손절 방어
-     백테스트 (99종목, 2021-11-26~2026-11-25 5년, 2022년 하락장 포함): 이익 +5% 게이트 + -10% 상한 기준
-       W 보조 루트 포함 평균 +91.33% · 중앙 +58.23% · 승률 57.5% · 보유초과 35/99 · 평균 MDD -36.96% · 평균 보유 41.4일
-       (W 루트가 추가로 잡은 거래 33건 · 스윙 포지션이 없는 날만)
-       (W 루트 없던 직전 기준: 평균 +87.37% · 중앙 +60.34% · 승률 57.6% · 보유초과 35/99 · 평균 MDD -36.90% · 평균 보유 41.5일)
-       (상한 없던 직전 기준: 평균 +90.98% · 중앙 +54.46% · 승률 62.1% · 평균 MDD -38.62% · 평균 보유 48.7일)
-       (직전 +1% 게이트: 평균 +81.87% · 중앙 +53.21% · 승률 77.1% · 평균 보유 21.8일)
-       (직전 단기 청산 G3는 +41.19% · 중앙 +26.29% · 승률 80.1% · 평균 보유 11.2일)
+     백테스트 (99종목, 2021-11-26~2026-11-25 5년, 2022년 하락장 포함): 이익 +5% 게이트 + -10% 상한 + 20일선 2일 연속 확인
+       W 보조 루트 포함 평균 +98.59% · 중앙 +64.47% · 평균 MDD -36.40% · -15% 초과 13건(기존 16) · -20% 초과 4건(기존 7)
+       (20일선 2일 확인 적용 전 기준: 평균 +91.33% · 중앙 +58.23% · 승률 57.5% · 평균 MDD -36.96% · -15% 초과 16건)
      ============================================================ */
   var SWING_P = {
     rsiLen: 2, rsiEntry: 15, qqqMa: 200, useMarketFilter: true,
-    ma20Exit: true,            /* 이익 상태에서 종가 < 20일선이면 다음 날 시가 청산 */
-    ma20Gate: 0.05,            /* '이익 상태' = 평가수익 +5% 이상 (99종목 5년 -10% 상한 기준 평균 +87.4% · 승률 57.6% · 평균 보유 41.5일) */
+    ma20Exit: true,            /* 이익 상태에서 종가 < 20일선이 2거래일 연속이면 다음 날 시가 청산 */
+    ma20Confirm: 2,            /* 20일선 이탈 확인 거래일 수 — 1이면 기존(하루 이탈 즉시) */
+    ma20Gate: 0.05,            /* '이익 상태' = 평가수익 +5% 이상 (99종목 5년 평균 +98.59% · 중앙 +64.47% · MDD -36.40%) */
     stopAtr: 4.5,              /* 진입가 − 4.5 × ATR */
     stopCap: 0.10,             /* 손절 상한 — 4.5 ATR이 −10%보다 멀면 −10%에서 먼저 청산 (대형 손절 방어) */
     wRoute: true,              /* W 쌍바닥 넥라인 돌파 보조 루트 (포지션이 없을 때만 — 스윙 신호가 먼저) */
@@ -711,12 +711,27 @@
     return prev ? prev.ok : true;
   }
 
-  /* 청산 규칙 판정 (종가 기준) — 이익(+5% 이상) 상태에서 종가가 20일선 아래로 내려오면 다음 날 시가 청산 */
+  /* 청산 규칙 판정 (종가 기준) — 이익(+5% 이상) 상태에서 종가가 20일선 아래로 내려온 날이
+     ma20Confirm(기본 2)거래일 연속일 때 다음 날 시가 청산. 게이트(+5%)는 결정일 종가 기준. */
   function swingExitAt(series, ind, i, pos, o) {
     if (!o.ma20Exit) return null;
     var c = series.c, pnl = c[i] / pos.entry - 1;
-    if (pnl >= o.ma20Gate && ind.ma20[i] != null && c[i] < ind.ma20[i]) return 'MA20이탈';
-    return null;
+    if (!(pnl >= o.ma20Gate)) return null;
+    var need = o.ma20Confirm > 0 ? o.ma20Confirm : 1, k, j;
+    for (k = 0; k < need; k++) {
+      j = i - k;
+      if (j < 0 || ind.ma20[j] == null || !(c[j] < ind.ma20[j])) return null;
+    }
+    return 'MA20이탈';
+  }
+  /* 마지막 종가부터 20일선 아래로 연속 마감한 거래일 수 (최대 cap) */
+  function ma20BelowStreak(series, ind, cap) {
+    var c = series.c, n = c.length, k = 0, lim = cap || 5, j;
+    for (j = n - 1; j >= 0 && k < lim; j--) {
+      if (ind.ma20[j] == null || !(c[j] < ind.ma20[j])) break;
+      k++;
+    }
+    return k;
   }
 
   /* bar i 종가 시점의 스윙형 진입 판정 — swingStatus(상단 카드)와 swingBacktest 가 같이 쓰는 단일 소스 */
@@ -765,9 +780,9 @@
       stopCapPrice: series.c[i] * (1 - o.stopCap),
       stopCap: o.stopCap, scoreGate: null,
       stopAtr: o.stopAtr, atr: atrNow, target: null,
-      ma20Gate: o.ma20Gate, rsiEntry: o.rsiEntry,
-      exitNow: null,                          /* 보유 중일 때만 — 이익 상태 & 종가<20일선 */
-      exitRule: '손절 min(' + o.stopAtr + ' ATR, -' + Math.round(o.stopCap * 100) + '%) · 이익(+' + Math.round(o.ma20Gate * 100) + '% 이상) 중 20일선 이탈 → 다음 날 시가 청산 (고정 보유기간 없음 · 평균 42일)',
+      ma20Gate: o.ma20Gate, ma20Confirm: o.ma20Confirm, rsiEntry: o.rsiEntry,
+      exitNow: null,                          /* 보유 중일 때만 — 이익 상태 & 20일선 2일 연속 아래 */
+      exitRule: '손절 min(' + o.stopAtr + ' ATR, -' + Math.round(o.stopCap * 100) + '%) · 이익(+' + Math.round(o.ma20Gate * 100) + '% 이상) 중 20일선 아래 2거래일 연속 마감 → 다음 날 시가 청산 (고정 보유기간 없음)',
       entryRule: 'RSI(2) ' + o.rsiEntry + ' 미만 (주력) · W 쌍바닥 넥라인 돌파 (보조) · 둘 다 QQQ ' + o.qqqMa + '일선 위 — 다음 날 시가 매수',
       reason: sig
         ? (route === 'W돌파'
@@ -838,11 +853,17 @@
       bars++; if (pos) inMkt++;
     }
     /* 마지막 봉 기준 보유 스냅숏 — 상단 '보유 중 관리' 표시용 */
+    var swBelow = ma20BelowStreak(series, ind, 3);
+    var swRetNow = pos ? c[n - 1] / pos.entry - 1 : 0;
     var liveSw = pos ? {
       entry: pos.entry, entryDate: pos.entryDate, entryIdx: pos.entryIdx, atr0: pos.atr0, kind: pos.kind,
       stop: Math.max(pos.entry - o.stopAtr * pos.atr0, pos.entry * (1 - o.stopCap)),
-      ma20: ind.ma20[n - 1], last: c[n - 1], ret: c[n - 1] / pos.entry - 1,
-      exitActive: (c[n - 1] / pos.entry - 1) >= o.ma20Gate, date: D[n - 1]
+      ma20: ind.ma20[n - 1], last: c[n - 1], ret: swRetNow,
+      exitActive: swRetNow >= o.ma20Gate,
+      ma20Below: swBelow, ma20Need: o.ma20Confirm > 0 ? o.ma20Confirm : 1,
+      exitConfirm: swRetNow >= o.ma20Gate && swBelow >= (o.ma20Confirm > 0 ? o.ma20Confirm : 1),
+      exitWatch: swRetNow >= o.ma20Gate && swBelow === 1,
+      date: D[n - 1]
     } : null;
     if (pos) { closeAt(c[n - 1], n - 1, '보유중'); equity[n - 1] = cash; }
 
@@ -900,6 +921,7 @@
   function backtestRun(series, ind, sc, opts) {
     var opt = trendOpts(opts);
     var ENTRY = opt.entry, STOP_ATR = opt.stopAtr, TRAIL_ATR = opt.trailAtr, TRAIL_START = opt.trailStartAtr;
+    var MIN_HOLD = opt.minHold || 0;
     var FEE = opt.fee, WARM = opt.warmup, USE_REGIME = opt.marketFilter;
 
     var c = series.c, o = series.o, h = series.h, l = series.l, d = series.d;
@@ -974,8 +996,12 @@
       /* 3) 종가 판단 */
       var rg = (RM && RM[d[i]]) || { tw: 1, st: 'normal' };
       if (pos) {
-        if (rg.tw === 0) pendExit = '시장약세';
-        else targetW = rg.tw;
+        if (rg.tw === 0) {
+          /* 최소 보유 3거래일 — 진입 1~2일차에는 시장약세 청산도, 0% 비중축소도 하지 않는다.
+             장중 6 ATR 손절·트레일은 위(2단계)에서 이미 즉시 적용된다. */
+          if (MIN_HOLD > 0 && (i - pos.entryIdx) < MIN_HOLD) targetW = pos.w;
+          else pendExit = '시장약세';
+        } else targetW = rg.tw;
       } else {
         /* 진입 판정은 상단 카드와 같은 함수(trendEntryAt)를 쓴다 — 단일 소스 */
         var ent = trendEntryAt(sc, ind, i, rg, opt);
@@ -984,18 +1010,23 @@
       equity[i] = eqAt(c[i]);
       bars++;
     }
+    /* 마지막 봉 종가 기준 시장 단계 — 보유 중 관리 카드가 청산 발동 여부를 보여줄 때도 같은 값 */
+    var rgNow = (RM && RM[d[n - 1]]) || { tw: 1, st: 'normal', q: null, ma100: null, slope: null };
+    var heldNow = pos ? (n - 1) - pos.entryIdx : 0;
     /* 마지막 봉 기준 보유 스냅숏 — 상단 '보유 중 관리'가 실제 적용 중인 기준가를 쓰도록 */
     var live = pos ? {
       entry: pos.entry, entryDate: pos.entryDate, entryIdx: pos.entryIdx, atr0: pos.atr0,
       stop: pos.stop, trailStop: pos.trailStop, peakH: pos.peakH, w: pos.w, shares: pos.shares,
       trailArm: pos.entry + TRAIL_START * pos.atr0, trailArmed: pos.trailStop != null,
-      last: c[n - 1], ret: c[n - 1] / pos.entry - 1, date: d[n - 1]
+      last: c[n - 1], ret: c[n - 1] / pos.entry - 1, date: d[n - 1],
+      holdDays: heldNow, minHold: MIN_HOLD, twNow: rgNow.tw, marketSt: rgNow.st,
+      marketExitArmed: heldNow >= MIN_HOLD,                 /* 3거래일 경과 — 시장약세 청산 발동 가능 */
+      marketExitPending: rgNow.tw === 0 && heldNow >= MIN_HOLD
     } : null;
     if (pos) closePos(c[n - 1], n - 1, '보유중');
     equity[n - 1] = cash;
 
     /* 마지막 봉 종가 기준 진입 판정 — 백테스트 루프와 같은 함수 */
-    var rgNow = (RM && RM[d[n - 1]]) || { tw: 1, st: 'normal', q: null, ma100: null, slope: null };
     var entryNow = trendEntryAt(sc, ind, n - 1, rgNow, opt);
 
     /* ---- stats (기존과 동일 필드) ---- */
@@ -1078,6 +1109,9 @@
       entryRule: '종합점수 ' + o.entry + ' 이상 + 시장 단계(QQQ 100일선) 100/50% → 다음 날 시가 매수',
       stopRule: '기준 진입가 − ' + o.stopAtr + ' ATR',
       trailRule: '진입가 +' + o.trailStartAtr + ' ATR 도달 후 고점 − ' + o.trailAtr + ' ATR',
+      minHold: o.minHold,
+      exitRule: '손절 ' + o.stopAtr + ' ATR·트레일 ' + o.trailAtr + ' ATR는 즉시 · 시장 위험 0% 전량 청산은 진입 후 ' +
+        o.minHold + '거래일이 지나야 발동 (초단기 왕복 매매 방지)',
       reason: e.ok
         ? (e.tw < 1 ? '종합점수 ' + e.score.toFixed(1) + ' ≥ ' + e.need + ' · 시장 주의(' + stage.ko + ') — 절반 비중 진입'
           : '종합점수 ' + e.score.toFixed(1) + ' ≥ ' + e.need + ' · 시장 정상(' + stage.ko + ') — 진입 조건 충족')

@@ -68,13 +68,13 @@
       <button data-f="fav">관심<span class="c" id="cFav">5</span></button>
     </div>
     <div class="seg seg-pre" id="presetTabs" aria-label="프리셋 필터">
-      <button data-f="top30" title="시총 상위 30종목만 표시 · 종목 시총(장마감 기준) 순위">시총 Top 30<span class="c" id="cTop30">30</span></button>
-      <button data-f="quality" title="EPS 흑자 · 매출성장 5% 초과 · 순이익률 15% 초과 종목만 표시 · 최근 분기 실적 기준">실적 우량주<span class="c" id="cQual">0</span></button>
-      <button data-f="w" title="마지막 종가 기준 W 쌍바닥 — 넥라인 돌파(최근 5봉) · 임박(넥라인 5% 이내) · 진행(바닥 형성)">W 쌍바닥<span class="c" id="cW">0</span></button>
-      <button data-f="vcp" title="대형 우량주(시총 Top 30 ∪ 실적 우량주) 한정 · 미너비니 Trend Template(정배열) 충족 + VCP 변동성 축소 · 피벗 돌파/임박(피벗 -5% 이내)">VCP<span class="c" id="cVcp">0</span></button>
-      <button data-f="tri" title="삼각수렴 — 최근 45봉 안 피벗 고점 2·저점 2 수렴(대칭/상승/하락, 쐐기 제외) · 돌파(최근 5봉)/임박/진행 · 표시 전용">삼각수렴<span class="c" id="cTri">0</span></button>
+      <button data-f="top30" title="시총 상위 30종목만 표시 · 종목 시총(장마감 기준) 순위 · 다시 누르면 해제 (상단 탭과 교집합)">시총 Top 30<span class="c" id="cTop30">30</span></button>
+      <button data-f="quality" title="EPS 흑자 · 매출성장 5% 초과 · 순이익률 15% 초과 종목만 표시 · 최근 분기 실적 기준 · 다시 누르면 해제">실적 우량주<span class="c" id="cQual">0</span></button>
+      <button data-f="w" title="마지막 종가 기준 W 쌍바닥 — 넥라인 돌파(최근 5봉) · 임박(넥라인 5% 이내) · 진행(바닥 형성) · 다시 누르면 해제">W 쌍바닥<span class="c" id="cW">0</span></button>
+      <button data-f="vcp" title="대형 우량주(시총 Top 30 ∪ 실적 우량주) 한정 · 미너비니 Trend Template(정배열) 충족 + VCP 변동성 축소 · 피벗 돌파/임박(피벗 -5% 이내) · 다시 누르면 해제">VCP<span class="c" id="cVcp">0</span></button>
+      <button data-f="tri" title="삼각수렴 — 최근 45봉 안 피벗 고점 2·저점 2 수렴(대칭/상승/하락, 쐐기 제외) · 돌파(최근 5봉)/임박/진행 · 표시 전용 · 다시 누르면 해제">삼각수렴<span class="c" id="cTri">0</span></button>
     </div>
-    <div class="preset-note" id="presetNote">프리셋을 누르면 목록이 그 기준으로 좁혀집니다 · 검색·정렬과 함께 적용됩니다</div>
+    <div class="preset-note" id="presetNote">상단 탭(전체 · 매수 · 매도 · 관심)과 프리셋은 함께 적용됩니다 — 프리셋을 다시 누르면 해제 · 검색·정렬과 함께 적용</div>
     <div class="side-tools">
       <input id="listSearch" type="text" placeholder="목록 내 검색" autocomplete="off" spellcheck="false">
       <select id="sortSel" title="정렬 기준 · 상단 추세형/스윙형 전략 버튼을 누르면 그 전략의 추천 순위로 자동 전환됩니다">
@@ -319,7 +319,7 @@
       </div>
       <div class="strat-txt">
         <b id="stratTitle">추세형 (중기)</b>
-        <p id="stratDesc">종합 기술점수 50 이상 매수 · 시장 단계(100/50/0%)로 비중 조절 · 손절 6 ATR · 트레일 10 ATR 청산</p>
+        <p id="stratDesc">종합 기술점수 50 이상 매수 · 시장 단계(100/50/0%)로 비중 조절 · 손절 6 ATR · 트레일 10 ATR 청산 — 둘 다 즉시 · 시장 위험 0% 청산은 진입 3거래일 이후</p>
       </div>
       <div class="strat-uni" id="stratUni"></div>
     </section>
@@ -541,7 +541,7 @@
 
     <section class="card table-card" id="logCard">
       <div class="panel-h">
-        <div><h3>트레이드 로그 · <span id="logTicker">—</span></h3><p id="logSub">종합점수 50 이상 매수 · 시장 단계(100/50/0%) 방어 · 손절 6 ATR · 트레일 10 ATR 청산</p></div>
+        <div><h3>트레이드 로그 · <span id="logTicker">—</span></h3><p id="logSub">종합점수 50 이상 매수 · 시장 단계(100/50/0%) 방어 · 손절 6 ATR·트레일 10 ATR 즉시 · 시장약세 전량 청산은 진입 3거래일 이후</p></div>
         <div class="legend" id="logStats"></div>
       </div>
       <div class="tbl-wrap">
