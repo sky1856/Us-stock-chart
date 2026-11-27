@@ -74,6 +74,7 @@
       <button data-f="w" title="마지막 종가 기준 W 쌍바닥 — 넥라인 돌파(최근 5봉) · 임박(넥라인 5% 이내) · 진행(바닥 형성) · 다시 누르면 해제">W 쌍바닥<span class="c" id="cW">0</span></button>
       <button data-f="vcp" title="대형 우량주(시총 Top 30 ∪ 실적 우량주) 한정 · 미너비니 Trend Template(정배열) 충족 + VCP 변동성 축소 · 피벗 돌파/임박(피벗 -5% 이내) · 다시 누르면 해제">VCP<span class="c" id="cVcp">0</span></button>
       <button data-f="tri" title="삼각수렴 — 최근 45봉 안 피벗 고점 2·저점 2 수렴(대칭/상승/하락, 쐐기 제외) · 돌파(최근 5봉)/임박/진행 · 표시 전용 · 다시 누르면 해제">삼각수렴<span class="c" id="cTri">0</span></button>
+      <button data-f="div" title="상승 다이버전스 — 10일 신저가인데 RSI(14)가 5~60봉 전 저점보다 높은 종목 · 최근 3거래일 내 발생 기준 · 참고용(매매 조건 미적용) · 다시 누르면 해제">다이버전스<span class="c" id="cDiv">0</span></button>
     </div>
     <div class="preset-note" id="presetNote">상단 탭(전체 · 매수 · 매도 · 관심)과 프리셋은 함께 적용됩니다 — 프리셋을 다시 누르면 해제 · 검색·정렬과 함께 적용</div>
     <div class="side-tools">
@@ -176,6 +177,7 @@
         </div>
         <div class="sig-meta"><b id="sigName">—</b><span id="sigSub">종합 기술 점수</span></div>
       </div>
+      <div class="div-strip" id="divStrip"></div>
       <div class="plan-grid" id="planGrid">
         <div class="plan-block" id="pbEntry">
           <div class="pb-head">
@@ -233,7 +235,7 @@
           <button data-n="128" class="on">6M</button>
           <button data-n="252">1Y</button>
           <button data-n="501">2Y</button>
-          <button data-n="1255" title="5년 전체 (2021-11-26 ~ 2026-11-25 · 2022년 하락장 포함)">5Y</button>
+          <button data-n="1255" title="5년 전체 (2021-11-26 ~ 2026-11-25 · 2022년 하락장 포함) — 아래 자료 기간과 같은 기간으로 함께 움직입니다">5Y</button>
         </div>
         <div class="toggles" id="toggles">
           <button class="clean-btn" id="cleanToggle" aria-pressed="false" title="깔끔 보기 — 구름대·볼린저·엘리어트·패턴을 잠시 숨기고 캔들 + 20·240일선 + 고저점만 표시 (기본 OFF)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h10M4 17h6"/></svg><span class="lb">깔끔 보기</span><span class="lbs">깔끔</span></button>
@@ -242,6 +244,7 @@
           <button class="tg on" data-t="ew"><i></i><span class="lb">엘리어트 파동</span><span class="lbs">파동</span></button>
           <button class="tg on" data-t="w"><i></i><span class="lb">W 쌍바닥</span><span class="lbs">W</span></button>
           <button class="tg" data-t="tri" title="삼각수렴(대칭·상승·하락, 쐐기 제외) 상단·하단 수렴 추세선 · 표시 전용(매매 조건 미적용)"><i></i><span class="lb">삼각수렴</span><span class="lbs">삼각</span></button>
+          <button class="tg on" data-t="div" title="상승 다이버전스(RSI14) — 최근 3거래일 내 두 저점(가격은 더 낮은데 RSI는 높음)을 점선과 라벨로 표시 · 참고용(매매 조건 미적용) · 깔끔 보기에서 숨김"><i></i><span class="lb">상승 다이버전스</span><span class="lbs">다이버</span></button>
           <button class="tg on" data-t="bb"><i></i><span class="lb">볼린저 밴드</span><span class="lbs">BB</span></button>
           <button class="tg on" data-t="sig"><i></i><span class="lb">매수·매도 마커</span><span class="lbs">신호</span></button>
           <button class="tg on" data-t="rsi"><i></i><span class="lb">RSI 14</span><span class="lbs">RSI</span></button>
@@ -339,13 +342,13 @@
         <span class="bp-k">백테스트 기간</span>
         <div class="bp-btns" id="btf" role="group" aria-label="백테스트 검증 기간">
           <button data-n="64">3M</button>
-          <button data-n="128">6M</button>
+          <button data-n="128" class="on">6M</button>
           <button data-n="252">1Y</button>
           <button data-n="501">2Y</button>
-          <button data-n="1255" class="on">5Y</button>
+          <button data-n="1255">5Y</button>
         </div>
       </div>
-      <span class="bp-note" id="bpNote">차트 표시 기간과 별개로 선택 · 지표 워밍업은 전체 이력 사용</span>
+      <span class="bp-note" id="bpNote">위 차트 기간과 같은 기간으로 함께 움직입니다 · 지표 워밍업은 전체 이력 사용</span>
       <div class="bp-meta" id="bpMeta">—</div>
     </section>
 

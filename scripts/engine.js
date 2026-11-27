@@ -2507,6 +2507,62 @@
        VCP: 직전 60봉 최고가(피벗) → 베이스 12~60봉 · 깊이 40% 이내 ·
             전/후반 변동폭 0.6배 이하 축소 또는 최근 10일 박스 8% 이내
      ============================================================ */
+  /* ============================================================
+     상승 다이버전스 (RSI14) — 참고 배지 전용 (표시만, 매매 규칙 무관)
+     ------------------------------------------------------------
+     work/stock/v5_upgrade/bottom_signal_study.js 의 divR 정의를 그대로 옮겼다.
+       · 오늘이 10일 신저가 (저가 ≤ 직전 10봉 최저)
+       · 5~60봉 전의 직전 신저가보다 가격이 같거나 낮음 (0.5% 허용)
+       · RSI(14)는 그때보다 높음
+     99종목 5년 사건 연구(REPORT_BOTTOM_SIGNALS): 같은 RSI(2) 매수 자리 중 다이버전스가
+     있던 곳은 20일 뒤 +3.30% vs +1.62% (종목별 t=4.35, 67/99 우위).
+     필터·보조 진입으로 쓰면 거래가 줄어 총수익이 붕괴하므로 '배지'로만 쓴다.
+     추세형·스윙형 진입·청산·백테스트에는 이 값을 넘기지 않는다.
+     ============================================================ */
+  var DIV_P = { lookback: 10, gapMin: 5, gapMax: 60, tol: 0.005, recent: 3 };
+  /* 신저가 이벤트 목록(ev)의 q번째 이벤트에 대해 '직전 저점'을 찾아 다이버전스 성립 여부를 본다 */
+  function divPairAt(ev, q, p, l, r) {
+    var ci = ev[q], j = q - 1;
+    while (j >= 0 && ci - ev[j] < p.gapMin) j--;      /* 5봉보다 가까운 신저가는 건너뛴다 (하네스와 동일) */
+    if (j < 0) return null;
+    var pj = ev[j], gap = ci - pj;
+    if (gap > p.gapMax) return null;
+    if (!(l[ci] <= l[pj] * (1 + p.tol))) return null;  /* 가격은 같거나 더 낮아야 */
+    if (!(r[ci] != null && r[pj] != null && r[ci] > r[pj])) return null;   /* RSI는 더 높아야 */
+    return { i: ci, j: pj, gap: gap };
+  }
+  function divScan(series, prm) {
+    var p = {}, kk;
+    for (kk in DIV_P) p[kk] = DIV_P[kk];
+    if (prm) for (kk in prm) p[kk] = prm[kk];
+    var l = series.l, c = series.c, d = series.d, n = c.length;
+    var res = { hit: false, recent: p.recent, lookback: p.lookback, asOf: d ? d[n - 1] : null,
+      idx: null, date: null, low: null, rsi: null, prev: null, gap: null, age: null, count: 0 };
+    if (!(n > p.lookback + p.gapMin + 15)) return res;
+    var r = rsi(c, 14);
+    var ev = [], i, k;
+    for (i = p.lookback; i < n; i++) {
+      var mn = Infinity;
+      for (k = i - p.lookback; k < i; k++) if (l[k] < mn) mn = l[k];
+      if (l[i] <= mn) ev.push(i);
+    }
+    if (!ev.length) return res;
+    /* 최근 recent 봉 안의 신저가부터 최신 순으로 확인 — 가장 최근 성립 건을 대표로 남긴다 */
+    for (var q = ev.length - 1; q >= 0; q--) {
+      var ci = ev[q];
+      if (n - 1 - ci >= p.recent) break;
+      var pair = divPairAt(ev, q, p, l, r);
+      if (!pair) continue;
+      res.count++;
+      if (res.hit) continue;
+      res.hit = true;
+      res.idx = ci; res.date = d ? d[ci] : null; res.low = l[ci]; res.rsi = r[ci];
+      res.age = n - 1 - ci; res.gap = pair.gap;
+      res.prev = { idx: pair.j, date: d ? d[pair.j] : null, low: l[pair.j], rsi: r[pair.j] };
+    }
+    return res;
+  }
+
   var VCP_P = {
     baseMin: 12, baseMax: 60, contr: 0.60, tight: 0.08, tightDays: 10,
     depthMax: 0.40, extMax: 0.06, volx: 1.2, near: 0.05, lookback: 252
@@ -2655,6 +2711,7 @@
     rec.w = wnow;                 /* 차트 오버레이·스캐너 필터용 현재 W 상태 */
     rec.vcp = vcpScan(series);    /* 스캐너 VCP 필터 (표시 전용) */
     rec.tri = triDetect(series);  /* 스캐너·차트 삼각수렴 (표시 전용 — 전략 진입·청산 미적용) */
+    rec.div = divScan(series);    /* 스캐너·차트 상승 다이버전스 배지 (표시 전용 — 전략 진입·청산 미적용) */
     rec.elliott = ewAnalyze(series, ind);
     /* 두 전략을 함께 산출 — 전환 탭은 다시 계산하지 않고 이 결과를 골라 쓴다 */
     rec.strategyMode = mode;
@@ -2688,6 +2745,7 @@
     swingEntryAt: swingEntryAt, marketRegimeMap: marketRegimeMap, marketStageText: marketStageText,
     trendTemplate: trendTemplate, vcpSetup: vcpSetup, vcpScan: vcpScan, VCP_P: VCP_P,
     triDetect: triDetect, TRI_P: TRI_P,
+    divScan: divScan, DIV_P: DIV_P,
     clamp: clamp, elliott: ewAnalyze
   };
 

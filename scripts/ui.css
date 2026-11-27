@@ -194,7 +194,7 @@ input,select{font-family:inherit;color:inherit}
   font-size:12.5px;outline:none;color:var(--txt2);max-width:118px
 }
 .scan-head{
-  display:grid;grid-template-columns:30px 1fr 46px 68px 92px;gap:6px;
+  display:grid;grid-template-columns:30px 1fr 46px 68px 96px;gap:6px;
   padding:7px 12px;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;
   color:var(--txt4);border-top:1px solid var(--line2);border-bottom:1px solid var(--line2);
   position:sticky;top:0;background:rgba(11,14,20,.94);backdrop-filter:blur(8px);z-index:2;
@@ -202,7 +202,7 @@ input,select{font-family:inherit;color:inherit}
 .scan-head span:nth-child(n+3){text-align:right}
 .scan-list{flex:1;overflow-y:auto;overscroll-behavior:contain;padding-bottom:24px}
 .srow{
-  display:grid;grid-template-columns:30px 1fr 46px 68px 92px;gap:6px;align-items:center;
+  display:grid;grid-template-columns:30px 1fr 46px 68px 96px;gap:6px;align-items:center;
   padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.035);cursor:pointer;
   transition:background .12s;position:relative;
 }
@@ -221,7 +221,17 @@ input,select{font-family:inherit;color:inherit}
 .srow .px{text-align:right}
 .srow .px b{display:block;font-size:12.5px;font-variant-numeric:tabular-nums}
 .srow .px span{display:block;font-size:12px;font-variant-numeric:tabular-nums;margin-top:1px}
-.srow .sg{display:flex;align-items:center;justify-content:flex-end;gap:5px}
+.srow .sg{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:2px;min-width:0}
+/* 행의 전략 상태 — 활성 전략은 채운 칩(위 줄), 다른 전략은 작은 글씨(아래 줄).
+   두 전략 상태를 함께 보여 주되 좁은 사이드바(84~92px)에서도 잘리지 않게 한 줄씩 쌓는다. */
+.srow .sg .chip{font-size:10.5px;padding:1px 5px;line-height:1.3;letter-spacing:-.01em;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.srow .sg .chip.n{color:#FCD34D;background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.28)}
+.srow .sg2{display:flex;align-items:center;justify-content:flex-end;gap:5px;max-width:100%;min-width:0;line-height:1.15}
+.srow .sg2 .sc{font-size:11px;flex:0 0 auto}
+.srow .sg2 .st2{font-size:10.5px;color:var(--txt3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em}
+.srow .sg2 .st2.sb,.srow .sg2 .st2.b{color:#6EE7B7}
+.srow .sg2 .st2.n{color:#FCD34D}
+.srow .sg2 .st2.s{color:#FDA4AF}
 .chip{
   font-size:11.5px;font-weight:600;letter-spacing:.01em;padding:4px 7px;border-radius:5px;
   white-space:nowrap;border:1px solid transparent;
@@ -950,9 +960,9 @@ table.tbl{width:100%;border-collapse:collapse;font-size:12.5px;min-width:660px}
   .sidebar.open{transform:none;box-shadow:30px 0 60px -20px rgba(0,0,0,.9)}
   .side-head .icon-btn{display:grid}
   .workspace{padding:12px 12px 32px;gap:11px}
-  .scan-head{grid-template-columns:30px 1fr 62px 84px;padding:7px 11px}
+  .scan-head{grid-template-columns:30px 1fr 62px 96px;padding:7px 11px}
   .scan-head span:nth-child(3){display:none}
-  .srow{grid-template-columns:30px 1fr 62px 84px;padding:9px 11px}
+  .srow{grid-template-columns:30px 1fr 62px 96px;padding:9px 11px}
   .srow .spark{display:none}
   .macro-strip{gap:6px}
   .mchip{flex:1 1 145px;min-width:0;padding:6px 9px;gap:6px;align-items:center}
@@ -1135,6 +1145,26 @@ table.tbl{width:100%;border-collapse:collapse;font-size:12.5px;min-width:660px}
   padding:1px 4px;border-radius:4px;vertical-align:1px;font-family:var(--sans)}
 .srow .tk b .vcpb.near{color:#FCD34D;background:rgba(245,158,11,.14);border:1px solid rgba(245,158,11,.34)}
 .srow .tk b .vcpb.brk{color:#86EFAC;background:rgba(16,185,129,.16);border:1px solid rgba(16,185,129,.36)}
+
+/* ---------- 상승 다이버전스 참고 배지 · 필터 (표시 전용) ---------- */
+.srow .tk b .divb{font-style:normal;font-size:11px;font-weight:600;letter-spacing:.01em;margin-left:5px;
+  padding:1px 4px;border-radius:4px;vertical-align:1px;font-family:var(--sans);
+  color:#5EEAD4;background:rgba(45,212,191,.14);border:1px solid rgba(45,212,191,.34)}
+.div-strip{display:none}
+.div-strip.on{display:flex;align-items:center;gap:7px;flex-wrap:wrap;grid-column:1/-1;
+  padding:8px 11px;border-radius:9px;color:#A7F3D0;font-size:12.5px;line-height:1.45;
+  background:linear-gradient(90deg,rgba(45,212,191,.15),rgba(45,212,191,.04));
+  border:1px solid rgba(45,212,191,.34)}
+.div-strip>.dv-ico{font-size:13px;line-height:1}
+.div-strip>b{font-weight:600;color:#5EEAD4;letter-spacing:.01em}
+.div-strip .dv-sep{color:rgba(94,234,212,.55)}
+.div-strip .dv-t{color:#CCFBF1;font-variant-numeric:tabular-nums}
+.div-strip .dv-t b{font-weight:600;color:#F0FDFA}
+.div-strip .dv-sub{flex:1 1 260px;min-width:0;font-size:12px;color:rgba(167,243,208,.82);letter-spacing:-.002em;word-break:keep-all}
+@media (max-width:640px){
+  .div-strip{padding:7px 9px;font-size:12px}
+  .div-strip .dv-sub{flex-basis:100%}
+}
 
 /* ---------- 실적 발표 임박 (D-0~D-3) 경고 ---------- */
 .earn-slot{grid-column:1/-1}
@@ -1918,6 +1948,7 @@ body{font-variant-numeric:tabular-nums}
 #toggles.clean-mode .tg[data-t=env],
 #toggles.clean-mode .tg[data-t=w],
 #toggles.clean-mode .tg[data-t=tri],
+#toggles.clean-mode .tg[data-t=div],
 #toggles.clean-mode .tg[data-t=sar]{opacity:.4}
 
 /* 스캐너 행 배지 — '시장대기' 는 4글자라 좁은 화면에서도 잘리지 않게 */
@@ -1930,6 +1961,7 @@ body{font-variant-numeric:tabular-nums}
   .clean-btn .lbs{display:inline}
   .srow .tk b .sigb,.srow .tk b .edot{font-size:10.5px;padding:1px 3px;margin-left:3px}
   .srow .tk b .vcpb{font-size:10.5px;padding:1px 3px;margin-left:4px}
+  .srow .tk b .divb{font-size:10.5px;padding:1px 3px;margin-left:4px}
   .market-badge .upd{font-size:11px}
 }
 
@@ -1956,8 +1988,8 @@ body{font-variant-numeric:tabular-nums}
 
 /* 1280 안팎 노트북 — 사이드바가 좁아 스캐너 행 배지가 잘리지 않도록 열 폭을 조금 조인다 */
 @media (min-width:901px) and (max-width:1366px){
-  .scan-head{grid-template-columns:26px 1fr 40px 62px 84px;gap:5px;padding:7px 10px}
-  .srow{grid-template-columns:26px 1fr 40px 62px 84px;gap:5px;padding:9px 10px}
+  .scan-head{grid-template-columns:26px 1fr 40px 62px 96px;gap:5px;padding:7px 10px}
+  .srow{grid-template-columns:26px 1fr 40px 62px 96px;gap:5px;padding:9px 10px}
   .srow .spark{width:52px}
 }
 .side-foot .upd,.mfoot .upd,.upd{color:var(--txt3)}

@@ -81,8 +81,8 @@
 
   var cache = new Map();
   var state = {
-    cur: 'NVDA', range: 128, btRange: 1255, filter: 'all', preset: '', sort: 'mc', q: '', listQ: '',
-    show: { ma: true, ichi: true, bb: true, sig: true, rsi: true, macd: true, ew: true, w: true, sar: false, env: false, tri: false },
+    cur: 'NVDA', range: 128, btRange: 128, filter: 'all', preset: '', sort: 'mc', q: '', listQ: '',
+    show: { ma: true, ichi: true, bb: true, sig: true, rsi: true, macd: true, ew: true, w: true, sar: false, env: false, tri: false, div: true },
     maOn: { 5: true, 20: true, 60: true, 120: true, 240: true },
     simIdx: 0, tool: 'cursor', ewMode: 0, clean: false,
     ewShow: { sub: true, ch: true, clu: true },
@@ -108,7 +108,8 @@
   }
   wRestore();
 
-  /* ---------------- 파라볼릭 SAR · 엔벨로프 토글 (둘 다 기본 OFF · 개인 브라우저 localStorage 저장) ---------------- */
+  /* ---------------- 파라볼릭 SAR · 엔벨로프 토글 (둘 다 기본 OFF · 개인 브라우저 localStorage 저장)
+     상승 다이버전스 표시(state.show.div)는 기본 ON 이라 여기서는 끈 경우만 저장한다. ---------------- */
   var XTOG_KEY = 'apex.extra.v1';
   function xtogRestore() {
     try {
@@ -117,17 +118,18 @@
         if (o.sar === 1 || o.sar === true) state.show.sar = true;
         if (o.env === 1 || o.env === true) state.show.env = true;
         if (o.tri === 1 || o.tri === true) state.show.tri = true;
+        if (o.div === 0 || o.div === false) state.show.div = false;
       }
     } catch (e) { /* 저장소 차단 환경에서는 기본 OFF */ }
   }
   xtogRestore();
   function xtogPersist() {
     try {
-      localStorage.setItem(XTOG_KEY, JSON.stringify({ sar: state.show.sar ? 1 : 0, env: state.show.env ? 1 : 0, tri: state.show.tri ? 1 : 0 }));
+      localStorage.setItem(XTOG_KEY, JSON.stringify({ sar: state.show.sar ? 1 : 0, env: state.show.env ? 1 : 0, tri: state.show.tri ? 1 : 0, div: state.show.div ? 1 : 0 }));
     } catch (e) {}
   }
   function xtogSync() {
-    ['sar', 'env', 'tri'].forEach(function (k) {
+    ['sar', 'env', 'tri', 'div'].forEach(function (k) {
       var b = $('.tg[data-t=' + k + ']');
       if (b) b.classList.toggle('on', !!state.show[k]);
     });
@@ -139,7 +141,7 @@
      캔들 + 핵심 이평선(20·240일선) + 고저점만 남긴다. state.show 값은 건드리지 않으므로
      다시 끄면 기존 오버레이 구성 그대로 돌아온다. */
   var CLEAN_KEY = 'apex.clean.v1';
-  var CLEAN_HIDE = { ichi: 1, bb: 1, env: 1, ew: 1, w: 1, tri: 1, sar: 1 };
+  var CLEAN_HIDE = { ichi: 1, bb: 1, env: 1, ew: 1, w: 1, tri: 1, sar: 1, div: 1 };
   function vis(k) { return !!state.show[k] && !(state.clean && CLEAN_HIDE[k]); }
   function cleanRestore() {
     try { state.clean = localStorage.getItem(CLEAN_KEY) === '1'; } catch (e) { state.clean = false; }
@@ -153,8 +155,8 @@
       b.classList.toggle('on', !!state.clean);
       b.setAttribute('aria-pressed', state.clean ? 'true' : 'false');
       b.title = state.clean
-        ? '깔끔 보기 켜짐 — 구름대·볼린저·엘리어트·패턴 오버레이를 숨기고 캔들 + 20·240일선 + 고저점만 표시 · 누르면 해제'
-        : '깔끔 보기 — 구름대·볼린저·엘리어트·패턴을 잠시 숨기고 캔들 + 20·240일선 + 고저점만 표시 (기본 OFF)';
+        ? '깔끔 보기 켜짐 — 구름대·볼린저·엘리어트·패턴·다이버전스 오버레이를 숨기고 캔들 + 20·240일선 + 고저점만 표시 · 누르면 해제'
+        : '깔끔 보기 — 구름대·볼린저·엘리어트·패턴·다이버전스를 잠시 숨기고 캔들 + 20·240일선 + 고저점만 표시 (기본 OFF)';
     }
     var bar = $('#toggles');
     if (bar) bar.classList.toggle('clean-mode', !!state.clean);
@@ -197,9 +199,9 @@
   function stratPersist() {
     try { localStorage.setItem(STRAT_KEY, state.strategy); } catch (e) {}
   }
-  /* ---------------- 백테스트 기간 (차트 표시 기간과 독립) ----------------
-     차트 기간 버튼(#tf)은 화면에 보이는 봉 수만 바꾸고, 백테스트 검증 기간(#btf)은
-     KPI·자산곡선·트레이드 로그·종목 평균을 따로 계산한다. 둘은 서로를 건드리지 않는다. */
+  /* ---------------- 기간 (차트 표시 = 백테스트 검증 기간) ----------------
+     차트 기간 버튼(#tf)과 자료 기간 버튼(#btf)은 같은 값(state.range = state.btRange)을 쓰고,
+     어느 쪽을 눌러도 차트·KPI·자산곡선·전략 비교·트레이드 로그가 같은 기간으로 함께 움직인다. */
   var BT_WIN = { '64': 63, '128': 126, '252': 252, '501': 504, '1255': 1255 };
   var BT_TAG = { 63: '3M', 126: '6M', 252: '1Y', 504: '2Y', 1255: '5Y' };
   var BT_NAME = { 63: '최근 3개월', 126: '최근 6개월', 252: '최근 1년', 504: '최근 2년', 1255: '최근 5년' };
@@ -210,6 +212,25 @@
     var on = String(state.btRange);
     $$('#btf button').forEach(function (b) { b.classList.toggle('on', b.dataset.n === on); });
     $$('#tf button').forEach(function (b) { b.classList.toggle('on', b.dataset.n === String(state.range)); });
+  }
+  /* ---------------- 기간 동기화 (차트 ↔ 아래 자료) ----------------
+     위 차트 기간 버튼(#tf)과 아래 자료 기간 버튼(#btf)은 같은 값을 쓴다.
+     한쪽을 누르면 차트 표시 범위와 KPI·자산곡선·전략 비교·트레이드 로그가 모두 같은 기간으로 함께 움직인다. */
+  function setPeriod(n) {
+    n = parseInt(n, 10);
+    if (!n) return;
+    var a = A[state.cur];
+    if (state.range !== n) {
+      state.range = n;
+      if (chart && chart.setRange) chart.setRange(n);
+    }
+    if (state.btRange !== n) {
+      state.btRange = n;
+      if (a) applyBtPeriod();               /* KPI·자산곡선·전략 비교·트레이드 로그 재계산 */
+      prefetchPeriods();                    /* 다른 기간 집계를 미리 계산해 두어 전환이 빠르게 */
+    }
+    btSelSync();                            /* 두 버튼 그룹의 선택 표시를 같은 값으로 */
+    if (a) { var v = stratView(viewOf(state.cur)); renderBtPeriod(v); }
   }
   var winCache = Object.create(null);      /* 'TICKER|bars' → { trend, swing } */
   function winOf(t, bars) {
@@ -552,12 +573,52 @@
     }
     return '<i class="vcpb ' + (v.state === '돌파' ? 'brk' : 'near') + '" title="' + t + '">VCP</i>';
   }
-  /* 전략 신호 — 스캐너의 매수/매도 탭은 고정 점수(58/44)가 아니라 선택한 전략의 단일 소스
+  /* ---------------- 상승 다이버전스 (RSI14) — 참고 배지 · 프리셋 (표시 전용) ----------------
+     엔진 divScan(series) 결과만 읽는다. 최근 3거래일 안에 성립한 건만 '지금 신호'로 본다.
+     매매 전략(추세형·스윙형) 진입·청산 조건에는 어떤 값도 넘기지 않는다. */
+  var divCache = null;
+  function divCounts() {
+    if (divCache) return divCache;
+    var set = {}, list = [], asOf = M.asOf;
+    M.tickers.forEach(function (x) {
+      var a = A[x.t];
+      if (!a || !a.div || !a.div.hit) return;
+      set[x.t] = 1; list.push(x.t);
+      if (a.div.date) asOf = a.div.date;
+    });
+    divCache = { set: set, list: list, n: list.length, asOf: asOf, recent: (QE.DIV_P && QE.DIV_P.recent) || 3 };
+    return divCache;
+  }
+  function divTip(a) {
+    var d = a && a.div;
+    if (!d || !d.hit || !d.prev) return '';
+    return '상승 다이버전스 (RSI14 · 최근 ' + (d.recent || 3) + '거래일) — 직전 저점 ' + d.prev.date + ' $' + pxs(d.prev.low) +
+      ' (RSI ' + d.prev.rsi.toFixed(1) + ') → 최근 저점 ' + d.date + ' $' + pxs(d.low) + ' (RSI ' + d.rsi.toFixed(1) + ')' +
+      ' — 가격은 더 낮은데 RSI는 올라선 자리 · 참고용 배지(매매 조건 미적용) · 과거 같은 자리 20일 평균 +3.3%·승률 61.6%';
+  }
+  function divBadge(a) {
+    if (!a || !a.div || !a.div.hit) return '';
+    return '<i class="divb" title="' + divTip(a) + '">다이버전스</i>';
+  }
+  /* 히어로(상단 카드) 배지 — 직전 저점 → 최근 저점을 날짜·가격·RSI로 보여 준다 */
+  function divStripHtml(a) {
+    var d = a && a.div;
+    if (!d || !d.hit || !d.prev) return '';
+    var when = d.age === 0 ? '오늘' : d.age + '거래일 전';
+    return '<span class="dv-ico" aria-hidden="true">📈</span>' +
+      '<b>상승 다이버전스</b><span class="dv-sep">·</span>' +
+      '<span class="dv-t">직전 저점 <b>' + d.prev.date + '</b> $' + pxs(d.prev.low) + ' (RSI ' + d.prev.rsi.toFixed(1) + ')' +
+      ' → 최근 저점 <b>' + d.date + '</b> $' + pxs(d.low) + ' (RSI ' + d.rsi.toFixed(1) + ')</span>' +
+      '<span class="dv-sub">가격은 더 낮은데 RSI는 올라선 자리 · 10일 신저가 · ' + d.gap + '봉 간격 · ' + when +
+      ' 발생 — 참고용 지표입니다 (매매 조건·수익률 계산에는 적용하지 않습니다)</span>';
+  }
+  /* 전략 신호 — 스캐너의 매수/매도 탭과 행 칩은 고정 점수(58/44)가 아니라 전략의 단일 소스
      (trendStatus / swingStatus = 백테스트와 같은 진입 조건)를 기준으로 집계한다.
-     · 매수 신호: 전략 진입 조건 충족 또는 그 전략으로 현재 보유 중
-     · 매도 신호: 보유 중 청산·손절 조건 발동 또는 진입 제한 — 종합점수 배지는 행에 그대로 둔다 */
-  function sigOf(a) {
-    var swing = state.strategy === 'swing';
+     · 매수: 전략 진입 조건 충족(진입) 또는 그 전략으로 현재 보유 중(보유)
+     · 매도: 보유 중 청산·손절 조건 발동(청산) 또는 진입 제한(시장대기·손절대기)
+     key 를 넣지 않으면 현재 선택한 전략(state.strategy) 기준 — 행에는 두 전략을 함께 보여 준다. */
+  function sigOf(a, key) {
+    var swing = (key || state.strategy) === 'swing';
     var st = swing ? a.swing : a.trendPlan;
     var b = a.strategy && (swing ? a.strategy.swing : a.strategy.trend);
     var live = b && b.live;
@@ -615,18 +676,26 @@
     return '<b>' + (state.strategy === 'swing' ? '스윙형(단기)' : '추세형(중기)') + '</b> 진입 조건 충족 <b>0건</b> — 현재 시장 단계(' +
       t1 + ' · ' + s1 + ')로 신규 진입이 제한되어 있습니다. 행의 종합점수는 그대로 표시됩니다.';
   }
-  /* 행의 전략 신호 칩 — 선택한 전략 기준(매수/매도 탭과 같은 소스) */
-  function sigBadge(a) {
-    var g = sigOf(a);
-    if (g.sell && g.kind === 'blocked') {
-      /* '제한' 은 매도로 오해되기 쉬워 '시장대기' 로 바꾸고, 배지 옆 숫자가 무엇인지 툴팁에 명시 */
-      var cond = state.strategy === 'swing' ? 'QQQ 200일선 아래' : '시장 단계 위험';
-      return '<i class="sigb n" title="시장대기 · ' + cond + ' — 시장 약세로 신규 매수 보류 중 (오른쪽 숫자는 기술평가 점수, 매도 신호 아님)">시장대기</i>';
-    }
-    if (g.kind === 'cool') return '<i class="sigb n" title="' + g.why + '">손절대기</i>';
-    if (g.sell) return '<i class="sigb s" title="' + g.why + '">청산</i>';
-    if (!g.buy) return '';
-    return '<i class="sigb b" title="' + g.why + '">' + (g.held ? '보유' : '진입') + '</i>';
+  /* 행의 전략 상태 칩 — 선택한 전략(또는 key 로 지정한 전략)의 실제 상태만 쓴다.
+     상단 카드의 peState/peSig·매수/매도 탭과 같은 단일 소스라 서로 어긋나지 않는다.
+     기술점수 라벨(매수/관망/매도)은 행의 신호 칩으로 쓰지 않는다 — '스윙은 대기인데 종목은 매수'로
+     보이던 불일치를 없애고, 기술점수는 숫자로 남겨 툴팁에서 '기술평가'임을 밝힌다. */
+  function sigChip(a, key) {
+    var swing = (key || state.strategy) === 'swing';
+    var g = sigOf(a, key);
+    if (g.sell && g.kind === 'blocked') return { tx: '시장대기', cls: 'n', why: g.why };
+    if (g.sell && g.kind === 'cool') return { tx: '손절대기', cls: 'n', why: g.why };
+    if (g.sell) return { tx: '청산', cls: 's', why: g.why };
+    if (g.buy) return { tx: g.held ? '보유' : '진입', cls: g.held ? 'b' : 'sb', why: g.why };
+    var st = swing ? a.swing : a.trendPlan;
+    return { tx: '대기', cls: 'w', why: (st && st.reason) || '진입 조건 미충족 — 신규 진입 신호 없음' };
+  }
+  /* 행의 전략 상태 표기 — 활성 전략은 채운 칩, 다른 전략은 아래 줄에 작은 글씨로 */
+  function stratTagHtml(a, key, active) {
+    var c = sigChip(a, key), nm = key === 'swing' ? '스윙' : '추세';
+    var why = String(c.why || '').replace(/"/g, '”');
+    if (active) return '<span class="chip ' + c.cls + '" title="' + nm + '형 기준 — ' + why + '">' + nm + ' ' + c.tx + '</span>';
+    return '<span class="st2 ' + c.cls + '" title="' + nm + '형 기준 — ' + why + '">' + nm + ' ' + c.tx + '</span>';
   }
   function triCounts() {
     if (triCache) return triCache;
@@ -642,11 +711,11 @@
   }
   /* ---------------- 필터 · 프리셋 (서로 독립 · AND 교집합) ----------------
      상단 탭 state.filter = all | buy | sell | fav
-     프리셋  state.preset = '' | top30 | quality | w | vcp | tri  (같은 버튼을 다시 누르면 해제)
+     프리셋  state.preset = '' | top30 | quality | w | vcp | tri | div  (같은 버튼을 다시 누르면 해제)
      둘을 함께 켜면 교집합으로 좁히고, 전략을 바꿔도 이 조합은 유지된다. */
   var PRESET_META = {
     top30: { name: '시총 Top 30' }, quality: { name: '실적 우량주' },
-    w: { name: 'W 쌍바닥' }, vcp: { name: 'VCP' }, tri: { name: '삼각수렴' }
+    w: { name: 'W 쌍바닥' }, vcp: { name: 'VCP' }, tri: { name: '삼각수렴' }, div: { name: '다이버전스' }
   };
   function presetActive() { return !!(state.preset && PRESET_META[state.preset]); }
   function presetMembers(a) {
@@ -656,6 +725,7 @@
     if (p === 'w') return !!wCounts().set[a.sym];
     if (p === 'vcp') return !!vcpCounts().set[a.sym];
     if (p === 'tri') return !!triCounts().set[a.sym];
+    if (p === 'div') return !!divCounts().set[a.sym];
     return true;
   }
   function filterMembers(a) {
@@ -668,6 +738,11 @@
   /* 프리셋 하나의 설명 문구 (필터와 무관한 프리셋 자체 정보) */
   function presetText() {
     var pd = presetData();
+    if (state.preset === 'div') {
+      var dc = divCounts();
+      return '<b>상승 다이버전스</b> · RSI14 · 최근 ' + dc.recent + '거래일 내 <b>' + dc.n + '</b>종목 · ' + dc.asOf + ' 종가 기준' +
+        ' · 가격은 10일 신저가인데 RSI(14)는 5~60봉 전 저점보다 높은 자리 · 참고용(매매 조건 미적용)';
+    }
     if (state.preset === 'tri') {
       var tc = triCounts();
       return '<b>삼각수렴</b> · 돌파 ' + tc.cnt['돌파'] + ' · 임박 ' + tc.cnt['임박'] + ' · 진행 ' + tc.cnt['진행'] +
@@ -825,6 +900,7 @@
     var cW = $('#cW'); if (cW) cW.textContent = wCounts().total;
     var cV = $('#cVcp'); if (cV) cV.textContent = vcpCounts().cnt.total;
     var cT = $('#cTri'); if (cT) cT.textContent = triCounts().total;
+    var cDv = $('#cDiv'); if (cDv) cDv.textContent = divCounts().n;
     var pn = $('#presetNote');
     if (pn) {
       pn.innerHTML = presetNoteHtml(rows.length);
@@ -834,25 +910,27 @@
     var recMode = state.sort === 'rec', recSwing = recMode && state.strategy === 'swing';
     var listHtml = rows.length ? rows.map(function (a, ri) {
       var x = a.meta, rv = rowOf(a), ew = a.elliott;
-      var sgHtml = sigBadge(a);
-      /* 좁은 화면(≤900px)에서는 전략 배지(진입·보유·청산·시장대기)가 잘리지 않도록
-         엘리어트 차수 배지를 양보한다 — 같은 정보는 상세 카드에도 있다. */
-      var ewb = (ew && ew.ok && !(window.innerWidth <= 900 && sgHtml)) ? '<i class="ewb ' + (ew.dir > 0 ? 'up' : 'dn') + '">' + ew.badge + '</i>' : '';
+      var ewb = (ew && ew.ok) ? '<i class="ewb ' + (ew.dir > 0 ? 'up' : 'dn') + '">' + ew.badge + '</i>' : '';
+      /* 활성 전략과 반대 전략의 상태를 함께 보여 준다 (예: 스윙 대기 / 추세 보유) */
+      var actKey = state.strategy === 'swing' ? 'swing' : 'trend';
+      var othKey = actKey === 'swing' ? 'trend' : 'swing';
       var rk = recMode ? rankInfo(a) : null;
       var rkCls = 'rk' + (recMode ? ' rec' + (ri < 3 ? ' top' + (ri + 1) : '') : '');
       var rkTx = recMode ? (ri + 1) : (x.r || '·');
       var rkTt = recMode ? ' title="' + rankTip(a, rk, ri + 1) + '"' : '';
       var scTx = recSwing ? rk.fit : Math.round(rv.score);
-      var scTt = recSwing ? ' title="' + rankTip(a, rk, ri + 1) + '"' : '';
+      var scTt = recSwing ? ' title="' + rankTip(a, rk, ri + 1) + '"'
+        : ' title="종합 기술점수(0~100) — 기술평가 참고값이며 매매 신호가 아닙니다"';
       return '<div class="srow' + (state.cur === x.t ? ' on' : '') + '" data-t="' + x.t + '"' +
         (recMode ? ' data-tier="' + rk.tier + '" data-fit="' + rk.fit + '"' : '') + '>' +
         '<div class="' + rkCls + '"' + rkTt + '>' + rkTx + '</div>' +
-        '<div class="tk"><b><i class="fstar' + (isWatch(x.t) ? ' on' : '') + '" data-f="' + x.t + '" role="button" title="' + (isWatch(x.t) ? '관심종목에서 제거' : '관심종목에 추가') + '">' + (isWatch(x.t) ? '★' : '☆') + '</i>' + x.t + ewb + vcpBadge(a) + sgHtml + earnChip(x.t) + '</b><span>' + x.nk + '</span></div>' +
+        '<div class="tk"><b><i class="fstar' + (isWatch(x.t) ? ' on' : '') + '" data-f="' + x.t + '" role="button" title="' + (isWatch(x.t) ? '관심종목에서 제거' : '관심종목에 추가') + '">' + (isWatch(x.t) ? '★' : '☆') + '</i>' + x.t + ewb + divBadge(a) + vcpBadge(a) + earnChip(x.t) + '</b><span>' + x.nk + '</span></div>' +
         spark(a, rv.i) +
         '<div class="px"><b>' + (rv.price >= 1000 ? rv.price.toFixed(0) : rv.price.toFixed(2)) + '</b>' +
         '<span class="' + cls(rv.change) + '">' + pct(rv.change, 2) + '</span></div>' +
-        '<div class="sg"><span class="chip ' + signalCls(rv.label.key) + '">' + rv.label.ko + '</span>' +
-        '<span class="sc' + (recSwing ? ' fit' : '') + '"' + scTt + '>' + scTx + '</span></div>' +
+        '<div class="sg">' + stratTagHtml(a, actKey, true) +
+        '<div class="sg2"><span class="sc' + (recSwing ? ' fit' : '') + '"' + scTt + '>' + scTx + '</span>' +
+        stratTagHtml(a, othKey, false) + '</div></div>' +
         '</div>';
     }).join('') : ((state.filter === 'buy' || state.filter === 'sell')
       ? '<div class="scan-note">' + marketNoteHtml() + '</div>'
@@ -866,10 +944,10 @@
     }
     $('#scanList').innerHTML = listHtml;
     /* 행 안 배지가 잘리면(좁은 사이드바·모바일) 우선순위대로 양보한다:
-       엘리어트 차수 → VCP → 실적 배지 축약('실적 D-3' → 'D-3'). 전략 배지(시장대기·진입·보유·청산)는 끝까지 남긴다. */
+       엘리어트 차수 → VCP → 다이버전스 → 실적 배지 축약('실적 D-3' → 'D-3'). 전략 배지(시장대기·진입·보유·청산)는 끝까지 남긴다. */
     $$('#scanList .srow .tk b').forEach(function (b) {
       if (b.scrollWidth <= b.clientWidth) return;
-      ['.ewb', '.vcpb'].forEach(function (sel) {
+      ['.ewb', '.vcpb', '.divb'].forEach(function (sel) {
         if (b.scrollWidth <= b.clientWidth) return;
         var e = b.querySelector(sel);
         if (e) e.parentNode.removeChild(e);
@@ -1012,7 +1090,7 @@
     renderScanner();                                          /* 좌측 스캐너 신호·순위를 새 전략 기준으로 즉시 재집계 */
     if (changed && state.cur && A[state.cur]) select(state.cur, true);   /* 선택 기간은 그대로 유지 */
   }
-  /* 백테스트 기간 버튼(#btf) → 아래 KPI·자산곡선·트레이드 로그·종목 평균 재계산. 차트 표시 기간은 건드리지 않는다. */
+  /* 기간 변경 → 아래 KPI·자산곡선·트레이드 로그·종목 평균 재계산 (setPeriod 가 차트 기간까지 함께 맞춘다) */
   function applyBtPeriod() {
     var t = state.cur;
     if (!t || !A[t]) return;
@@ -1052,6 +1130,11 @@
   function renderHero(a) {
     var ew = $('#earnSlot');
     if (ew) ew.innerHTML = earnWarnHtml(a.meta.t);
+    var dvs = $('#divStrip');
+    if (dvs) {
+      dvs.innerHTML = divStripHtml(a);
+      dvs.classList.toggle('on', !!(a.div && a.div.hit));
+    }
     $('#heroRank').textContent = a.meta.r ? '#' + a.meta.r : '관심';
     $('#heroTicker').textContent = a.sym;
     $('#heroName').textContent = a.meta.nk;
@@ -1296,9 +1379,9 @@
       var short = bars && !a.replay && cov < bars - 2;
       nt.innerHTML = short
         ? '<b class="warn">이 종목은 ' + cov + '거래일 이력</b> — 선택 기간(' + btTag() + ')보다 짧아 있는 만큼만 집계'
-        : '차트 표시 기간(' + (BT_TAG[BT_WIN[String(state.range)]] || '직접') + ')과 <b>독립</b> · 지표 워밍업은 전체 이력 사용 · 미래참조 없음';
+        : '위 차트와 <b>같은 ' + btTag() + ' 기간</b> · 지표 워밍업은 전체 이력 사용 · 미래참조 없음';
     }
-    el.title = '아래 KPI·자산곡선·트레이드 로그·종목 평균이 모두 이 기간으로 다시 계산됩니다 (차트에 보이는 기간과는 별개)';
+    el.title = '아래 KPI·자산곡선·전략 비교·트레이드 로그가 모두 이 기간으로 다시 계산됩니다 — 차트 기간 버튼과 같은 값이라 어느 쪽을 눌러도 함께 움직입니다';
   }
 
   /* ---------------- 기간 라벨 ---------------- */
@@ -2677,8 +2760,11 @@
       if (ewa.inv) grow(ewa.inv.price);
     }
 
-    var pad = (hi - lo) * (zoomed ? 0.045 : 0.06);
-    lo -= pad; hi += pad;
+    /* 세로 여유 — 위쪽은 넉넉하게(고점 라벨·추세선·다이버전스 라벨이 천장에 붙지 않게),
+       아래쪽은 기존과 같은 비율로 둔다. '차트 이동(팬·줌) 시 위쪽 여백' 요청 반영. */
+    var padB = (hi - lo) * (zoomed ? 0.045 : 0.06);
+    var padT = (hi - lo) * (zoomed ? 0.155 : 0.15);
+    lo -= padB; hi += padT;
     if (lo < 0) lo = 0;                       /* 주가축이 음수로 내려가지 않게 (5년 장기 범위) */
     var Y = function (v) { return p.y + (1 - (v - lo) / (hi - lo)) * p.h; };
     this._lo = lo; this._hi = hi; this._pt = p;
@@ -2841,6 +2927,7 @@
     this.drawUser(ctx, a, L, Y, i0, i1);                     /* 작도도 미래 여백에 그릴 수 있다 */
     this.drawWBottom(ctx, a, L, Y, i0, i1d, bw, 'label');   /* W 라벨은 맨 위 — 다른 라벨을 피해서 마지막에 */
     this.drawTri(ctx, a, L, Y, i0, i1d, bw, 'label');
+    this.drawDiv(ctx, a, L, Y, i0, i1d);                    /* 상승 다이버전스 — 참고용 라벨 */
     ctx.restore();
     var lastC = c[i1d], lastY = Y(lastC);
     ctx.fillStyle = c[i1d] >= oo[i1d] ? '#10B981' : '#F43F5E';
@@ -3360,6 +3447,44 @@
     var txt = '삼각수렴 ' + t.typKo + ' · ' + t.stage;
     self.pillTag(ctx, xr - 4, Math.max(L.price.y + 10, Math.min(ty, L.price.y + L.price.h - 10)), txt, phaseCol,
       'rgba(10,16,24,.94)', 'right');
+  };
+
+  /* ---------------- 상승 다이버전스 오버레이 (표시 전용) ----------------
+     엔진 divScan 결과의 두 저점(직전 저점 → 최근 저점)을 점선으로 잇고 라벨을 단다.
+     최근 3거래일 안에 성립한 건만 그리며, '깔끔 보기'에서는 다른 보조 오버레이와 함께 숨는다. */
+  Chart.prototype.drawDiv = function (ctx, a, L, Y, i0, i1) {
+    if (!vis('div')) return;
+    var d = a.div;
+    if (!d || !d.hit || !d.prev) return;
+    var pi = d.idx, pj = d.prev.idx;
+    if (pi < i0 || pi > i1) return;                 /* 최근 저점이 화면 밖이면 그리지 않는다 */
+    var self = this, xr = L.padL + L.plotW;
+    var x0 = this.x(pj), x1 = this.x(pi);
+    var y0 = Y(d.prev.low), y1 = Y(d.low);
+    var pTop = L.price.y + 1, pBot = L.price.y + L.price.h - 1;
+    var col = '#2DD4BF';
+    ctx.save();
+    ctx.beginPath();
+    if (ctx.rect) ctx.rect(L.padL, L.price.y, L.plotW, L.price.h);
+    ctx.clip();
+    /* 두 저점을 잇는 점선 — 캔들 위에서도 보이도록 어두운 테두리를 깐다 */
+    ctx.setLineDash([5, 4]);
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1);
+    ctx.strokeStyle = 'rgba(11,14,20,.85)'; ctx.lineWidth = 3.6; ctx.stroke();
+    ctx.strokeStyle = 'rgba(45,212,191,.92)'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.setLineDash([]);
+    /* 두 저점 마커 */
+    [[x0, y0], [x1, y1]].forEach(function (pt) {
+      ctx.beginPath(); ctx.arc(pt[0], pt[1], 3.1, 0, Math.PI * 2);
+      ctx.fillStyle = '#0B0E14'; ctx.fill();
+      ctx.strokeStyle = col; ctx.lineWidth = 1.7; ctx.stroke();
+    });
+    ctx.restore();
+    /* 라벨 — 최근 저점 아래쪽 빈 자리 */
+    if (x1 < L.padL - 1 || x1 > xr + 1) return;
+    var txt = '다이버전스 · RSI ' + d.prev.rsi.toFixed(0) + '→' + d.rsi.toFixed(0);
+    var ly = Math.max(pTop + 9, Math.min(y1 + 15, pBot - 9));
+    self.pillTag(ctx, x1, ly, txt, '#5EEAD4', 'rgba(6,40,36,.94)', 'center');
   };
 
   /* ---------------- 엘리어트 파동 오버레이 ---------------- */
@@ -4278,20 +4403,12 @@
     $('#listSearch').oninput = function () { state.listQ = this.value; renderScanner(); };
     $('#tf').onclick = function (e) {
       var b = e.target.closest('button'); if (!b) return;
-      state.range = parseInt(b.dataset.n, 10);
-      btSelSync();
-      chart.setRange(state.range);   /* 차트에 보이는 봉만 바뀐다 — 백테스트 기간은 그대로 */
+      setPeriod(b.dataset.n);        /* 차트 + 아래 자료(KPI·자산곡선·로그) 같은 기간으로 */
     };
     var btf = $('#btf');
     if (btf) btf.onclick = function (e) {
       var b = e.target.closest('button'); if (!b) return;
-      var n = parseInt(b.dataset.n, 10);
-      if (!n) return;
-      if (n === state.btRange) { btSelSync(); return; }
-      state.btRange = n;
-      btSelSync();
-      applyBtPeriod();               /* KPI·자산곡선·로그·종목 평균만 다시 계산 */
-      prefetchPeriods();
+      setPeriod(b.dataset.n);        /* 아래에서 눌러도 위 차트가 같은 기간으로 */
     };
     /* 자산곡선 마커 클릭 → 트레이드 로그 해당 거래로 이동 */
     var eqCv = $('#equity');
