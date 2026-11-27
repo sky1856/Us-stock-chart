@@ -168,81 +168,92 @@ input,select{font-family:inherit;color:inherit}
   background:linear-gradient(180deg,rgba(18,23,34,.55),rgba(11,14,20,.2));z-index:40;
 }
 .workspace{flex:1 1 auto;min-width:0;padding:18px 20px 40px;display:flex;flex-direction:column;gap:14px}
-.side-head{display:flex;align-items:flex-start;justify-content:space-between;padding:16px 16px 10px}
-.side-head h2{margin:0;font-size:13.5px;font-weight:600;letter-spacing:.01em}
-.side-head p{margin:3px 0 0;font-size:12.5px;color:var(--txt3)}
+.side-head{display:flex;align-items:flex-start;justify-content:space-between;padding:10px 12px 6px}
+.side-head h2{margin:0;font-size:13px;font-weight:600;letter-spacing:.01em}
+.side-head p{margin:2px 0 0;font-size:11.5px;color:var(--txt3)}
 .side-head .icon-btn{display:none}
-.seg{display:flex;gap:4px;padding:0 12px 10px;flex-wrap:wrap}
+.seg{display:flex;gap:3px;padding:0 10px 7px;flex-wrap:wrap}
 .seg button{
-  font-size:12.5px;font-weight:500;color:var(--txt2);padding:6px 10px;border-radius:8px;
+  font-size:11.5px;font-weight:500;color:var(--txt2);padding:5px 8px;border-radius:8px;
   border:1px solid transparent;transition:.15s;white-space:nowrap;
 }
 .seg button:hover{color:var(--txt);background:rgba(255,255,255,.04)}
 .seg button.on{color:var(--txt);background:#1A2232;border-color:rgba(255,255,255,.1);
   box-shadow:0 1px 0 rgba(255,255,255,.06) inset}
-.seg button .c{color:var(--txt3);font-size:12px;margin-left:3px;font-variant-numeric:tabular-nums}
+.seg button .c{color:var(--txt3);font-size:10px;margin-left:3px;font-variant-numeric:tabular-nums}
+/* 상태 탭 (전체 · 매수 · 홀드 · 관망 · 매도 · 관심) — 6개를 한 줄에 고정 */
+.seg-state{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:3px;padding:0 10px 7px}
+.seg-state button{display:flex;align-items:center;justify-content:center;gap:3px;
+  padding:5px 1px;border-radius:7px;font-size:11.5px;min-width:0}
+.seg-state button .c{font-size:10px;margin-left:0;opacity:.9}
+.seg-state button[data-f="buy"] .c{color:#6EE7B7}
+.seg-state button[data-f="hold"] .c{color:#34D399}
+.seg-state button[data-f="wait"] .c{color:#FCD34D}
+.seg-state button[data-f="sell"] .c{color:#FDA4AF}
+.seg-state button[data-f="fav"] .c{color:#FBBF24}
 /* 프리셋 필터 (시총 Top 30 · 실적 우량주) — 기본 탭과 같은 필터 상태를 공유하되 알약형으로 구분 */
-.seg-pre{padding-top:0}
+.seg-pre{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding-top:0}
 .seg-pre button{
-  font-size:12.5px;padding:5px 9px;border-radius:999px;border:1px solid rgba(56,189,248,.22);
-  color:#A9B6C9;display:inline-flex;align-items:center}
+  font-size:11px;padding:4px 4px;border-radius:999px;border:1px solid rgba(56,189,248,.22);
+  color:#A9B6C9;display:inline-flex;align-items:center;justify-content:center;gap:3px;
+  min-width:0;overflow:hidden}
 .seg-pre button:hover{color:var(--txt);border-color:rgba(56,189,248,.42);background:rgba(56,189,248,.07)}
 .seg-pre button.on{color:#DCF0FF;background:rgba(56,189,248,.15);border-color:rgba(56,189,248,.55);
   box-shadow:0 0 0 1px rgba(56,189,248,.12) inset}
 .seg-pre button.on .c{color:rgba(220,240,255,.82)}
 /* 켜진 프리셋은 같은 버튼을 다시 누르면 해제 — × 힌트로 표시 (상단 탭과 교집합으로 함께 적용) */
-.seg-pre button.on::after{content:'×';margin-left:5px;font-size:11px;line-height:1;opacity:.6}
+.seg-pre button.on::after{content:'×';margin-left:3px;font-size:10px;line-height:1;opacity:.6}
 .seg-pre[data-on="1"] button.on{box-shadow:0 0 0 1px rgba(56,189,248,.18) inset,0 0 18px -10px rgba(56,189,248,1)}
-.preset-note{padding:0 13px 9px;font-size:12px;line-height:1.45;color:var(--txt4);
+.preset-note{padding:0;font-size:11.5px;line-height:1.45;color:var(--txt4);
   overflow-wrap:anywhere}
 .preset-note b{color:var(--txt2);font-weight:500}
 .preset-note.on{color:var(--txt3)}
-@media (max-width:900px){.seg-pre button{padding:6px 10px;font-size:12.5px}}
-.side-tools{display:flex;gap:6px;padding:0 12px 10px}
+@media (max-width:420px){.seg-pre button{font-size:10.5px;padding:4px 3px}.seg-state button{font-size:11px}}
+.side-tools{display:flex;gap:5px;padding:0 10px 7px}
 .side-tools input{
   flex:1;min-width:0;background:#0E131C;border:1px solid var(--line);border-radius:8px;
-  padding:7px 10px;font-size:12.5px;outline:none}
+  padding:5px 8px;font-size:11.5px;outline:none}
 .side-tools input:focus{border-color:rgba(56,189,248,.4)}
 .side-tools select{
-  background:#0E131C;border:1px solid var(--line);border-radius:8px;padding:7px 6px;
-  font-size:12.5px;outline:none;color:var(--txt2);max-width:118px
+  background:#0E131C;border:1px solid var(--line);border-radius:8px;padding:5px 4px;
+  font-size:11.5px;outline:none;color:var(--txt2);max-width:112px
 }
 .scan-head{
-  display:grid;grid-template-columns:30px 1fr 46px 68px 112px;gap:6px;
-  padding:7px 12px;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;
+  display:grid;grid-template-columns:26px 1fr 40px 62px 104px;gap:5px;
+  padding:4px 10px;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
   color:var(--txt4);border-top:1px solid var(--line2);border-bottom:1px solid var(--line2);
   position:sticky;top:0;background:rgba(11,14,20,.94);backdrop-filter:blur(8px);z-index:2;
 }
 .scan-head span:nth-child(n+3){text-align:right}
-.scan-list{flex:1;overflow-y:auto;overscroll-behavior:contain;padding-bottom:24px}
+.scan-list{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-bottom:8px}
 .srow{
-  display:grid;grid-template-columns:30px 1fr 46px 68px 112px;gap:6px;align-items:center;
-  padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.035);cursor:pointer;
+  display:grid;grid-template-columns:26px 1fr 40px 62px 104px;gap:5px;align-items:center;
+  padding:4px 10px;border-bottom:1px solid rgba(255,255,255,.035);cursor:pointer;
   transition:background .12s;position:relative;
 }
 .srow:hover{background:rgba(255,255,255,.035)}
 .srow.on{background:linear-gradient(90deg,rgba(56,189,248,.13),rgba(56,189,248,.03) 60%,transparent)}
 .srow.on:before{content:"";position:absolute;left:0;top:6px;bottom:6px;width:2px;border-radius:2px;background:var(--cyan)}
-.srow .rk{font-size:12px;color:var(--txt4);font-variant-numeric:tabular-nums;text-align:right}
+.srow .rk{font-size:11.5px;color:var(--txt4);font-variant-numeric:tabular-nums;text-align:right}
 .srow .rk.rec{color:#8FD7F5;font-weight:600}
 .srow .rk.rec.top1{color:#FCD34D;text-shadow:0 0 10px rgba(245,158,11,.55)}
 .srow .rk.rec.top2{color:#E2E8F0}
 .srow .rk.rec.top3{color:#F0B48A}
 .srow .tk{min-width:0}
-.srow .tk b{display:block;font-family:var(--mono);font-size:13px;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.srow .tk span{display:block;font-size:12px;color:var(--txt3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
-.srow .spark{width:46px;height:20px;opacity:.95;justify-self:start}
+.srow .tk b{display:block;font-family:var(--mono);font-size:12.5px;letter-spacing:.01em;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.srow .tk span{display:block;font-size:10.5px;line-height:1.25;color:var(--txt3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:0}
+.srow .spark{width:40px;height:16px;opacity:.95;justify-self:start}
 .srow .px{text-align:right}
-.srow .px b{display:block;font-size:12.5px;font-variant-numeric:tabular-nums}
-.srow .px span{display:block;font-size:12px;font-variant-numeric:tabular-nums;margin-top:1px}
-.srow .sg{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:2px;min-width:0}
+.srow .px b{display:block;font-size:12px;line-height:1.35;font-variant-numeric:tabular-nums}
+.srow .px span{display:block;font-size:10.5px;line-height:1.25;font-variant-numeric:tabular-nums;margin-top:0}
+.srow .sg{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:1px;min-width:0}
 /* 행의 전략 상태 — 활성 전략은 채운 칩(위 줄), 다른 전략은 작은 글씨(아래 줄).
    두 전략 상태를 함께 보여 주되 좁은 사이드바(84~92px)에서도 잘리지 않게 한 줄씩 쌓는다. */
-.srow .sg .chip{font-size:10.5px;padding:1px 5px;line-height:1.3;letter-spacing:-.01em;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.srow .sg .chip{font-size:10px;padding:1px 4px;line-height:1.28;letter-spacing:-.01em;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .srow .sg .chip.n{color:#FCD34D;background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.28)}
-.srow .sg2{display:flex;align-items:center;justify-content:flex-end;gap:5px;max-width:100%;min-width:0;line-height:1.15}
-.srow .sg2 .sc{font-size:11px;flex:0 0 auto}
-.srow .sg2 .st2{font-size:10.5px;color:var(--txt3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em}
+.srow .sg2{display:flex;align-items:center;justify-content:flex-end;gap:4px;max-width:100%;min-width:0;line-height:1.1}
+.srow .sg2 .sc{font-size:10.5px;flex:0 0 auto}
+.srow .sg2 .st2{font-size:10px;color:var(--txt3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em}
 .srow .sg2 .st2.sb,.srow .sg2 .st2.b{color:#6EE7B7}
 .srow .sg2 .st2.n{color:#FCD34D}
 .srow .sg2 .st2.s{color:#FDA4AF}
@@ -255,9 +266,23 @@ input,select{font-family:inherit;color:inherit}
 .chip.w{color:#FCD34D;background:rgba(245,158,11,.09);border-color:rgba(245,158,11,.2)}
 .chip.s{color:#FDA4AF;background:rgba(244,63,94,.09);border-color:rgba(244,63,94,.2)}
 .chip.ss{color:#FB7185;background:rgba(244,63,94,.16);border-color:rgba(244,63,94,.35)}
-.srow .sc{font-size:12px;color:var(--txt3);font-variant-numeric:tabular-nums;width:24px;text-align:right}
+.srow .sc{font-size:11px;color:var(--txt3);font-variant-numeric:tabular-nums;width:22px;text-align:right}
 .srow .sc.fit{color:#A7F3D0;font-weight:600}
-.side-foot{padding:10px 16px 12px;border-top:1px solid var(--line2);font-size:12px;color:var(--txt4);line-height:1.5}
+.side-foot{padding:5px 10px 7px;border-top:1px solid var(--line2);font-size:10.5px;color:var(--txt4);line-height:1.4}
+/* 설명란 (전략 가이드 + 프리셋 안내) — 종목 목록 아래 접기/펴기 */
+.side-info{flex:0 0 auto;border-top:1px solid var(--line2);background:rgba(255,255,255,.012)}
+.si-head{display:flex;align-items:center;gap:6px;width:100%;padding:6px 10px;
+  border:0;background:transparent;color:var(--txt3);font-family:inherit;cursor:pointer;transition:color .15s}
+.si-head:hover{color:var(--txt2)}
+.si-head b{font-size:11.5px;font-weight:600;color:var(--txt2);letter-spacing:-.01em;flex:0 0 auto}
+.si-chev{width:11px;height:11px;flex:0 0 auto;transition:transform .2s cubic-bezier(.2,.7,.3,1)}
+.side-info.open .si-chev{transform:rotate(180deg)}
+.si-sum{margin-left:auto;font-size:10.5px;color:var(--txt4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right}
+.side-info.open .si-sum{color:var(--txt3)}
+.si-body{display:none;max-height:46vh;overflow-y:auto;overscroll-behavior:contain;padding:0 10px 8px}
+.side-info.open .si-body{display:block}
+.si-body .pguide{margin:0 0 6px}
+.si-body .preset-note{padding:0 1px 2px}
 .backdrop{position:fixed;inset:0;background:rgba(5,7,11,.72);backdrop-filter:blur(3px);z-index:70;display:none}
 .backdrop.on{display:block}
 
@@ -873,15 +898,41 @@ table.tbl{width:100%;border-collapse:collapse;font-size:12.5px;min-width:660px}
 
 /* ---- 엘리어트 파동 고급화: 시나리오 전환 · 다중 차수 · 클러스터 ---- */
 .ew-mode{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 15px 9px;flex-wrap:wrap}
-.ew-switch{display:inline-flex;padding:2px;gap:2px;border:1px solid var(--line2);border-radius:9px;background:rgba(255,255,255,.022)}
-.ew-switch button{appearance:none;border:0;background:transparent;color:var(--txt3);font-size:12px;font-weight:500;letter-spacing:-.01em;
-  padding:5px 10px;border-radius:7px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-family:inherit;transition:.15s}
-.ew-switch button i{font-style:normal;font-size:11.5px;font-family:var(--mono);color:var(--txt4);padding:1px 4px;border-radius:4px;background:rgba(255,255,255,.05)}
-.ew-switch button:hover{color:var(--txt2)}
-.ew-switch button.on{background:rgba(56,189,248,.14);color:#BAE6FD;box-shadow:inset 0 0 0 1px rgba(56,189,248,.3)}
-.ew-switch button.on i{color:#7DD3FC;background:rgba(56,189,248,.14)}
-.ew-switch button.alt.on{background:rgba(245,158,11,.14);color:#FDE68A;box-shadow:inset 0 0 0 1px rgba(245,158,11,.32)}
-.ew-switch button.alt.on i{color:#FDE68A;background:rgba(245,158,11,.14)}
+/* 기본 / 대안 시나리오 전환 — 세그먼트 토글 (활성 = 테두리·글로우 + 점 + '보는 중' 배지) */
+.ew-switch{display:inline-grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:5px;padding:4px;
+  border:1px solid var(--line2);border-radius:13px;background:rgba(255,255,255,.025);min-width:min(400px,100%);max-width:540px}
+.ew-switch .esb{position:relative;display:flex;flex-direction:column;gap:3px;align-items:stretch;
+  padding:7px 11px 8px;border-radius:10px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.015);
+  color:var(--txt2);font-family:inherit;font-size:12px;cursor:pointer;min-width:0;text-align:left;transition:.16s}
+.ew-switch .esb:hover{color:var(--txt);border-color:rgba(56,189,248,.32);background:rgba(56,189,248,.06)}
+.ew-switch .es-top{display:flex;align-items:center;gap:6px;min-width:0}
+.ew-switch .es-dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto;background:currentColor;opacity:.3;
+  box-shadow:0 0 0 3px rgba(255,255,255,.03);transition:.16s}
+.ew-switch .es-t{font-size:12.5px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ew-switch .es-c{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:600;color:var(--txt3);
+  padding:0 5px;border-radius:99px;background:rgba(255,255,255,.05);border:1px solid var(--line);flex:0 0 auto;font-variant-numeric:tabular-nums}
+.ew-switch .es-now{font-size:9.5px;font-weight:700;letter-spacing:.02em;padding:1px 5px;border-radius:99px;flex:0 0 auto}
+.ew-switch .es-h{display:flex;align-items:center;gap:3px;font-size:10.5px;line-height:1.25;color:var(--txt3);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.ew-switch .es-h i{font-style:normal;font-weight:700;flex:0 0 auto}
+.ew-switch .es-h i.up{color:var(--up2)}
+.ew-switch .es-h i.dn{color:var(--dn2)}
+/* 활성 — 기본: 시안 / 대안: 앰버 */
+.ew-switch .esb.on{color:#EAF9FF;border-color:rgba(56,189,248,.62);
+  background:linear-gradient(180deg,rgba(56,189,248,.26),rgba(56,189,248,.08));
+  box-shadow:0 0 0 1px rgba(56,189,248,.2) inset,0 0 26px -10px rgba(56,189,248,1),0 1px 0 rgba(255,255,255,.06) inset}
+.ew-switch .esb.on .es-dot{opacity:1;background:#7DD3FC;box-shadow:0 0 0 3px rgba(56,189,248,.18),0 0 12px rgba(56,189,248,.95)}
+.ew-switch .esb.on .es-c{color:#BAE6FD;background:rgba(56,189,248,.18);border-color:rgba(56,189,248,.4)}
+.ew-switch .esb.on .es-now{color:#04121C;background:#7DD3FC}
+.ew-switch .esb.on .es-h{color:#BAE6FD}
+.ew-switch .esb.alt.on{color:#FFF7E6;border-color:rgba(245,158,11,.62);
+  background:linear-gradient(180deg,rgba(245,158,11,.26),rgba(245,158,11,.07));
+  box-shadow:0 0 0 1px rgba(245,158,11,.2) inset,0 0 26px -10px rgba(245,158,11,1),0 1px 0 rgba(255,255,255,.06) inset}
+.ew-switch .esb.alt.on .es-dot{opacity:1;background:#FBBF24;box-shadow:0 0 0 3px rgba(245,158,11,.18),0 0 12px rgba(245,158,11,.95)}
+.ew-switch .esb.alt.on .es-c{color:#FDE68A;background:rgba(245,158,11,.18);border-color:rgba(245,158,11,.42)}
+.ew-switch .esb.alt.on .es-now{color:#1A1206;background:#FBBF24}
+.ew-switch .esb.alt.on .es-h{color:#FDE68A}
+@media (max-width:640px){.ew-switch{max-width:100%;width:100%}.ew-switch .es-now{display:none}.ew-switch .esb{padding:6px 9px 7px}.ew-switch .es-t{font-size:12px}}
 .ew-chips{display:inline-flex;gap:4px}
 .ew-chips button{appearance:none;border:1px solid var(--line2);background:rgba(255,255,255,.02);color:var(--txt4);
   font-size:11.5px;font-weight:600;padding:4px 8px;border-radius:6px;cursor:pointer;font-family:inherit;transition:.15s}
@@ -977,9 +1028,9 @@ table.tbl{width:100%;border-collapse:collapse;font-size:12.5px;min-width:660px}
   .sidebar.open{transform:none;box-shadow:30px 0 60px -20px rgba(0,0,0,.9)}
   .side-head .icon-btn{display:grid}
   .workspace{padding:12px 12px 32px;gap:11px}
-  .scan-head{grid-template-columns:26px 1fr 58px 106px;gap:5px;padding:7px 11px}
+  .scan-head{grid-template-columns:24px 1fr 56px 102px;gap:5px;padding:3px 10px}
   .scan-head span:nth-child(3){display:none}
-  .srow{grid-template-columns:26px 1fr 58px 106px;gap:5px;padding:9px 11px}
+  .srow{grid-template-columns:24px 1fr 56px 102px;gap:5px;padding:5px 10px}
   .srow .spark{display:none}
   .macro-strip{gap:6px}
   .mchip{flex:1 1 145px;min-width:0;padding:6px 9px;gap:6px;align-items:center}
@@ -1226,12 +1277,14 @@ table.tbl{width:100%;border-collapse:collapse;font-size:12.5px;min-width:660px}
 
 /* ---------- 프리셋 필터 줄 · 차트 기간/지표 토글 줄 정돈 (1440 · 390) ---------- */
 #presetTabs{gap:4px;align-content:flex-start}
-#presetTabs button{padding:5px 9px}
-/* 사이드바 드로어 폭(352px)에서는 프리셋 4개를 2×2로 — 3+1 어긋남 방지 */
+#presetTabs button{padding:4px 4px;font-size:11px}
+/* 드로어 폭(343px)에서도 프리셋 8개를 4×2로 — 세로 높이를 줄여 종목을 더 보이게 */
 @media (max-width:900px){
-  #presetTabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;padding:0 12px 9px}
-  #presetTabs button{justify-content:center;width:100%;padding:6px 8px;font-size:12.5px}
-  #presetTabs button .c{margin-left:4px}
+  #presetTabs{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:0 10px 7px}
+  #presetTabs button{justify-content:center;width:100%;padding:4px 3px;font-size:10.5px;gap:2px}
+  #presetTabs button .c{margin-left:2px;font-size:9.5px}
+  /* 좁은 칩에서는 해제 표시(×)가 라벨을 잘라내므로 숨긴다 — 켜짐은 배경·테두리로 표시 */
+  #presetTabs button.on::after{display:none}
   /* 지표 토글은 가로 스크롤 대신 4×2 격자로 한눈에 */
   .toggles{width:100%;margin-left:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
     gap:6px;flex-wrap:wrap;overflow:visible;padding-bottom:0}
@@ -2023,9 +2076,9 @@ body{font-variant-numeric:tabular-nums}
 
 /* 1280 안팎 노트북 — 사이드바가 좁아 스캐너 행 배지가 잘리지 않도록 열 폭을 조금 조인다 */
 @media (min-width:901px) and (max-width:1366px){
-  .scan-head{grid-template-columns:22px 1fr 40px 56px 106px;gap:5px;padding:7px 10px}
-  .srow{grid-template-columns:22px 1fr 40px 56px 106px;gap:5px;padding:9px 10px}
-  .srow .spark{width:52px}
+  .scan-head{grid-template-columns:24px 1fr 38px 56px 102px;gap:5px;padding:4px 10px}
+  .srow{grid-template-columns:24px 1fr 38px 56px 102px;gap:5px;padding:5px 10px}
+  .srow .spark{width:38px}
 }
 .side-foot .upd,.mfoot .upd,.upd{color:var(--txt3)}
 
@@ -2250,6 +2303,33 @@ html[data-theme="light"] .ew-chan .u{color:#129C5C}
 html[data-theme="light"] .ew-chan .l{color:#AD0015}
 html[data-theme="light"] .ew-switch-row .k{color:#AD8B00}
 html[data-theme="light"] .ew-card.ew-alt .ew-tag{color:#AD8B00}
+/* 기본/대안 시나리오 토글 — 화이트 테마 대비 */
+html[data-theme="light"] .ew-switch{background:rgba(15,23,42,.04);border-color:rgba(15,23,42,.14)}
+html[data-theme="light"] .ew-switch .esb{background:#FFFFFF;border-color:rgba(15,23,42,.12);color:#3B4A5E}
+html[data-theme="light"] .ew-switch .esb:hover{border-color:rgba(2,132,199,.4);background:#F0F9FF;color:#0F172A}
+html[data-theme="light"] .ew-switch .es-dot{background:#94A3B8;box-shadow:0 0 0 3px rgba(15,23,42,.04)}
+html[data-theme="light"] .ew-switch .es-c{background:rgba(15,23,42,.04);border-color:rgba(15,23,42,.1);color:#5A677A}
+html[data-theme="light"] .ew-switch .esb.on{color:#053546;border-color:#0369A1;
+  background:linear-gradient(180deg,#DBEAFE,#F1F9FF);
+  box-shadow:0 0 0 2px rgba(2,132,199,.16) inset,0 6px 18px -10px rgba(2,132,199,1)}
+html[data-theme="light"] .ew-switch .esb.on .es-dot{opacity:1;background:#0284C7;box-shadow:0 0 0 3px rgba(2,132,199,.16),0 0 10px rgba(2,132,199,.55)}
+html[data-theme="light"] .ew-switch .esb.on .es-c{background:rgba(2,132,199,.12);border-color:rgba(2,132,199,.3);color:#0369A1}
+html[data-theme="light"] .ew-switch .esb.on .es-now{background:#0284C7;color:#FFFFFF}
+html[data-theme="light"] .ew-switch .esb.on .es-h{color:#0369A1}
+html[data-theme="light"] .ew-switch .esb.alt.on{color:#4A2C00;border-color:#D97706;
+  background:linear-gradient(180deg,#FEF3C7,#FFFDF5);
+  box-shadow:0 0 0 1px rgba(217,119,6,.22) inset,0 6px 18px -10px rgba(217,119,6,.9)}
+html[data-theme="light"] .ew-switch .esb.alt.on .es-dot{opacity:1;background:#D97706;box-shadow:0 0 0 3px rgba(217,119,6,.16)}
+html[data-theme="light"] .ew-switch .esb.alt.on .es-c{background:rgba(217,119,6,.14);border-color:rgba(217,119,6,.3);color:#B45309}
+html[data-theme="light"] .ew-switch .esb.alt.on .es-now{background:#D97706;color:#FFFFFF}
+html[data-theme="light"] .ew-switch .esb.alt.on .es-h{color:#B45309}
+html[data-theme="light"] .side-info{background:rgba(15,23,42,.025)}
+html[data-theme="light"] .si-head b{color:#334155}
+html[data-theme="light"] .seg-state button[data-f="buy"] .c,
+html[data-theme="light"] .seg-state button[data-f="hold"] .c{color:#047857}
+html[data-theme="light"] .seg-state button[data-f="wait"] .c{color:#B45309}
+html[data-theme="light"] .seg-state button[data-f="sell"] .c{color:#BE123C}
+html[data-theme="light"] .seg-state button[data-f="fav"] .c{color:#B45309}
 html[data-theme="light"] .acc-btn{background:rgba(15,23,42,0.03)}
 @media (max-width:900px){html[data-theme="light"] .sidebar{background:#FFFFFF}}
 @media (max-width:900px){html[data-theme="light"] .sidebar.open{box-shadow:30px 0 60px -20px rgba(15,23,42,0.9)}}
@@ -2669,7 +2749,7 @@ html[data-theme="light"] .theme-btn:hover{background:#E0F2FE;border-color:rgba(1
 
 /* ---------- ③ 스캐너 기법별 3줄 가이드 ---------- */
 .pguide{
-  display:none;margin:0 12px 10px;padding:8px 10px 9px;
+  display:none;margin:0 0 6px;padding:7px 9px 8px;
   border:1px solid var(--line);border-radius:10px;
   background:rgba(56,189,248,.055);
   font-size:11.5px;line-height:1.5;
@@ -2780,24 +2860,24 @@ html[data-theme="light"] .pg-row.sell b{color:#0E7490}
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
     </div>
-    <div class="seg" id="filterTabs">
-      <button data-f="all" class="on">전체<span class="c" id="cAll">100</span></button>
-      <button data-f="buy">매수 신호<span class="c" id="cBuy">0</span></button>
-      <button data-f="sell">매도 신호<span class="c" id="cSell">0</span></button>
-      <button data-f="fav">관심<span class="c" id="cFav">5</span></button>
+    <div class="seg seg-state" id="filterTabs" role="group" aria-label="전략 상태 필터">
+      <button data-f="all" class="on" title="전체 종목 — 프리셋과 검색을 함께 적용한 결과">전체<span class="c" id="cAll">100</span></button>
+      <button data-f="buy" title="매수 — 오늘 신규 진입 조건을 충족한 종목 (이미 보유 중이면 '홀드')">매수<span class="c" id="cBuy">0</span></button>
+      <button data-f="hold" title="보유시홀드 — 이미 보유 중이고 계속 들고 가는 상태">홀드<span class="c" id="cHold">0</span></button>
+      <button data-f="wait" title="관망 — 진입 조건 미충족, 지금은 살 자리도 팔 자리도 아님">관망<span class="c" id="cWait">0</span></button>
+      <button data-f="sell" title="매도 — 청산·손절 조건 발동 또는 진입 제한(시장대기·손절대기)">매도<span class="c" id="cSell">0</span></button>
+      <button data-f="fav" title="관심종목">관심<span class="c" id="cFav">5</span></button>
     </div>
     <div class="seg seg-pre" id="presetTabs" aria-label="프리셋 필터">
-      <button data-f="top30" title="시총 상위 30종목만 표시 · 종목 시총(장마감 기준) 순위 · 다시 누르면 해제 (상단 탭과 교집합)">시총 Top 30<span class="c" id="cTop30">30</span></button>
-      <button data-f="quality" title="EPS 흑자 · 매출성장 5% 초과 · 순이익률 15% 초과 종목만 표시 · 최근 분기 실적 기준 · 다시 누르면 해제">실적 우량주<span class="c" id="cQual">0</span></button>
-      <button data-f="w" title="마지막 종가 기준 W 쌍바닥 — 넥라인 돌파(최근 5봉) · 임박(넥라인 5% 이내) · 진행(바닥 형성) · 다시 누르면 해제">W 쌍바닥<span class="c" id="cW">0</span></button>
-      <button data-f="vcp" title="대형 우량주(시총 Top 30 ∪ 실적 우량주) 한정 · 미너비니 Trend Template(정배열) 충족 + VCP 변동성 축소 · 피벗 돌파/임박(피벗 -5% 이내) · 다시 누르면 해제">VCP<span class="c" id="cVcp">0</span></button>
+      <button data-f="top30" title="시총 상위 30종목만 표시 · 종목 시총(장마감 기준) 순위 · 다시 누르면 해제 (상단 탭과 교집합)">시총Top<span class="c" id="cTop30">30</span></button>
+      <button data-f="quality" title="실적 우량주 — EPS 흑자 · 매출성장 5% 초과 · 순이익률 15% 초과 종목만 표시 · 최근 분기 실적 기준 · 다시 누르면 해제">실적우량<span class="c" id="cQual">0</span></button>
+      <button data-f="bk" title="거래량 돌파 — 종가가 직전 20봉 최고가를 넘고(20일 신고가 돌파) 그날 거래량이 20일 평균의 1.5배 이상인 종목 · 최근 3거래일 내 발생 기준 · 참고용(매매 조건 미적용) · 다시 누르면 해제">거래량<span class="c" id="cBk">0</span></button>
+      <button data-f="win70" title="현재 전략 5년 백테스트 승률 70% 이상 종목 · 참고 필터(과거 성과 기반) · 최소 거래 1건 이상 · 상단 추세형/스윙형을 바꾸면 그 전략 기준으로 다시 셈 · 다시 누르면 해제">승률70%<span class="c" id="cWin70">0</span></button>
+      <button data-f="w" title="W 쌍바닥 — 마지막 종가 기준 · 넥라인 돌파(최근 5봉) · 임박(넥라인 5% 이내) · 진행(바닥 형성) · 다시 누르면 해제">W쌍바닥<span class="c" id="cW">0</span></button>
+      <button data-f="vcp" title="VCP — 대형 우량주(시총 Top 30 ∪ 실적 우량주) 한정 · 미너비니 Trend Template(정배열) 충족 + 변동성 축소 · 피벗 돌파/임박 · 다시 누르면 해제">VCP<span class="c" id="cVcp">0</span></button>
       <button data-f="tri" title="삼각수렴 — 최근 45봉 안 피벗 고점 2·저점 2 수렴(대칭/상승/하락, 쐐기 제외) · 돌파(최근 5봉)/임박/진행 · 표시 전용 · 다시 누르면 해제">삼각수렴<span class="c" id="cTri">0</span></button>
       <button data-f="div" title="상승 다이버전스 — 10일 신저가인데 RSI(14)가 5~60봉 전 저점보다 높은 종목 · 최근 3거래일 내 발생 기준 · 참고용(매매 조건 미적용) · 다시 누르면 해제">다이버전스<span class="c" id="cDiv">0</span></button>
-      <button data-f="bk" title="거래량 돌파 — 종가가 직전 20봉 최고가를 넘고(20일 신고가 돌파) 그날 거래량이 20일 평균의 1.5배 이상인 종목 · 최근 3거래일 내 발생 기준 · 2026-11-25 종가 기준 · 참고용(매매 조건 미적용) · 다시 누르면 해제">거래량 돌파<span class="c" id="cBk">0</span></button>
-      <button data-f="win70" title="현재 전략 5년 백테스트 승률 70% 이상 종목 · 참고 필터(과거 성과 기반) · 최소 거래 1건 이상 · 상단 추세형/스윙형을 바꾸면 그 전략 기준으로 다시 셈 · 다시 누르면 해제">승률 70%+<span class="c" id="cWin70">0</span></button>
     </div>
-    <div class="preset-note" id="presetNote">상단 탭(전체 · 매수 · 매도 · 관심)과 프리셋은 함께 적용됩니다 — 프리셋을 다시 누르면 해제 · 검색·정렬과 함께 적용</div>
-    <div class="pguide" id="presetGuide" aria-live="polite"></div>
     <div class="side-tools">
       <input id="listSearch" type="text" placeholder="목록 내 검색" autocomplete="off" spellcheck="false">
       <select id="sortSel" title="정렬 기준 · 상단 추세형/스윙형 전략 버튼을 누르면 그 전략의 추천 순위로 자동 전환됩니다">
@@ -2810,7 +2890,18 @@ html[data-theme="light"] .pg-row.sell b{color:#0E7490}
     </div>
     <div class="scan-head"><span id="scanRankHead">#</span><span>종목</span><span>추세</span><span>현재가</span><span>시그널</span></div>
     <div class="scan-list" id="scanList"></div>
-    <div class="side-foot">데이터: Yahoo Finance 일봉 · <span id="footAsOf">—</span> 종가 기준<span class="upd" id="footUpd"></span><br>기술적 분석 참고용, 투자 권유가 아닙니다.</div>
+    <div class="side-info" id="sideInfo">
+      <button class="si-head" id="siToggle" type="button" aria-expanded="false" aria-controls="siBody" title="지금 전략의 매수·손절·익절 기준과 프리셋 설명 펼치기/접기">
+        <svg class="si-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        <b>전략 가이드</b>
+        <span class="si-sum" id="siSum">—</span>
+      </button>
+      <div class="si-body" id="siBody">
+        <div class="pguide" id="presetGuide" aria-live="polite"></div>
+        <div class="preset-note" id="presetNote">상단 탭(전체 · 매수 · 홀드 · 관망 · 매도 · 관심)과 프리셋은 함께 적용됩니다 — 프리셋을 다시 누르면 해제 · 검색·정렬과 함께 적용</div>
+      </div>
+    </div>
+    <div class="side-foot">Yahoo Finance 일봉 · <span id="footAsOf">—</span> 종가 기준<span class="upd" id="footUpd"></span> · 투자 권유 아님</div>
   </aside>
 
   <main class="workspace">
@@ -7989,15 +8080,19 @@ var EDUFIG = (function () {
     return { buy: buy && !sell, sell: sell, held: held, why: why, kind: kind };
   }
   function scanCounts(scoped) {
-    var c = { all: 0, buy: 0, sell: 0, entry: 0, held: 0, blocked: 0, cool: 0, fav: 0 };
+    var c = { all: 0, buy: 0, entryBuy: 0, hold: 0, wait: 0, sell: 0, entry: 0, held: 0, blocked: 0, cool: 0, fav: 0 };
     M.tickers.forEach(function (x) {
       var a = A[x.t]; if (!a) return;
       if (scoped && !presetMembers(a)) return;          /* 프리셋 안에서만 집계 */
       c.all++;
       if (isWatch(a.sym)) c.fav++;
       var g = sigOf(a);
-      if (g.buy) c.buy++;
+      if (g.buy) {
+        c.buy++;
+        if (g.held) c.hold++; else c.entryBuy++;       /* 신규 진입 매수 / 보유시홀드 */
+      }
       if (g.sell) c.sell++;
+      if (!g.buy && !g.sell) c.wait++;                  /* 관망 — 살 자리도 팔 자리도 아님 */
       var st = state.strategy === 'swing' ? a.swing : a.trendPlan;
       if (st && st.signal) c.entry++;
       if (g.held) c.held++;
@@ -8077,7 +8172,10 @@ var EDUFIG = (function () {
     return true;
   }
   function filterMembers(a) {
-    if (state.filter === 'buy') return sigOf(a).buy;
+    var g;
+    if (state.filter === 'buy') { g = sigOf(a); return g.buy && !g.held; }   /* 신규 진입 매수 */
+    if (state.filter === 'hold') { g = sigOf(a); return g.buy && g.held; }   /* 보유시홀드 */
+    if (state.filter === 'wait') { g = sigOf(a); return !g.buy && !g.sell; } /* 관망 */
     if (state.filter === 'sell') return sigOf(a).sell;
     if (state.filter === 'fav') return isWatch(a.sym);
     return true;
@@ -8123,8 +8221,10 @@ var EDUFIG = (function () {
     return '';
   }
   function filterName() {
-    if (state.filter === 'buy') return '매수 신호';
-    if (state.filter === 'sell') return '매도 신호';
+    if (state.filter === 'buy') return '매수';
+    if (state.filter === 'hold') return '보유시홀드';
+    if (state.filter === 'wait') return '관망';
+    if (state.filter === 'sell') return '매도';
     if (state.filter === 'fav') return '관심';
     return '전체';
   }
@@ -8139,7 +8239,7 @@ var EDUFIG = (function () {
       if (state.filter !== 'all') bits.push(filterName() + ' 교집합 <b>' + shown + '</b>종목');
       return bits.join(' · ');
     }
-    if (state.filter === 'buy' || state.filter === 'sell') {
+    if (state.filter === 'buy' || state.filter === 'hold' || state.filter === 'sell') {
       return '<b>' + stratName + ' · ' + filterName() + '</b> — 백테스트와 같은 전략 조건으로 집계 · ' +
         '진입 조건 충족 <b>' + c.entry + '</b> · 보유 중 <b>' + c.held + '</b> · 청산/진입 제한 <b>' + c.blocked + '</b>' +
         (c.cool ? ' · 손절 후 재진입 대기 <b>' + c.cool + '</b>' : '') + ' · 마지막 종가 기준';
@@ -8147,7 +8247,7 @@ var EDUFIG = (function () {
     if (state.filter === 'fav') {
       return '<b>관심종목</b> ' + state.watch.length + '종목 · 지금 ' + shown + '종목 표시 · 프리셋을 함께 켜면 교집합으로 좁혀집니다';
     }
-    return '상단 탭(전체 · 매수 · 매도 · 관심)과 프리셋은 함께 적용됩니다 — 프리셋을 다시 누르면 해제 · 검색·정렬과 함께 적용';
+    return '상단 탭(전체 · 매수 · 홀드 · 관망 · 매도 · 관심)과 프리셋은 함께 적용됩니다 — 프리셋을 다시 누르면 해제 · 검색·정렬과 함께 적용';
   }
   function spark(a, upto) {
     var c = a.close, n = upto == null ? c.length : upto + 1, k = Math.min(34, n);
@@ -8247,12 +8347,18 @@ var EDUFIG = (function () {
     var counts = scanCounts(presetActive());
     var scopeTxt = presetActive() ? (PRESET_META[state.preset].name + ' 안에서') : '전체 종목';
     $('#cAll').textContent = counts.all;
-    $('#cBuy').textContent = counts.buy;
+    $('#cBuy').textContent = counts.entryBuy;
     $('#cSell').textContent = counts.sell;
+    var cHd = $('#cHold'); if (cHd) cHd.textContent = counts.hold;
+    var cWt = $('#cWait'); if (cWt) cWt.textContent = counts.wait;
     var cf = $('#cFav'); if (cf) { cf.textContent = counts.fav; cf.title = scopeTxt + ' 관심종목 수'; }
-    ['#cAll', '#cBuy', '#cSell'].forEach(function (sel) {
+    ['#cAll', '#cBuy', '#cHold', '#cWait', '#cSell'].forEach(function (sel) {
       var el = $(sel); if (el) el.title = scopeTxt + ' 집계 — 프리셋을 켜면 그 안에서 다시 센다';
     });
+    var siSum = $('#siSum');
+    if (siSum) siSum.textContent = (presetActive() ? PRESET_META[state.preset].name + ' · ' : '') +
+      (state.strategy === 'swing' ? '스윙형' : '추세형') + ' · 매수 ' + counts.entryBuy + ' · 홀드 ' + counts.hold +
+      ' · 관망 ' + counts.wait + ' · 매도 ' + counts.sell;
     var pd = presetData();
     var cTop = $('#cTop30'); if (cTop) cTop.textContent = pd.nTop;
     var cQual = $('#cQual'); if (cQual) cQual.textContent = pd.nQual;
@@ -9710,12 +9816,32 @@ var EDUFIG = (function () {
       (e.valid ? '' : 'background:linear-gradient(90deg,rgba(244,63,94,.45),#FB7185)') + '"></i></div>' +
       '<b style="color:' + thColor(e.valid ? '#C4B5FD' : '#FDA4AF') + '">' + e.conf + '</b>';
 
-    /* 기본 / 대안 시나리오 전환 */
+    /* 기본 / 대안 시나리오 전환 — 세그먼트 토글: 방향·목표 힌트 + 신뢰도 배지 + 활성 점/'보는 중' */
     var sw2 = $('#ewSwitch');
     if (sw2) {
       sw2.innerHTML = arr.map(function (s, i) {
-        return '<button data-i="' + i + '" class="' + (i === state.ewMode ? 'on' : '') + (i ? ' alt' : '') + '">' +
-          (i === 0 ? '기본 시나리오' : '대안 시나리오') + '<i>' + s.conf + '</i></button>';
+        var on = i === state.ewMode, alt = i > 0, up = s.dir > 0;
+        var tg = '';
+        if (s.targets && s.targets.length) {
+          var t = s.targets[0], tlo = t.lo, thi = t.hi;
+          var nf = function (v) { return v >= 100 ? v.toFixed(0) : v.toFixed(2); };
+          if (tlo != null && thi != null && isFinite(tlo) && isFinite(thi)) {
+            tg = (Math.abs(thi - tlo) < 0.005) ? '$' + nf(thi) : '$' + nf(tlo) + '~' + nf(thi);
+          }
+        }
+        var lbl = String(s.label || '').replace(' (규칙 위반)', '');
+        var dirTxt = up ? '상승' : '하락';
+        var hint = dirTxt + (tg ? ' · 목표 ' + tg : '');
+        var full = (alt ? '대안' : '기본') + ' 시나리오 · ' + lbl + ' · 신뢰도 ' + s.conf +
+          (tg ? ' · 1차 목표 ' + tg : '') + (s.next ? ' · ' + s.next : '');
+        return '<button type="button" data-i="' + i + '" role="tab" aria-selected="' + (on ? 'true' : 'false') +
+          '" class="esb' + (on ? ' on' : '') + (alt ? ' alt' : '') + '" title="' + full.replace(/"/g, '”') + '">' +
+          '<span class="es-top"><i class="es-dot" aria-hidden="true"></i>' +
+          '<b class="es-t">' + (alt ? '대안' : '기본') + ' 시나리오</b>' +
+          '<span class="es-c">' + s.conf + '</span>' +
+          (on ? '<span class="es-now">보는 중</span>' : '') + '</span>' +
+          '<span class="es-h"><i class="' + (up ? 'up' : 'dn') + '" aria-hidden="true">' + (up ? '▲' : '▼') + '</i>' +
+          hint.replace(/"/g, '”') + '</span></button>';
       }).join('');
     }
     var chips = $('#ewChips');
@@ -12119,6 +12245,19 @@ var EDUFIG = (function () {
       toggleScanPreset(b.dataset.f);
     };
     syncScanTabs();   /* 초기 상태(전체 · 프리셋 없음)를 aria·data 속성에도 반영 */
+    /* 설명란(전략 가이드 · 프리셋 안내)은 종목 목록 아래 접기/펼치기 — 상태는 브라우저에 저장 */
+    var siT = $('#siToggle'), siBox = $('#sideInfo');
+    if (siT && siBox) {
+      var siApply = function (open, save) {
+        siBox.classList.toggle('open', !!open);
+        siT.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if (save) { try { localStorage.setItem('apex.side.info.v1', open ? '1' : '0'); } catch (e) {} }
+      };
+      var siStart = false;
+      try { siStart = localStorage.getItem('apex.side.info.v1') === '1'; } catch (e) {}
+      siApply(siStart, false);
+      siT.onclick = function () { siApply(!siBox.classList.contains('open'), true); };
+    }
     $('#sortSel').onchange = function () { state.sort = this.value; renderScanner(); };
     $('#listSearch').oninput = function () { state.listQ = this.value; renderScanner(); };
     $('#tf').onclick = function (e) {

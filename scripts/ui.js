@@ -820,15 +820,19 @@
     return { buy: buy && !sell, sell: sell, held: held, why: why, kind: kind };
   }
   function scanCounts(scoped) {
-    var c = { all: 0, buy: 0, sell: 0, entry: 0, held: 0, blocked: 0, cool: 0, fav: 0 };
+    var c = { all: 0, buy: 0, entryBuy: 0, hold: 0, wait: 0, sell: 0, entry: 0, held: 0, blocked: 0, cool: 0, fav: 0 };
     M.tickers.forEach(function (x) {
       var a = A[x.t]; if (!a) return;
       if (scoped && !presetMembers(a)) return;          /* 프리셋 안에서만 집계 */
       c.all++;
       if (isWatch(a.sym)) c.fav++;
       var g = sigOf(a);
-      if (g.buy) c.buy++;
+      if (g.buy) {
+        c.buy++;
+        if (g.held) c.hold++; else c.entryBuy++;       /* 신규 진입 매수 / 보유시홀드 */
+      }
       if (g.sell) c.sell++;
+      if (!g.buy && !g.sell) c.wait++;                  /* 관망 — 살 자리도 팔 자리도 아님 */
       var st = state.strategy === 'swing' ? a.swing : a.trendPlan;
       if (st && st.signal) c.entry++;
       if (g.held) c.held++;
@@ -908,7 +912,10 @@
     return true;
   }
   function filterMembers(a) {
-    if (state.filter === 'buy') return sigOf(a).buy;
+    var g;
+    if (state.filter === 'buy') { g = sigOf(a); return g.buy && !g.held; }   /* 신규 진입 매수 */
+    if (state.filter === 'hold') { g = sigOf(a); return g.buy && g.held; }   /* 보유시홀드 */
+    if (state.filter === 'wait') { g = sigOf(a); return !g.buy && !g.sell; } /* 관망 */
     if (state.filter === 'sell') return sigOf(a).sell;
     if (state.filter === 'fav') return isWatch(a.sym);
     return true;
@@ -954,8 +961,10 @@
     return '';
   }
   function filterName() {
-    if (state.filter === 'buy') return '매수 신호';
-    if (state.filter === 'sell') return '매도 신호';
+    if (state.filter === 'buy') return '매수';
+    if (state.filter === 'hold') return '보유시홀드';
+    if (state.filter === 'wait') return '관망';
+    if (state.filter === 'sell') return '매도';
     if (state.filter === 'fav') return '관심';
     return '전체';
   }
@@ -970,7 +979,7 @@
       if (state.filter !== 'all') bits.push(filterName() + ' 교집합 <b>' + shown + '</b>종목');
       return bits.join(' · ');
     }
-    if (state.filter === 'buy' || state.filter === 'sell') {
+    if (state.filter === 'buy' || state.filter === 'hold' || state.filter === 'sell') {
       return '<b>' + stratName + ' · ' + filterName() + '</b> — 백테스트와 같은 전략 조건으로 집계 · ' +
         '진입 조건 충족 <b>' + c.entry + '</b> · 보유 중 <b>' + c.held + '</b> · 청산/진입 제한 <b>' + c.blocked + '</b>' +
         (c.cool ? ' · 손절 후 재진입 대기 <b>' + c.cool + '</b>' : '') + ' · 마지막 종가 기준';
@@ -978,7 +987,7 @@
     if (state.filter === 'fav') {
       return '<b>관심종목</b> ' + state.watch.length + '종목 · 지금 ' + shown + '종목 표시 · 프리셋을 함께 켜면 교집합으로 좁혀집니다';
     }
-    return '상단 탭(전체 · 매수 · 매도 · 관심)과 프리셋은 함께 적용됩니다 — 프리셋을 다시 누르면 해제 · 검색·정렬과 함께 적용';
+    return '상단 탭(전체 · 매수 · 홀드 · 관망 · 매도 · 관심)과 프리셋은 함께 적용됩니다 — 프리셋을 다시 누르면 해제 · 검색·정렬과 함께 적용';
   }
   function spark(a, upto) {
     var c = a.close, n = upto == null ? c.length : upto + 1, k = Math.min(34, n);
@@ -1078,12 +1087,18 @@
     var counts = scanCounts(presetActive());
     var scopeTxt = presetActive() ? (PRESET_META[state.preset].name + ' 안에서') : '전체 종목';
     $('#cAll').textContent = counts.all;
-    $('#cBuy').textContent = counts.buy;
+    $('#cBuy').textContent = counts.entryBuy;
     $('#cSell').textContent = counts.sell;
+    var cHd = $('#cHold'); if (cHd) cHd.textContent = counts.hold;
+    var cWt = $('#cWait'); if (cWt) cWt.textContent = counts.wait;
     var cf = $('#cFav'); if (cf) { cf.textContent = counts.fav; cf.title = scopeTxt + ' 관심종목 수'; }
-    ['#cAll', '#cBuy', '#cSell'].forEach(function (sel) {
+    ['#cAll', '#cBuy', '#cHold', '#cWait', '#cSell'].forEach(function (sel) {
       var el = $(sel); if (el) el.title = scopeTxt + ' 집계 — 프리셋을 켜면 그 안에서 다시 센다';
     });
+    var siSum = $('#siSum');
+    if (siSum) siSum.textContent = (presetActive() ? PRESET_META[state.preset].name + ' · ' : '') +
+      (state.strategy === 'swing' ? '스윙형' : '추세형') + ' · 매수 ' + counts.entryBuy + ' · 홀드 ' + counts.hold +
+      ' · 관망 ' + counts.wait + ' · 매도 ' + counts.sell;
     var pd = presetData();
     var cTop = $('#cTop30'); if (cTop) cTop.textContent = pd.nTop;
     var cQual = $('#cQual'); if (cQual) cQual.textContent = pd.nQual;
@@ -2541,12 +2556,32 @@
       (e.valid ? '' : 'background:linear-gradient(90deg,rgba(244,63,94,.45),#FB7185)') + '"></i></div>' +
       '<b style="color:' + thColor(e.valid ? '#C4B5FD' : '#FDA4AF') + '">' + e.conf + '</b>';
 
-    /* 기본 / 대안 시나리오 전환 */
+    /* 기본 / 대안 시나리오 전환 — 세그먼트 토글: 방향·목표 힌트 + 신뢰도 배지 + 활성 점/'보는 중' */
     var sw2 = $('#ewSwitch');
     if (sw2) {
       sw2.innerHTML = arr.map(function (s, i) {
-        return '<button data-i="' + i + '" class="' + (i === state.ewMode ? 'on' : '') + (i ? ' alt' : '') + '">' +
-          (i === 0 ? '기본 시나리오' : '대안 시나리오') + '<i>' + s.conf + '</i></button>';
+        var on = i === state.ewMode, alt = i > 0, up = s.dir > 0;
+        var tg = '';
+        if (s.targets && s.targets.length) {
+          var t = s.targets[0], tlo = t.lo, thi = t.hi;
+          var nf = function (v) { return v >= 100 ? v.toFixed(0) : v.toFixed(2); };
+          if (tlo != null && thi != null && isFinite(tlo) && isFinite(thi)) {
+            tg = (Math.abs(thi - tlo) < 0.005) ? '$' + nf(thi) : '$' + nf(tlo) + '~' + nf(thi);
+          }
+        }
+        var lbl = String(s.label || '').replace(' (규칙 위반)', '');
+        var dirTxt = up ? '상승' : '하락';
+        var hint = dirTxt + (tg ? ' · 목표 ' + tg : '');
+        var full = (alt ? '대안' : '기본') + ' 시나리오 · ' + lbl + ' · 신뢰도 ' + s.conf +
+          (tg ? ' · 1차 목표 ' + tg : '') + (s.next ? ' · ' + s.next : '');
+        return '<button type="button" data-i="' + i + '" role="tab" aria-selected="' + (on ? 'true' : 'false') +
+          '" class="esb' + (on ? ' on' : '') + (alt ? ' alt' : '') + '" title="' + full.replace(/"/g, '”') + '">' +
+          '<span class="es-top"><i class="es-dot" aria-hidden="true"></i>' +
+          '<b class="es-t">' + (alt ? '대안' : '기본') + ' 시나리오</b>' +
+          '<span class="es-c">' + s.conf + '</span>' +
+          (on ? '<span class="es-now">보는 중</span>' : '') + '</span>' +
+          '<span class="es-h"><i class="' + (up ? 'up' : 'dn') + '" aria-hidden="true">' + (up ? '▲' : '▼') + '</i>' +
+          hint.replace(/"/g, '”') + '</span></button>';
       }).join('');
     }
     var chips = $('#ewChips');
@@ -4950,6 +4985,19 @@
       toggleScanPreset(b.dataset.f);
     };
     syncScanTabs();   /* 초기 상태(전체 · 프리셋 없음)를 aria·data 속성에도 반영 */
+    /* 설명란(전략 가이드 · 프리셋 안내)은 종목 목록 아래 접기/펼치기 — 상태는 브라우저에 저장 */
+    var siT = $('#siToggle'), siBox = $('#sideInfo');
+    if (siT && siBox) {
+      var siApply = function (open, save) {
+        siBox.classList.toggle('open', !!open);
+        siT.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if (save) { try { localStorage.setItem('apex.side.info.v1', open ? '1' : '0'); } catch (e) {} }
+      };
+      var siStart = false;
+      try { siStart = localStorage.getItem('apex.side.info.v1') === '1'; } catch (e) {}
+      siApply(siStart, false);
+      siT.onclick = function () { siApply(!siBox.classList.contains('open'), true); };
+    }
     $('#sortSel').onchange = function () { state.sort = this.value; renderScanner(); };
     $('#listSearch').oninput = function () { state.listQ = this.value; renderScanner(); };
     $('#tf').onclick = function (e) {
