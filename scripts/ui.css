@@ -2558,3 +2558,156 @@ html[data-theme="light"] .theme-btn:hover{background:#E0F2FE;border-color:rgba(1
   .theme-btn .th-tx{display:none}
 }
 /* <<< LIGHT-THEME MANUAL <<< */
+
+/* ============================================================
+   초보자 가이드 3종 (2026-11-27)
+   ① 상단 '초보자 3단계 보는 법' 접기/펼치기 박스
+   ② 종목 카드(hero) 내부 '한눈 행동 요약 3줄'
+   ③ 좌측 스캐너 '기법별 매수·손절·매도 3줄 가이드'
+   다크 기본값 + 아래쪽 light 전용 규칙을 함께 둔다.
+   ============================================================ */
+
+/* 용어 풀이 — 라벨 옆 작은 부제 */
+.tm{font-style:normal;font-weight:500;font-size:10.5px;letter-spacing:-.01em;color:var(--txt4);margin-left:4px;white-space:nowrap}
+.kpi .lab .tm{display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}
+@media (max-width:900px){.kpi .lab .tm{display:none}}
+
+/* ---------- ① 초보자 3단계 보는 법 ---------- */
+.begin-card{
+  padding:0;overflow:hidden;
+  background:linear-gradient(180deg,rgba(56,189,248,.075),rgba(56,189,248,.012));
+  border:1px solid rgba(56,189,248,.22);
+}
+.bg-head{
+  display:flex;align-items:center;gap:9px;width:100%;padding:10px 14px;
+  text-align:left;color:var(--txt);border:0;background:none;cursor:pointer;
+}
+.bg-head:hover{background:rgba(56,189,248,.06)}
+.bg-ico{font-size:14px;line-height:1;flex:0 0 auto}
+.bg-t{font-size:12.5px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;color:var(--txt)}
+.bg-s{
+  flex:1 1 auto;min-width:0;font-size:11.5px;color:var(--txt3);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.bg-cv{flex:0 0 auto;font-size:11px;font-weight:600;color:var(--cyan);white-space:nowrap}
+.bg-head svg{flex:0 0 auto;width:13px;height:13px;color:var(--txt3);transition:transform .18s}
+.begin-card.collapsed .bg-head svg{transform:rotate(-90deg)}
+.bg-body{padding:0 12px 12px}
+.begin-card.collapsed .bg-body{display:none}
+.bg-steps{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;
+  margin:0;padding:0;list-style:none;
+}
+.bg-step{
+  display:flex;gap:8px;align-items:flex-start;min-width:0;
+  padding:9px 10px;border-radius:10px;
+  border:1px solid var(--line);background:rgba(255,255,255,.028);
+}
+.bg-step em{
+  flex:0 0 auto;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;
+  font-style:normal;font-size:10.5px;font-weight:700;line-height:1;
+  color:#0B0E14;background:var(--cyan);
+}
+.bg-step div{min-width:0}
+.bg-step b{display:block;font-size:12px;font-weight:700;margin-bottom:2px;color:var(--txt)}
+.bg-step span{display:block;font-size:11px;line-height:1.5;color:var(--txt2);word-break:keep-all;overflow-wrap:anywhere}
+.bg-step span b{display:inline;font-size:11px;color:var(--txt)}
+.bg-gloss{
+  display:flex;flex-wrap:wrap;gap:5px 14px;margin-top:9px;padding-top:8px;
+  border-top:1px dashed var(--line);font-size:11px;color:var(--txt3);
+}
+.bg-gloss span{white-space:normal}
+.bg-gloss b{color:var(--txt2);font-weight:700;margin-right:3px}
+
+/* ---------- ② 종목 카드 한눈 행동 요약 ---------- */
+.begin-sum{
+  grid-column:1/-1;display:none;
+  grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;
+  margin-top:2px;border:1px solid var(--line);border-radius:12px;overflow:hidden;
+  background:var(--line);
+}
+.begin-sum.on{display:grid}
+.bs-cell{min-width:0;padding:9px 12px;background:var(--card2)}
+.bs-k{
+  display:flex;align-items:center;gap:5px;margin-bottom:3px;
+  font-size:10.5px;font-weight:700;letter-spacing:-.01em;color:var(--txt3);
+}
+.bs-k i{
+  flex:0 0 auto;font-style:normal;font-size:11.5px;font-weight:700;line-height:1;
+  color:var(--cyan);
+}
+.bs-v{font-size:12.5px;font-weight:700;line-height:1.4;color:var(--txt);word-break:keep-all;overflow-wrap:anywhere}
+.bs-v .big{font-size:13.5px}
+.bs-v.pos{color:var(--up)}
+.bs-v.neg{color:var(--dn)}
+.bs-v.warnv{color:var(--amber)}
+.bs-v.dim{color:var(--txt2)}
+.bs-n{display:block;margin-top:2px;font-size:10.5px;line-height:1.45;color:var(--txt3);word-break:keep-all;overflow-wrap:anywhere}
+.bs-n b{color:var(--txt2);font-weight:600}
+.bs-cell.tone-buy{background:linear-gradient(180deg,rgba(16,185,129,.10),rgba(16,185,129,.03))}
+.bs-cell.tone-sell{background:linear-gradient(180deg,rgba(244,63,94,.10),rgba(244,63,94,.03))}
+.bs-cell.tone-warn{background:linear-gradient(180deg,rgba(245,158,11,.11),rgba(245,158,11,.03))}
+.bs-cell.tone-wait{background:linear-gradient(180deg,rgba(148,163,184,.09),rgba(148,163,184,.02))}
+.bs-cell.tone-buy .bs-k i{color:var(--up)}
+.bs-cell.tone-sell .bs-k i{color:var(--dn)}
+.bs-cell.tone-warn .bs-k i{color:var(--amber)}
+.bs-cell.tone-wait .bs-k i{color:var(--cyan)}
+
+/* ---------- ③ 스캐너 기법별 3줄 가이드 ---------- */
+.pguide{
+  display:none;margin:0 12px 10px;padding:8px 10px 9px;
+  border:1px solid var(--line);border-radius:10px;
+  background:rgba(56,189,248,.055);
+  font-size:11.5px;line-height:1.5;
+}
+.pguide.on{display:block}
+.pg-h{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  margin-bottom:5px;font-size:11px;font-weight:700;color:var(--cyan);letter-spacing:-.01em;
+}
+.pg-h .pg-tag{
+  font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:99px;
+  border:1px solid rgba(245,158,11,.45);color:var(--amber);background:rgba(245,158,11,.10);
+}
+.pg-h .pg-tag.live{border-color:rgba(16,185,129,.45);color:var(--up);background:rgba(16,185,129,.10)}
+.pg-row{display:grid;grid-template-columns:44px minmax(0,1fr);gap:6px;padding:2px 0;align-items:start}
+.pg-row b{
+  font-size:10px;font-weight:700;line-height:1.5;letter-spacing:-.01em;color:var(--txt3);
+  white-space:nowrap;
+}
+.pg-row.buy b{color:var(--up)}
+.pg-row.stop b{color:var(--dn2)}
+.pg-row.sell b{color:var(--cyan)}
+.pg-row span{color:var(--txt2);word-break:keep-all;overflow-wrap:anywhere}
+.pg-row span em{font-style:normal;color:var(--txt3)}
+.pg-foot{margin-top:5px;padding-top:5px;border-top:1px dashed var(--line);font-size:10.5px;line-height:1.45;color:var(--txt4);word-break:keep-all}
+
+/* ---------- 라이트 테마 ---------- */
+html[data-theme="light"] .begin-card{
+  background:linear-gradient(180deg,#F1F8FE,#FFFFFF);
+  border-color:rgba(14,116,144,.22);
+}
+html[data-theme="light"] .bg-head:hover{background:rgba(14,116,144,.06)}
+html[data-theme="light"] .bg-step{background:#FFFFFF;border-color:rgba(15,23,42,.10)}
+html[data-theme="light"] .bg-step em{background:#0E7490;color:#FFFFFF}
+html[data-theme="light"] .bs-cell{background:#FFFFFF}
+html[data-theme="light"] .bs-cell.tone-buy{background:linear-gradient(180deg,#ECFDF5,#FFFFFF)}
+html[data-theme="light"] .bs-cell.tone-sell{background:linear-gradient(180deg,#FFF1F3,#FFFFFF)}
+html[data-theme="light"] .bs-cell.tone-warn{background:linear-gradient(180deg,#FFF8EC,#FFFFFF)}
+html[data-theme="light"] .bs-cell.tone-wait{background:linear-gradient(180deg,#F4F7FB,#FFFFFF)}
+html[data-theme="light"] .bs-v.pos{color:#0B7A57}
+html[data-theme="light"] .bs-v.neg{color:#B31340}
+html[data-theme="light"] .bs-v.warnv{color:#9A5B00}
+html[data-theme="light"] .pguide{background:#F1F8FE;border-color:rgba(14,116,144,.18)}
+html[data-theme="light"] .pg-row span{color:#3B4A5E}
+html[data-theme="light"] .pg-row.buy b{color:#0B7A57}
+html[data-theme="light"] .pg-row.stop b{color:#B31340}
+html[data-theme="light"] .pg-row.sell b{color:#0E7490}
+
+@media (max-width:900px){
+  .bg-steps{grid-template-columns:1fr}
+  .bg-gloss{gap:4px 12px}
+  .begin-sum{grid-template-columns:1fr}
+  .bs-cell{padding:8px 11px}
+  .bg-s{display:none}
+}

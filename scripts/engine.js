@@ -663,6 +663,8 @@
             ② W 쌍바닥 넥라인 상향 돌파              (보조 — REPORT_W_BOTTOM.md 권고안)
                전일 종가 ≤ N, 당일 종가 > N → 신호, 다음 거래일 시가 매수
             ① ② 모두 QQQ 종가 > QQQ 200일 단순이동평균 조건에서만
+            ★ 시장 예외(I4 A안): QQQ가 200일선 아래여도 QQQ RSI(2) < 5(극단 패닉)인 날은 허용
+              99종목 5년 스윙 +104.99% → +144.86% · 중앙 +43.50% → +73.94% · 승률 57.77% (REPORT_SWING_IMPROVE.md 축3)
             ★ 손절(진입가 아래)로 청산한 뒤 10거래일은 그 종목 신규 진입 금지 (① ② 모두)
               — REPORT_SWING_LOSS.md §6-1 I4안. 같은 종목에서 손절이 연달아 나는 것을 막는다
        청산 고정 보유기간 없음 — 종가에 아래 조건을 확인해 다음 날 시가 매도
@@ -679,6 +681,7 @@
      ============================================================ */
   var SWING_P = {
     rsiLen: 2, rsiEntry: 10, qqqMa: 200, useMarketFilter: true,
+    mktRsiExc: 5,              /* 시장 예외 — QQQ가 200일선 아래여도 QQQ RSI(2)가 이 값 미만(극단 패닉)이면 진입 허용 (I4 A안) */
     coolLoss: 10,              /* 손절(진입가 아래) 청산 후 그 종목 신규 진입 금지 거래일 — 0이면 끔 */
     ma20Exit: true,            /* 이익 상태에서 종가 < 20일선이 2거래일 연속이면 다음 날 시가 청산 */
     ma20Confirm: 2,            /* 20일선 이탈 확인 거래일 수 — 1이면 기존(하루 이탈 즉시) */
@@ -695,15 +698,22 @@
     if (o) for (k in o) out[k] = o[k];
     return out;
   }
-  /* QQQ 200일선 시장 필터 — 날짜별 맵 (MARKET.asOf 가 바뀌면 다시 계산) */
+  /* QQQ 200일선 시장 필터 — 날짜별 맵 (MARKET.asOf 가 바뀌면 다시 계산)
+     I4 A안: `QQQ > 200일선` 단독이 아니라 `QQQ > 200일선 OR QQQ RSI(2) < mktRsiExc(5)`.
+     지수가 200일선 아래여도 공포가 극단인 날은 눌림 매수를 허용 — 99종목 5년 스윙
+     +104.99% → +144.86%(중앙 +73.94% · 승률 57.77%)로 개선(REPORT_SWING_IMPROVE.md 축3). */
   function swingMarketMap(o) {
     var MKT = (root && root.MARKET) || null;
     if (!o.useMarketFilter || !MKT || !MKT.series || !MKT.series.QQQ || !MKT.dates) return null;
-    var key = (MKT.asOf || 'na') + '|' + o.qqqMa;
+    var exc = o.mktRsiExc == null ? 5 : o.mktRsiExc;
+    var key = (MKT.asOf || 'na') + '|' + o.qqqMa + '|' + exc;
     if (_swingMap && _swingMap.key === key) return _swingMap.map;
-    var qc = MKT.series.QQQ.c, ma = sma(qc, o.qqqMa), map = {};
+    var qc = MKT.series.QQQ.c, ma = sma(qc, o.qqqMa), qr = exc > 0 ? rsi(qc, 2) : null, map = {};
     for (var i = 0; i < MKT.dates.length; i++) {
-      map[MKT.dates[i]] = { qqq: qc[i], ma: ma[i], ok: (ma[i] == null ? true : qc[i] > ma[i]) };
+      var above = (ma[i] == null ? true : qc[i] > ma[i]);
+      var r2 = qr ? qr[i] : null;
+      var os = (exc > 0 && r2 != null && r2 < exc);   /* 극단 과매도 예외 발동 */
+      map[MKT.dates[i]] = { qqq: qc[i], ma: ma[i], r2: r2, above: above, os: os, ok: (above || os) };
     }
     _swingMap = { key: key, map: map };
     return map;
@@ -793,10 +803,17 @@
     var wNeck = null, wGap = null;
     if (breakToday) { wNeck = w.brkinfo[i].neck; wGap = series.c[i] / wNeck - 1; }
     else if (wnow.pat) { wNeck = wnow.pat.neck; wGap = series.c[i] / wNeck - 1; }
+    /* 시장 필터 표기 — I4 A안(200일선 위 OR RSI(2) 극단 패닉) */
+    var exc = o.mktRsiExc == null ? 0 : o.mktRsiExc;
+    var mktTxt = 'QQQ ' + o.qqqMa + '일선 위' + (exc > 0 ? ' 또는 QQQ RSI(2)<' + exc + ' 극단 패닉' : '');
+    var mktWhy = ent.marketOk
+      ? (rec && rec.above ? 'QQQ ' + o.qqqMa + '일선 위' : 'QQQ ' + o.qqqMa + '일선 아래지만 QQQ RSI(2) ' + (rec && rec.r2 != null ? rec.r2.toFixed(1) : '—') + ' 극단 패닉 — 예외 허용')
+      : 'QQQ ' + o.qqqMa + '일선 아래';
     return {
       strategy: 'swing', date: series.d[i], signal: !!sig, route: route, routeRaw: ent.routeRaw, state: ent.state,
       rsi2: rNow, rsi2Prev: r2[i - 1], r14: r14, rsiOk: ent.rsiOk, ma5: ind.ma5[i], ma20: ind.ma20[i],
       qqq: rec ? rec.qqq : null, qqqMa: rec ? rec.ma : null, marketOk: mktOk,
+      qqqRsi2: rec ? rec.r2 : null, marketAbove: rec ? !!rec.above : null, marketOs: !!(rec && rec.os), marketWhy: mktWhy,
       wStage: wnow.stage, wBreak: breakToday, wNeck: wNeck, wGap: wGap, wPat: wnow.pat,
       coolLeft: coolLeft, coolTotal: o.coolLoss || 0, coolActive: coolLeft > 0,
       coolFromDate: coolLeft > 0 ? series.d[lsi] : null,
@@ -809,21 +826,21 @@
       ma20Gate: o.ma20Gate, ma20Confirm: o.ma20Confirm, rsiEntry: o.rsiEntry,
       exitNow: null,                          /* 보유 중일 때만 — 이익 상태 & 20일선 2일 연속 아래 */
       exitRule: '손절 min(' + o.stopAtr + ' ATR, -' + Math.round(o.stopCap * 100) + '%) · 이익(+' + Math.round(o.ma20Gate * 100) + '% 이상) 중 20일선 아래 2거래일 연속 마감 → 다음 날 시가 청산 (고정 보유기간 없음)',
-      entryRule: 'RSI(2) ' + o.rsiEntry + ' 미만 (주력) · W 쌍바닥 넥라인 돌파 (보조) · 둘 다 QQQ ' + o.qqqMa + '일선 위 — 다음 날 시가 매수' +
+      entryRule: 'RSI(2) ' + o.rsiEntry + ' 미만 (주력) · W 쌍바닥 넥라인 돌파 (보조) · 둘 다 ' + mktTxt + ' — 다음 날 시가 매수' +
         (o.coolLoss > 0 ? ' · 손절 후 ' + o.coolLoss + '거래일 재진입 금지' : ''),
       reason: sig
         ? (route === 'W돌파'
           ? 'W 쌍바닥 넥라인 ' + usdNeck(wNeck) + ' 상향 돌파 — 보조 루트 (다음 시가 매수)'
-          : 'RSI(2) ' + rNow.toFixed(1) + ' — 과매도 극단 · QQQ 200일선 위 (다음 시가 매수)')
+          : 'RSI(2) ' + rNow.toFixed(1) + ' — 과매도 극단 · ' + mktWhy + ' (다음 시가 매수)')
         : (ent.state === 'cool'
           ? '손절 후 재진입 대기 (' + coolLeft + '/' + o.coolLoss + '일) — ' + series.d[lsi] + ' 손절 청산 이후 신규 진입 금지' +
             (ent.routeRaw ? ' · ' + (ent.routeRaw === 'W돌파' ? 'W 돌파' : 'RSI(2) ' + (rNow == null ? '—' : rNow.toFixed(1))) + ' 신호는 나왔지만 대기' : '') +
-            (mktOk ? '' : ' · QQQ ' + o.qqqMa + '일선 아래')
+            (mktOk ? '' : ' · ' + mktWhy)
           : (ent.state === 'blocked'
-            ? (route === 'W돌파' ? 'W 넥라인 돌파는 나왔지만 QQQ 200일선 아래 — 진입 제한'
-              : 'RSI(2) ' + (rNow == null ? '—' : rNow.toFixed(1)) + ' 과매도이나 QQQ 200일선 아래 — 진입 제한')
+            ? (route === 'W돌파' ? 'W 넥라인 돌파는 나왔지만 ' + mktWhy + ' — 진입 제한'
+              : 'RSI(2) ' + (rNow == null ? '—' : rNow.toFixed(1)) + ' 과매도이나 ' + mktWhy + ' — 진입 제한')
             : 'RSI(2) ' + (rNow == null ? '—' : rNow.toFixed(1)) + ' — 기준 ' + o.rsiEntry + ' 미만 대기' +
-              (mktOk ? ' · QQQ 200일선 위' : ' · QQQ 200일선 아래')))
+              ' · ' + mktWhy))
     };
   }
   function usdNeck(v) {

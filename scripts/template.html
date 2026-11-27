@@ -83,6 +83,7 @@
       <button data-f="bk" title="거래량 돌파 — 종가가 직전 20봉 최고가를 넘고(20일 신고가 돌파) 그날 거래량이 20일 평균의 1.5배 이상인 종목 · 최근 3거래일 내 발생 기준 · 2026-11-25 종가 기준 · 참고용(매매 조건 미적용) · 다시 누르면 해제">거래량 돌파<span class="c" id="cBk">0</span></button>
     </div>
     <div class="preset-note" id="presetNote">상단 탭(전체 · 매수 · 매도 · 관심)과 프리셋은 함께 적용됩니다 — 프리셋을 다시 누르면 해제 · 검색·정렬과 함께 적용</div>
+    <div class="pguide" id="presetGuide" aria-live="polite"></div>
     <div class="side-tools">
       <input id="listSearch" type="text" placeholder="목록 내 검색" autocomplete="off" spellcheck="false">
       <select id="sortSel" title="정렬 기준 · 상단 추세형/스윙형 전략 버튼을 누르면 그 전략의 추천 순위로 자동 전환됩니다">
@@ -140,7 +141,30 @@
       <div class="macro-events" id="macroEvents" aria-label="주요 경제지표 발표 일정"></div>
     </section>
 
-    <section class="fg-card card" id="fgCard" aria-label="CNN 공포·탐욕 지수">
+    <section class="begin-card card" id="beginCard" aria-label="초보자 3단계 보는 법">
+      <button class="bg-head" id="beginToggle" type="button" aria-expanded="true" aria-controls="beginBody" title="초보자 3단계 보는 법 접기/펼치기">
+        <span class="bg-ico" aria-hidden="true">🎓</span>
+        <b class="bg-t">초보자 3단계 보는 법</b>
+        <span class="bg-s">장세 확인 → 전략 신호 확인 → 손절가 먼저 정하고 진입</span>
+        <span class="bg-cv">접기</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="bg-body" id="beginBody">
+        <ol class="bg-steps">
+          <li class="bg-step"><em>①</em><div><b>장세 확인</b><span>위 공포·탐욕 시계와 QQQ가 200일선 위인지 봅니다. 공포(0~25)면 관망, 200일선 위면 매매 가능.</span></div></li>
+          <li class="bg-step"><em>②</em><div><b>전략 신호 확인</b><span>왼쪽 목록의 <b>매수 · 보유시홀드 · 관망 · 매도</b> 칩만 봅니다. 종합점수는 차트 참고 점수일 뿐입니다.</span></div></li>
+          <li class="bg-step"><em>③</em><div><b>손절가 먼저 정하고 진입</b><span>가운데 종목 카드의 손절가를 먼저 확인하고, 그 아래로 깨지면 미련 없이 나옵니다.</span></div></li>
+        </ol>
+        <div class="bg-gloss">
+          <span><b>ATR</b> 하루 평균 변동폭 → 손절폭 계산</span>
+          <span><b>MDD</b> 최대 낙폭(고점에서 가장 많이 떨어진 폭)</span>
+          <span><b>RSI(2)</b> 단기 과매도 점수 (낮을수록 많이 빠짐)</span>
+          <span><b>PF</b> 총이익÷총손실 (1.5 이상이면 양호)</span>
+        </div>
+      </div>
+    </section>
+
+
       <div class="fg-top">
         <div class="fg-title">
           <span class="fg-h">Fear &amp; Greed Index<em>공포·탐욕 시계</em></span>
@@ -184,6 +208,7 @@
         <div class="sig-meta"><b id="sigName">—</b><span id="sigSub">차트 참고 점수</span>
           <i class="sig-note" id="sigNote">개별 차트 참고 점수 · 실제 진입은 아래 전략 신호 기준</i></div>
       </div>
+      <div class="begin-sum" id="heroSum" aria-label="초보자 한눈 행동 요약"></div>
       <div class="div-strip" id="divStrip"></div>
       <div class="div-strip bk-strip" id="bkStrip"></div>
       <div class="plan-grid" id="planGrid">
@@ -209,7 +234,7 @@
             <span class="pb-state none" id="phState">포지션 없음</span>
           </div>
           <div class="pb-rows">
-            <div class="pb-row"><span class="pb-k">초기 손절가</span><b id="phStop">—</b><span class="pb-sub" id="phStopSub">—</span></div>
+            <div class="pb-row"><span class="pb-k">초기 손절가 <em class="tm" title="ATR = 하루 평균 변동폭. 손절폭을 종목 변동성에 맞춰 정하는 데 씁니다">변동성 기준</em></span><b id="phStop">—</b><span class="pb-sub" id="phStopSub">—</span></div>
             <div class="pb-row"><span class="pb-k">트레일링 스톱 발동</span><b id="phTrail">—</b><span class="pb-sub" id="phTrailSub">—</span></div>
             <div class="pb-row"><span class="pb-k">현재 청산 기준가</span><b id="phExit">미발동</b><span class="pb-sub" id="phExitSub">—</span></div>
           </div>
@@ -319,7 +344,7 @@
         </div>
         <div class="nx-item nx-swing">
           <div class="nx-lab"><em>02</em><b>매매 실행 시</b><span>스윙 특화 전략</span></div>
-          <p>단기·중기 관점에서 적극적 매매를 실행할 경우에는 변동성 통제와 손익비 관리가 반영된 <b>스윙 특화 전략</b>을 보조 지표로 활용하시기 바랍니다.</p>
+          <p>단기·중기 관점에서 적극적 매매를 실행할 경우에는 변동성 통제와 손익비 관리가 반영된 <b>스윙 특화 전략</b>을 보조 지표로 활용하시기 바랍니다. <em class="tm" style="display:block;margin:4px 0 0;white-space:normal;line-height:1.5">스윙형 진입 조건 · RSI(2) 10 미만 + QQQ 200일선 위 — 단, QQQ RSI(2) 5 미만(극단 패닉)이면 200일선 아래여도 허용</em></p>
         </div>
       </div>
       <p class="nx-foot">본 화면의 백테스트·모의매매 결과는 과거 데이터 기반 참고용 시뮬레이션이며, 특정 종목의 매수·매도 권유가 아닙니다.</p>
@@ -376,7 +401,7 @@
         <div class="sub2" id="k2t"></div>
       </div>
       <div class="card kpi">
-        <div class="lab">최대낙폭</div>
+        <div class="lab">최대낙폭 <em class="tm" title="MDD(Maximum Drawdown) — 고점 대비 가장 많이 떨어진 폭">MDD · 고점 대비 최대 하락</em></div>
         <b id="k3">—</b>
         <canvas class="mini" id="m3"></canvas>
         <div class="sub" id="k3s"></div>
