@@ -185,6 +185,9 @@ input,select{font-family:inherit;color:inherit}
 .seg-pre button.on{color:#DCF0FF;background:rgba(56,189,248,.15);border-color:rgba(56,189,248,.55);
   box-shadow:0 0 0 1px rgba(56,189,248,.12) inset}
 .seg-pre button.on .c{color:rgba(220,240,255,.82)}
+/* 켜진 프리셋은 같은 버튼을 다시 누르면 해제 — × 힌트로 표시 (상단 탭과 교집합으로 함께 적용) */
+.seg-pre button.on::after{content:'×';margin-left:5px;font-size:11px;line-height:1;opacity:.6}
+.seg-pre[data-on="1"] button.on{box-shadow:0 0 0 1px rgba(56,189,248,.18) inset,0 0 18px -10px rgba(56,189,248,1)}
 .preset-note{padding:0 13px 9px;font-size:12px;line-height:1.45;color:var(--txt4);
   overflow-wrap:anywhere}
 .preset-note b{color:var(--txt2);font-weight:500}
@@ -1324,6 +1327,7 @@ body{
   box-shadow:0 0 0 1px rgba(56,189,248,.18) inset, 0 0 22px -12px rgba(56,189,248,1);
 }
 .seg-pre button.on .c{color:#BEEBFF}
+@media (max-width:420px){.seg-pre button{font-size:11.5px;padding:5px 8px}.seg-pre button.on::after{font-size:10px;margin-left:4px}}
 
 /* 입력 · 셀렉트 */
 .search input,.side-tools input,.side-tools select,.fp-search input,.pt-acct input,.pt-qty-row input{
@@ -10133,8 +10137,16 @@ var EDUFIG = (function () {
       chart.draw();
     };
     function syncScanTabs() {
-      $$('#filterTabs button').forEach(function (x) { x.classList.toggle('on', x.dataset.f === state.filter); });
-      $$('#presetTabs button').forEach(function (x) { x.classList.toggle('on', !!state.preset && x.dataset.f === state.preset); });
+      $$('#filterTabs button').forEach(function (x) {
+        var on = x.dataset.f === state.filter;
+        x.classList.toggle('on', on);
+        x.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+      $$('#presetTabs button').forEach(function (x) {
+        var on = !!state.preset && x.dataset.f === state.preset;
+        x.classList.toggle('on', on);
+        x.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
       var pt = $('#presetTabs'); if (pt) pt.setAttribute('data-on', presetActive() ? '1' : '0');
     }
     function setScanFilter(f) {
@@ -10159,6 +10171,7 @@ var EDUFIG = (function () {
       if (!b || !b.dataset.f) return;
       toggleScanPreset(b.dataset.f);
     };
+    syncScanTabs();   /* 초기 상태(전체 · 프리셋 없음)를 aria·data 속성에도 반영 */
     $('#sortSel').onchange = function () { state.sort = this.value; renderScanner(); };
     $('#listSearch').oninput = function () { state.listQ = this.value; renderScanner(); };
     $('#tf').onclick = function (e) {

@@ -4071,8 +4071,16 @@
       chart.draw();
     };
     function syncScanTabs() {
-      $$('#filterTabs button').forEach(function (x) { x.classList.toggle('on', x.dataset.f === state.filter); });
-      $$('#presetTabs button').forEach(function (x) { x.classList.toggle('on', !!state.preset && x.dataset.f === state.preset); });
+      $$('#filterTabs button').forEach(function (x) {
+        var on = x.dataset.f === state.filter;
+        x.classList.toggle('on', on);
+        x.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+      $$('#presetTabs button').forEach(function (x) {
+        var on = !!state.preset && x.dataset.f === state.preset;
+        x.classList.toggle('on', on);
+        x.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
       var pt = $('#presetTabs'); if (pt) pt.setAttribute('data-on', presetActive() ? '1' : '0');
     }
     function setScanFilter(f) {
@@ -4097,6 +4105,7 @@
       if (!b || !b.dataset.f) return;
       toggleScanPreset(b.dataset.f);
     };
+    syncScanTabs();   /* 초기 상태(전체 · 프리셋 없음)를 aria·data 속성에도 반영 */
     $('#sortSel').onchange = function () { state.sort = this.value; renderScanner(); };
     $('#listSearch').oninput = function () { state.listQ = this.value; renderScanner(); };
     $('#tf').onclick = function (e) {
