@@ -11,7 +11,8 @@ scripts/data.js 를 다시 생성한다.
 엔진(engine.js)은 최근 1,255봉만 백테스트 구간으로 쓰므로, 매일 갱신해도
 백테스트 창은 항상 정확히 5년으로 유지된다.
 
-  window.MARKET = {asOf, dates[], tickers[], series{}, fundamentals{}, fearGreed{}, macro{}}
+  window.MARKET = {asOf, updatedAt, dates[], tickers[], series{}, fundamentals{}, fearGreed{}, macro{}}
+    updatedAt    : 데이터를 확인해 기록한 한국시간 'YYYY-MM-DD HH:MM' (휴장일 포함 매 실행 갱신)
     series       : 종목 102 + ^VIX + ^TNX + DXY  (off,o,h,l,c,v — 거래일 캘린더 정렬)
     fundamentals : {asOf, fetchedAt, tickers{t:{...}}}   # t.earningsDate = 다음 실적 발표일 YYYY-MM-DD (없으면 생략)
     fearGreed    : CNN 공포·탐욕 지수 {score, rating, previousClose, previous1Week,
@@ -45,10 +46,25 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 
+try:
+    from zoneinfo import ZoneInfo
+    _KST = ZoneInfo('Asia/Seoul')
+except Exception:  # tzdata 없는 환경 — UTC+9 고정
+    _KST = timezone.utc
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 RAW_DIR = os.path.join(HERE, 'raw')
 RAW_FUND = os.path.join(HERE, 'rawfund')
 DATA_JS = os.path.join(HERE, 'data.js')
+
+
+def kst_now_str():
+    """한국시간 갱신 시각 'YYYY-MM-DD HH:MM' — 화면 상단 '장마감 · 갱신' 배지에 표기한다."""
+    now = datetime.now(_KST)
+    if _KST is timezone.utc:            # tzdata 없는 환경 — UTC+9 고정
+        from datetime import timedelta
+        now = now + timedelta(hours=9)
+    return now.strftime('%Y-%m-%d %H:%M')
 TOP100 = os.path.join(HERE, 'top100.json')
 
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -831,7 +847,7 @@ def build_payload(base, tickers, charts_ok, prev, fg=None):
                           'fav': 1, 's': sec, 'sk': SECTOR_KO.get(sec, sec)})
 
     payload = {
-        'asOf': dates[-1], 'dates': dates, 'tickers': meta_list, 'series': series,
+        'asOf': dates[-1], 'updatedAt': kst_now_str(), 'dates': dates, 'tickers': meta_list, 'series': series,
         'fundamentals': {
             'asOf': f_asof,
             'fetchedAt': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
@@ -938,9 +954,14 @@ def main():
         ('%.1f (%s)' % (fgp.get('score'), fgp.get('timestamp'))) if fgp else '—'))
     if check_only:
         return 0
-    if prev and _stable(prev) == _stable(payload):
-        print('NOCHANGE: 기존 data.js 와 동일 (휴장일 등) — 쓰지 않음')
-        return 0
+    # 갱신 시각(updatedAt)만 다른 경우도 '확인 완료'를 남기기 위해 다시 쓴다 — 값이 같으면 NOCHANGE 로 알린다
+    same = False
+    if prev:
+        a_prev = dict(prev); a_new = dict(payload)
+        a_prev.pop('updatedAt', None); a_new.pop('updatedAt', None)
+        same = _stable(a_prev) == _stable(a_new)
+    if same:
+        print('NOCHANGE: 시세·지표 값은 기존 data.js 와 동일 (휴장일 등) — 갱신 시각만 기록')
 
     js = 'window.MARKET=' + json.dumps(payload, ensure_ascii=False, separators=(',', ':')) + ';\n'
     with open(DATA_JS, 'w', encoding='utf-8') as f:

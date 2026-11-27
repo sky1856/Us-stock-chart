@@ -1889,3 +1889,75 @@ body{font-variant-numeric:tabular-nums}
 .lower .eq-hint{white-space:nowrap}
 @media (max-width:1280px){ .lower .eq-hint{display:none} }
 .srow .sigb.n{color:#FCD34D;background:rgba(245,158,11,.13);border:1px solid rgba(245,158,11,.3)}
+
+/* ============================================================
+   5종 개선 — 상단 갱신 시각 · 깔끔 보기 · 스캐너 배지 · 백업/복원
+   ============================================================ */
+
+/* 장마감 배지 옆 데이터 갱신 시각 */
+.market-badge .upd{font-size:11.5px;font-weight:500;color:var(--txt3);margin-left:-3px;letter-spacing:-.01em}
+.market-badge .upd:empty{display:none}
+
+/* 깔끔 보기 토글 — 지표 토글 줄 맨 앞 */
+.clean-btn{
+  display:flex;align-items:center;gap:5px;order:-1;margin-right:3px;
+  font-size:12px;font-weight:500;color:var(--txt3);
+  border:1px solid var(--line);border-radius:7px;padding:5px 9px;
+  background:transparent;transition:.14s
+}
+.clean-btn svg{width:13px;height:13px;opacity:.7}
+.clean-btn:hover{color:var(--txt2);border-color:rgba(255,255,255,.18)}
+.clean-btn.on{color:#BEE9FF;background:rgba(56,189,248,.13);border-color:rgba(56,189,248,.46);
+  box-shadow:0 0 0 1px rgba(56,189,248,.12) inset}
+.clean-btn.on svg{opacity:1}
+.clean-btn .lbs{display:none}
+/* 깔끔 보기 중에는 숨겨진 오버레이 토글을 흐리게 */
+#toggles.clean-mode .tg[data-t=ichi],
+#toggles.clean-mode .tg[data-t=ew],
+#toggles.clean-mode .tg[data-t=bb],
+#toggles.clean-mode .tg[data-t=env],
+#toggles.clean-mode .tg[data-t=w],
+#toggles.clean-mode .tg[data-t=tri],
+#toggles.clean-mode .tg[data-t=sar]{opacity:.4}
+
+/* 스캐너 행 배지 — '시장대기' 는 4글자라 좁은 화면에서도 잘리지 않게 */
+.srow .sigb{white-space:nowrap;flex:0 0 auto;letter-spacing:-.01em}
+.srow .tk b .edot{white-space:nowrap;flex:0 0 auto;letter-spacing:-.01em}
+
+@media (max-width:900px){
+  .clean-btn{padding:5px 8px}
+  .clean-btn .lb{display:none}
+  .clean-btn .lbs{display:inline}
+  .srow .tk b .sigb,.srow .tk b .edot{font-size:10.5px;padding:1px 3px;margin-left:3px}
+  .srow .tk b .vcpb{font-size:10.5px;padding:1px 3px;margin-left:4px}
+  .market-badge .upd{font-size:11px}
+}
+
+/* 가상투자 카드 — 백업 내보내기 / 복원하기 */
+.pt-backup{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.pt-backup button{
+  display:flex;align-items:center;gap:5px;white-space:nowrap;
+  font-size:12px;font-weight:500;color:var(--txt2);background:#0E131C;
+  border:1px solid var(--line);border-radius:7px;padding:4px 9px;transition:.14s
+}
+.pt-backup button svg{width:13px;height:13px;opacity:.8}
+.pt-backup button:hover{color:var(--txt);border-color:rgba(56,189,248,.42);background:rgba(56,189,248,.08)}
+.pt-backup button:hover svg{opacity:1}
+.bk-msg{flex:1 1 100%;text-align:right;font-size:12px;line-height:1.45;color:var(--txt3);
+  letter-spacing:-.005em;word-break:keep-all}
+.bk-msg:empty{display:none}
+.bk-msg.ok{color:#6EE7B7}
+.bk-msg.err{color:#FDA4AF}
+@media (max-width:900px){
+  .paper-card .panel-h{flex-wrap:wrap;row-gap:8px}
+  .pt-backup{width:100%;justify-content:flex-start}
+  .bk-msg{text-align:left}
+}
+
+/* 1280 안팎 노트북 — 사이드바가 좁아 스캐너 행 배지가 잘리지 않도록 열 폭을 조금 조인다 */
+@media (min-width:901px) and (max-width:1366px){
+  .scan-head{grid-template-columns:26px 1fr 40px 62px 84px;gap:5px;padding:7px 10px}
+  .srow{grid-template-columns:26px 1fr 40px 62px 84px;gap:5px;padding:9px 10px}
+  .srow .spark{width:52px}
+}
+.side-foot .upd,.mfoot .upd,.upd{color:var(--txt3)}

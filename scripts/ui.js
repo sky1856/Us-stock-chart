@@ -84,7 +84,7 @@
     cur: 'NVDA', range: 128, btRange: 1255, filter: 'all', preset: '', sort: 'mc', q: '', listQ: '',
     show: { ma: true, ichi: true, bb: true, sig: true, rsi: true, macd: true, ew: true, w: true, sar: false, env: false, tri: false },
     maOn: { 5: true, 20: true, 60: true, 120: true, 240: true },
-    simIdx: 0, tool: 'cursor', ewMode: 0,
+    simIdx: 0, tool: 'cursor', ewMode: 0, clean: false,
     ewShow: { sub: true, ch: true, clu: true },
     watch: [], strategy: 'trend'
   };
@@ -110,7 +110,7 @@
 
   /* ---------------- 파라볼릭 SAR · 엔벨로프 토글 (둘 다 기본 OFF · 개인 브라우저 localStorage 저장) ---------------- */
   var XTOG_KEY = 'apex.extra.v1';
-  (function xtogRestore() {
+  function xtogRestore() {
     try {
       var o = JSON.parse(localStorage.getItem(XTOG_KEY) || '{}');
       if (o && typeof o === 'object') {
@@ -119,7 +119,8 @@
         if (o.tri === 1 || o.tri === true) state.show.tri = true;
       }
     } catch (e) { /* 저장소 차단 환경에서는 기본 OFF */ }
-  })();
+  }
+  xtogRestore();
   function xtogPersist() {
     try {
       localStorage.setItem(XTOG_KEY, JSON.stringify({ sar: state.show.sar ? 1 : 0, env: state.show.env ? 1 : 0, tri: state.show.tri ? 1 : 0 }));
@@ -132,6 +133,32 @@
     });
   }
   xtogSync();
+
+  /* ---------------- 깔끔 보기 (기본 OFF · 개인 브라우저 localStorage 저장) ----------------
+     켜면 구름대·볼린저·엔벨로프·엘리어트(피보나치·채널·패턴)·W 쌍바닥·삼각수렴·SAR 을 잠시 숨기고
+     캔들 + 핵심 이평선(20·240일선) + 고저점만 남긴다. state.show 값은 건드리지 않으므로
+     다시 끄면 기존 오버레이 구성 그대로 돌아온다. */
+  var CLEAN_KEY = 'apex.clean.v1';
+  var CLEAN_HIDE = { ichi: 1, bb: 1, env: 1, ew: 1, w: 1, tri: 1, sar: 1 };
+  function vis(k) { return !!state.show[k] && !(state.clean && CLEAN_HIDE[k]); }
+  function cleanRestore() {
+    try { state.clean = localStorage.getItem(CLEAN_KEY) === '1'; } catch (e) { state.clean = false; }
+  }
+  function cleanPersist() {
+    try { localStorage.setItem(CLEAN_KEY, state.clean ? '1' : '0'); } catch (e) {}
+  }
+  function cleanSync() {
+    var b = $('#cleanToggle');
+    if (b) {
+      b.classList.toggle('on', !!state.clean);
+      b.setAttribute('aria-pressed', state.clean ? 'true' : 'false');
+      b.title = state.clean
+        ? '깔끔 보기 켜짐 — 구름대·볼린저·엘리어트·패턴 오버레이를 숨기고 캔들 + 20·240일선 + 고저점만 표시 · 누르면 해제'
+        : '깔끔 보기 — 구름대·볼린저·엘리어트·패턴을 잠시 숨기고 캔들 + 20·240일선 + 고저점만 표시 (기본 OFF)';
+    }
+    var bar = $('#toggles');
+    if (bar) bar.classList.toggle('clean-mode', !!state.clean);
+  }
 
   /* ---------------- 전략 전환 (추세형 ↔ 스윙형) ---------------- */
   var STRAT_KEY = 'apex.strategy.v1';
@@ -228,7 +255,8 @@
     return v;
   }
   stratRestore();
-  function maVisible(p) { return state.show.ma && state.maOn[p]; }
+  /* 깔끔 보기에서는 20·240일선만 — 굵은 두 선만 남겨 캔들이 시원하게 보이게 */
+  function maVisible(p) { return state.show.ma && state.maOn[p] && (!state.clean || p === 20 || p === 240); }
   function maSeries(a, p) { return a.ind['ma' + p]; }
 
   /* ---------------- data ---------------- */
@@ -345,6 +373,28 @@
 
   /* ---------------- boot ---------------- */
   var A = {};   // analysis by ticker
+  /* 데이터 갱신 시각(KST) — 미국 휴장일에도 '오늘 확인 마침'을 배지에서 바로 알 수 있게 병기 */
+  function updStamp() {
+    var u = M.updatedAt || (M.meta && M.meta.updatedAt) || (M.fundamentals && M.fundamentals.updatedAt) || '';
+    var m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(String(u));
+    if (!m) return '';
+    return m[2] + '/' + m[3] + ' ' + m[4] + ':' + m[5];
+  }
+  function setUpdatedBadge() {
+    var s = updStamp(), el = $('#asOfUpd'), mb = $('.market-badge');
+    if (el) {
+      el.textContent = s ? '· ' + s + ' 갱신' : '';
+      el.title = s ? '한국시간 ' + s + '에 최신 데이터 확인을 마쳤습니다 (미국 휴장일에는 종가가 그대로입니다)' : '';
+    }
+    if (mb) mb.title = '장마감 ' + M.asOf + ' 종가' + (s ? ' · 한국시간 ' + s + ' 데이터 갱신 확인' : '');
+    /* 좁은 화면에서는 상단 배지가 숨겨지므로 푸터에도 같은 시각을 남긴다 */
+    ['#footUpd', '#footUpd2'].forEach(function (sel) {
+      var f = $(sel);
+      if (!f) return;
+      f.textContent = s ? ' · ' + s + ' 갱신' : '';
+      f.title = s ? '한국시간 ' + s + '에 최신 데이터 확인을 마쳤습니다 (미국 휴장일에는 종가가 그대로입니다)' : '';
+    });
+  }
   function boot() {
     state.simIdx = lastIdx();
     ptLoad();
@@ -357,6 +407,7 @@
     $('#asOf').textContent = M.asOf;
     $('#footAsOf').textContent = M.asOf;
     $('#footAsOf2').textContent = M.asOf;
+    setUpdatedBadge();
     var pb = $('#ptBars'); if (pb) pb.textContent = M.dates.length.toLocaleString('en-US');
     renderMacro();
     renderFearGreed(M.fearGreed, false);
@@ -364,7 +415,8 @@
     var t0 = performance.now();
     M.tickers.forEach(function (x) { A[x.t] = get(x.t); });
     wSyncToggle();
-    $('#uniCount').textContent = M.tickers.filter(function (x) { return x.r; }).length;
+    $('#uniCount').textContent = String(M.tickers.length);      /* 스캐너 '전체' 집계와 같은 수 — 데이터에서 동적 반영 */
+    var fa = $('#favAdd'); if (fa) fa.title = '관심종목 추가 — ' + M.tickers.length + '종목 검색';
     var cf = $('#cFav'); if (cf) cf.textContent = state.watch.length;
     renderFavs();
     renderScanner();
@@ -558,7 +610,11 @@
   /* 행의 전략 신호 칩 — 선택한 전략 기준(매수/매도 탭과 같은 소스) */
   function sigBadge(a) {
     var g = sigOf(a);
-    if (g.sell && g.kind === 'blocked') return '<i class="sigb n" title="' + g.why + '">제한</i>';
+    if (g.sell && g.kind === 'blocked') {
+      /* '제한' 은 매도로 오해되기 쉬워 '시장대기' 로 바꾸고, 배지 옆 숫자가 무엇인지 툴팁에 명시 */
+      var cond = state.strategy === 'swing' ? 'QQQ 200일선 아래' : '시장 단계 위험';
+      return '<i class="sigb n" title="시장대기 · ' + cond + ' — 시장 약세로 신규 매수 보류 중 (오른쪽 숫자는 기술평가 점수, 매도 신호 아님)">시장대기</i>';
+    }
     if (g.sell) return '<i class="sigb s" title="' + g.why + '">청산</i>';
     if (!g.buy) return '';
     return '<i class="sigb b" title="' + g.why + '">' + (g.held ? '보유' : '진입') + '</i>';
@@ -767,7 +823,10 @@
     var recMode = state.sort === 'rec', recSwing = recMode && state.strategy === 'swing';
     var listHtml = rows.length ? rows.map(function (a, ri) {
       var x = a.meta, rv = rowOf(a), ew = a.elliott;
-      var ewb = (ew && ew.ok) ? '<i class="ewb ' + (ew.dir > 0 ? 'up' : 'dn') + '">' + ew.badge + '</i>' : '';
+      var sgHtml = sigBadge(a);
+      /* 좁은 화면(≤900px)에서는 전략 배지(진입·보유·청산·시장대기)가 잘리지 않도록
+         엘리어트 차수 배지를 양보한다 — 같은 정보는 상세 카드에도 있다. */
+      var ewb = (ew && ew.ok && !(window.innerWidth <= 900 && sgHtml)) ? '<i class="ewb ' + (ew.dir > 0 ? 'up' : 'dn') + '">' + ew.badge + '</i>' : '';
       var rk = recMode ? rankInfo(a) : null;
       var rkCls = 'rk' + (recMode ? ' rec' + (ri < 3 ? ' top' + (ri + 1) : '') : '');
       var rkTx = recMode ? (ri + 1) : (x.r || '·');
@@ -777,7 +836,7 @@
       return '<div class="srow' + (state.cur === x.t ? ' on' : '') + '" data-t="' + x.t + '"' +
         (recMode ? ' data-tier="' + rk.tier + '" data-fit="' + rk.fit + '"' : '') + '>' +
         '<div class="' + rkCls + '"' + rkTt + '>' + rkTx + '</div>' +
-        '<div class="tk"><b><i class="fstar' + (isWatch(x.t) ? ' on' : '') + '" data-f="' + x.t + '" role="button" title="' + (isWatch(x.t) ? '관심종목에서 제거' : '관심종목에 추가') + '">' + (isWatch(x.t) ? '★' : '☆') + '</i>' + x.t + ewb + vcpBadge(a) + sigBadge(a) + earnChip(x.t) + '</b><span>' + x.nk + '</span></div>' +
+        '<div class="tk"><b><i class="fstar' + (isWatch(x.t) ? ' on' : '') + '" data-f="' + x.t + '" role="button" title="' + (isWatch(x.t) ? '관심종목에서 제거' : '관심종목에 추가') + '">' + (isWatch(x.t) ? '★' : '☆') + '</i>' + x.t + ewb + vcpBadge(a) + sgHtml + earnChip(x.t) + '</b><span>' + x.nk + '</span></div>' +
         spark(a, rv.i) +
         '<div class="px"><b>' + (rv.price >= 1000 ? rv.price.toFixed(0) : rv.price.toFixed(2)) + '</b>' +
         '<span class="' + cls(rv.change) + '">' + pct(rv.change, 2) + '</span></div>' +
@@ -795,6 +854,19 @@
       if (cc0.entry === 0) listHtml = '<div class="scan-note">' + marketNoteHtml() + '</div>' + listHtml;
     }
     $('#scanList').innerHTML = listHtml;
+    /* 행 안 배지가 잘리면(좁은 사이드바·모바일) 우선순위대로 양보한다:
+       엘리어트 차수 → VCP → 실적 배지 축약('실적 D-3' → 'D-3'). 전략 배지(시장대기·진입·보유·청산)는 끝까지 남긴다. */
+    $$('#scanList .srow .tk b').forEach(function (b) {
+      if (b.scrollWidth <= b.clientWidth) return;
+      ['.ewb', '.vcpb'].forEach(function (sel) {
+        if (b.scrollWidth <= b.clientWidth) return;
+        var e = b.querySelector(sel);
+        if (e) e.parentNode.removeChild(e);
+      });
+      if (b.scrollWidth <= b.clientWidth) return;
+      var ed = b.querySelector('.edot');
+      if (ed) ed.textContent = ed.textContent.replace(/^실적\s*/, '');
+    });
     $$('#scanList .srow').forEach(function (r) {
       r.onclick = function (e) {
         var f = e.target.closest('.fstar');
@@ -1672,10 +1744,10 @@
     return { dd: Math.round((ed - earnBase()) / 86400000), date: f.earningsDate };
   }
   function earnLabel(dd) { return dd === 0 ? 'D-DAY' : 'D-' + dd; }
-  function earnChip(t) {                     /* 스캐너 행의 작은 경고칩 */
+  function earnChip(t) {                     /* 스캐너 행의 앰버 배지 — 발표 3일 내(0~3) */
     var e = earnDays(t);
     if (!e || e.dd < 0 || e.dd > 3) return '';
-    return '<i class="edot" title="실적 ' + earnLabel(e.dd) + ' (' + e.date + ') · 발표 전 갭하락 주의">' + earnLabel(e.dd) + '</i>';
+    return '<i class="edot" title="실적 ' + earnLabel(e.dd) + ' (' + e.date + ') · 발표 전 갭하락 주의">실적 ' + earnLabel(e.dd) + '</i>';
   }
   function earnWarnHtml(t) {                 /* 히어로 영역의 앰버 경고 배지 */
     var e = earnDays(t);
@@ -2322,7 +2394,7 @@
       if (!chip) return;
       var v = a.ind[x.k] ? a.ind[x.k][i] : null;
       chip.querySelector('b').textContent = (v == null) ? '—' : usd(v);
-      chip.classList.toggle('on', !!state.show.ichi);
+      chip.classList.toggle('on', vis('ichi'));
     });
     /* 범례가 두 줄로 늘어나면 HUD를 그 아래로 내림 */
     var h = el.offsetHeight;
@@ -2369,15 +2441,25 @@
   };
   Chart.prototype.layout = function () {
     var padL = 8, padR = 56, padT = 8, padB = 20, gap = 10;
-    var panels = [{ k: 'price', w: 3.5 }];
-    panels.push({ k: 'vol', w: 0.78 });
-    if (state.show.rsi) panels.push({ k: 'rsi', w: 1.0 });
-    if (state.show.macd) panels.push({ k: 'macd', w: 1.05 });
-    var usable = this.H - padT - padB - gap * (panels.length - 1);
-    var totalW = panels.reduce(function (a, b) { return a + b.w; }, 0);
+    var priceW = 3.5;
+    var subs = [{ k: 'vol', w: 0.78 }];
+    if (state.show.rsi) subs.push({ k: 'rsi', w: 1.0 });
+    if (state.show.macd) subs.push({ k: 'macd', w: 1.05 });
+    var panels = [{ k: 'price', w: priceW }].concat(subs);
+    var usable = this.H - padT - padB - gap * (subs.length);
+    /* PC(폭 900px 초과)에서는 거래량·RSI·MACD 세로를 33% 줄이고, 남는 높이를 전부 메인 캔들로 넘긴다.
+       모바일(<=900px)은 기존 비율 그대로 — 작은 화면에서 보조 패널이 너무 얇아지지 않게. */
+    var subW = subs.reduce(function (a, b) { return a + b.w; }, 0);
+    var baseSub = usable * subW / (subW + priceW);        /* 기존 배분에서 보조 패널이 받던 높이 */
+    var subTotal = window.innerWidth > 900 ? baseSub * 0.67 : baseSub;
+    var minSub = 34 * subs.length;
+    if (subTotal < minSub) subTotal = Math.min(minSub, baseSub);
+    var priceH = usable - subTotal;
     var y = padT, out = {};
-    panels.forEach(function (p, i) {
-      var h = usable * p.w / totalW;
+    out.price = { y: y, h: priceH };
+    y += priceH + gap;
+    subs.forEach(function (p) {
+      var h = subTotal * p.w / (subW || 1);
       out[p.k] = { y: y, h: h };
       y += h + gap;
     });
@@ -2521,53 +2603,55 @@
     var bw = L.plotW / nBars;
     ctx.clearRect(0, 0, W, H);
 
-    /* background grid + price range */
+    /* background grid + price range
+       ── 먼저 '지금 보이는 캔들'(i0~i1)의 고가·저가로 범위를 잡고, 보조 지표는 그 범위를 일정 폭 넘게 늘리지 못하게 막는다.
+          확대(줌인)했을 때 이평선·구름대·볼린저·목표/무효화 레벨이 Y축을 잡아늘려 캔들이 납작해지는 것을 막고,
+          캔들이 메인 패널 세로를 최대한 채우게 한다. */
     var p = L.price;
-    var lo = Infinity, hi = -Infinity, i;
+    var cLo = Infinity, cHi = -Infinity, i;
     for (i = i0; i <= i1; i++) {
-      if (hh[i] > hi) hi = hh[i];
-      if (ll[i] < lo) lo = ll[i];
+      if (hh[i] > cHi) cHi = hh[i];
+      if (ll[i] < cLo) cLo = ll[i];
+    }
+    if (!(cHi > cLo)) return;
+    var spanC = cHi - cLo;
+    var zoomed = nBars <= 90;                              /* 3M(64봉)·그 이하 확대 구간 */
+    var room = spanC * (zoomed ? 0.10 : 0.35);             /* 축을 늘릴 수 있는 여유 — 보조 지표가 캔들을 찌그러뜨리지 않게 */
+    var lo = cLo, hi = cHi;
+    var grow = function (v) {                              /* 캔들 범위에서 너무 먼 값은 축에서 제외(선은 패널 밖으로 잘림) */
+      if (v == null || !isFinite(v)) return;
+      if (v < cLo - room || v > cHi + room) return;
+      if (v > hi) hi = v;
+      if (v < lo) lo = v;
+    };
+    for (i = i0; i <= i1; i++) {
       if (state.show.ma) {
         MA.forEach(function (m) {
-          if (!state.maOn[m.p]) return;
-          var v = maSeries(a, m.p)[i];
-          if (v != null) { if (v > hi) hi = v; if (v < lo) lo = v; }
+          if (!maVisible(m.p)) return;
+          grow(maSeries(a, m.p)[i]);
         });
       }
-      if (state.show.ichi) {
-        ['spanA', 'spanB'].forEach(function (k) {
-          var v = ind[k][i];
-          if (v != null) { if (v > hi) hi = v; if (v < lo) lo = v; }
-        });
+      if (vis('ichi')) {
+        grow(ind.spanA[i]); grow(ind.spanB[i]);
       }
-      if (state.show.bb && ind.bb.up[i] != null) {
-        if (ind.bb.up[i] > hi) hi = ind.bb.up[i];
-        if (ind.bb.lo[i] < lo) lo = ind.bb.lo[i];
-      }
-      if (state.show.env && ind.env) {
-        if (ind.env.up[i] != null && ind.env.up[i] > hi) hi = ind.env.up[i];
-        if (ind.env.lo[i] != null && ind.env.lo[i] < lo) lo = ind.env.lo[i];
-      }
+      if (vis('bb')) { grow(ind.bb.up[i]); grow(ind.bb.lo[i]); }
+      if (vis('env') && ind.env) { grow(ind.env.up[i]); grow(ind.env.lo[i]); }
     }
-    var pad = (hi - lo) * 0.06;
+
+    /* 엘리어트 목표·무효화 레벨도 같은 규칙으로 (너무 멀면 축에서 제외) */
+    if (vis('ew') && a.elliott && a.elliott.ok) {
+      var ewa = (typeof ewScnOf === 'function' ? ewScnOf(a) : a.elliott) || a.elliott;
+      if (ewa.targets && ewa.targets[0] && !ewa.targets[0].bad) { grow(ewa.targets[0].lo); grow(ewa.targets[0].hi); }
+      if (ewa.supports && ewa.supports[0]) grow(ewa.supports[0].price);
+      if (ewa.inv) grow(ewa.inv.price);
+    }
+
+    var pad = (hi - lo) * (zoomed ? 0.045 : 0.06);
     lo -= pad; hi += pad;
     if (lo < 0) lo = 0;                       /* 주가축이 음수로 내려가지 않게 (5년 장기 범위) */
     var Y = function (v) { return p.y + (1 - (v - lo) / (hi - lo)) * p.h; };
     this._lo = lo; this._hi = hi; this._pt = p;
-
-    /* 엘리어트 목표·무효화 레벨을 화면 가격범위에 포함 (너무 멀면 제외) */
-    if (state.show.ew && a.elliott && a.elliott.ok) {
-      var span0 = Math.max(hi - lo, 1e-6), ewa = (typeof ewScnOf === 'function' ? ewScnOf(a) : a.elliott) || a.elliott;
-      var gs = [];
-      if (ewa.targets && ewa.targets[0] && !ewa.targets[0].bad) gs.push(ewa.targets[0].lo, ewa.targets[0].hi);
-      if (ewa.supports && ewa.supports[0]) gs.push(ewa.supports[0].price);
-      if (ewa.inv) gs.push(ewa.inv.price);
-      gs.forEach(function (v) {
-        if (!isFinite(v)) return;
-        if (v > lo - span0 * 0.75 && v < hi + span0 * 0.75) { if (v < lo) lo = v; if (v > hi) hi = v; }
-      });
-      this._lo = lo; this._hi = hi;
-    }
+    this._cLo = cLo; this._cHi = cHi; this._zoomed = zoomed;
 
     this._tagRects = [];
 
@@ -2590,7 +2674,7 @@
 
     /* 일목균형표 구름대 (선행스팬 A·B) — 옅은 면(약 11%) + 미세한 테두리
        볼린저는 채움 없이 점선으로 그려 둘이 겹쳐도 한눈에 구분되게 한다 */
-    if (state.show.ichi) {
+    if (vis('ichi')) {
       for (i = Math.max(i0, 1); i <= i1; i++) {
         var a0 = ind.spanA[i - 1], b0 = ind.spanB[i - 1], a1 = ind.spanA[i], b1 = ind.spanB[i];
         if (a0 == null || b0 == null || a1 == null || b1 == null) continue;
@@ -2609,7 +2693,7 @@
     }
 
     /* 엔벨로프 — 20일 이동평균 ±20% 상단/하단 밴드 (점선 · 상단은 과열 참고로 강조) */
-    if (state.show.env && ind.env) {
+    if (vis('env') && ind.env) {
       var envLine = function (arr, color, wd, dash) {
         ctx.save();
         if (dash) ctx.setLineDash(dash);
@@ -2628,7 +2712,7 @@
     }
 
     /* bollinger — 채움 없는 점선 테두리(1.1px) · 구름대와 겹쳐도 구분된다 */
-    if (state.show.bb) {
+    if (vis('bb')) {
       ctx.save();
       ctx.setLineDash([5, 4]);
       ctx.strokeStyle = 'rgba(129,140,248,.72)'; ctx.lineWidth = 1.1;
@@ -2683,13 +2767,13 @@
       order.forEach(function (pp) {
         var m = null;
         for (var q2 = 0; q2 < MA.length; q2++) if (MA[q2].p === pp) m = MA[q2];
-        if (!m || !state.maOn[m.p]) return;
+        if (!m || !maVisible(m.p)) return;
         drawLine(maSeries(a, m.p), m.color, m.w, m.a, m.heavy);
       });
     }
 
     /* 일목균형표 라인 */
-    if (state.show.ichi) {
+    if (vis('ichi')) {
       var ichiLine = function (arr, color, wd, dash) {
         ctx.save();
         if (dash) ctx.setLineDash(dash);
@@ -2706,7 +2790,7 @@
     }
 
     /* 파라볼릭 SAR — 캔들 위/아래 작은 점 (상승 추세 = 아래 · 하락 추세 = 위) */
-    if (state.show.sar && ind.sar) {
+    if (vis('sar') && ind.sar) {
       var sv = ind.sar.v, sd = ind.sar.dir;
       var dotR = bw > 4 ? 2.0 : (bw > 2.6 ? 1.6 : 1.2);
       for (i = i0; i <= i1; i++) {
@@ -2722,7 +2806,7 @@
     /* last price tag */
     this.drawWBottom(ctx, a, L, Y, i0, i1, bw, 'line');
     this.drawTri(ctx, a, L, Y, i0, i1, bw, 'line');
-    if (state.show.ew) this.drawWave(ctx, a, L, Y, i0, i1, bw);
+    if (vis('ew')) this.drawWave(ctx, a, L, Y, i0, i1, bw);
     this.drawUser(ctx, a, L, Y, i0, i1);
     this.drawWBottom(ctx, a, L, Y, i0, i1, bw, 'label');   /* W 라벨은 맨 위 — 다른 라벨을 피해서 마지막에 */
     this.drawTri(ctx, a, L, Y, i0, i1, bw, 'label');
@@ -2935,30 +3019,63 @@
     var r = QE.clamp((py - this._pt.y) / Math.max(this._pt.h, 1e-6), 0, 1);
     return this._hi - r * (this._hi - this._lo);
   };
+  /* 라벨 사각형을 '겹치지 않는 자리'에 배치한다 — 우선 후보 → 세로 밀어내기 → 패널 전체 탐색.
+     반환값은 실제로 그린 사각형(없으면 null). 그린 사각형은 _tagRects 에 쌓여 다음 라벨이 피해 간다. */
+  Chart.prototype.freeRect = function (w, h, pref) {
+    var pt = this._pt, L = this._L;
+    if (!pt || !L) return null;
+    var top = pt.y + 2, bot = pt.y + pt.h - h - 2;
+    var minX = L.padL + 1, maxX = L.padL + L.plotW - w - 1;
+    if (maxX < minX || bot < top) return null;
+    var list = this._tagRects || (this._tagRects = []);
+    var hits = function (r) {
+      for (var k = 0; k < list.length; k++) {
+        var b = list[k];
+        if (r.x + r.w < b.x + 1 || r.x > b.x + b.w - 1 || r.y + r.h < b.y + 1 || r.y > b.y + b.h - 1) continue;
+        return true;
+      }
+      return false;
+    };
+    for (var i = 0; i < pref.length; i++) {
+      var q = pref[i];
+      var r = { x: Math.max(minX, Math.min(q.x, maxX)), y: Math.max(top, Math.min(q.y, bot)), w: w, h: h };
+      if (!hits(r)) return r;
+    }
+    /* 마지막 수단: 패널을 훑어 '가장 가까운' 빈 자리 — 여기서도 자리가 없을 때만 라벨을 생략한다 */
+    var best = null, bestD = Infinity, y0 = pref.length ? pref[0].y : (top + bot) / 2;
+    for (var yv = top; yv <= bot; yv += 3) {
+      for (var xi = 0; xi < 3; xi++) {
+        var rr = { x: xi === 1 ? (minX + maxX) / 2 : (xi === 0 ? minX : maxX), y: yv, w: w, h: h };
+        if (hits(rr)) continue;
+        var d = Math.abs(yv - y0);
+        if (d < bestD) { bestD = d; best = rr; if (d < 2) return rr; }
+      }
+    }
+    return best;
+  };
+  /* 진단용 — 화면에 그린 라벨끼리 겹친 쌍의 수 (검증·디버깅) */
+  Chart.prototype.tagOverlaps = function () {
+    var rs = this._tagRects || [], n = 0, pairs = [];
+    for (var i = 0; i < rs.length; i++) {
+      for (var j = i + 1; j < rs.length; j++) {
+        var a = rs[i], b = rs[j];
+        if (a.x + a.w <= b.x + 1 || a.x >= b.x + b.w - 1 || a.y + a.h <= b.y + 1 || a.y >= b.y + b.h - 1) continue;
+        n++; pairs.push([i, j, a, b]);
+      }
+    }
+    return { count: n, total: rs.length, pairs: pairs };
+  };
   Chart.prototype.pillTag = function (ctx, x, y, text, color, bg, align) {
     ctx.save();
     ctx.font = '600 9.5px ui-monospace,SFMono-Regular,monospace';
     ctx.textBaseline = 'middle';
     var w = ctx.measureText(text).width + 10;
     var ax = align === 'right' ? x - w : (align === 'center' ? x - w / 2 : x);
-    var rect = { x: ax, y: y - 7.5, w: w, h: 15 };
-    if (!this._tagRects) this._tagRects = [];
-    if (align === 'right') {
-      var guard = 0;
-      while (guard++ < 40 && this._tagRects.some(function (r) {
-        return !(rect.x + rect.w < r.x + 1 || rect.x > r.x + r.w - 1 || rect.y + rect.h < r.y + 1 || rect.y > r.y + r.h - 1);
-      })) { rect.y += 16; }
-      var lim = (this._pt ? this._pt.y + this._pt.h - 12 : 1e9);
-      if (rect.y > lim) {
-        /* 오른쪽 여백이 꽉 찼으면 왼쪽 여백으로 옮긴다 */
-        rect.x = (this._L ? this._L.padL + 3 : 6);
-        rect.y = Math.max((this._pt ? this._pt.y + 2 : 0), Math.min(y - 7.5, lim));
-        var clash = this._tagRects.some(function (r) {
-          return !(rect.x + rect.w < r.x + 1 || rect.x > r.x + r.w - 1 || rect.y + rect.h < r.y + 1 || rect.y > r.y + r.h - 1);
-        });
-        if (clash) { ctx.restore(); return; }
-      }
-    }
+    var pref = [{ x: ax, y: y - 7.5 }], k;
+    for (k = 1; k <= 40; k++) pref.push({ x: ax, y: y - 7.5 + k * 16 });
+    for (k = 1; k <= 12; k++) pref.push({ x: ax, y: y - 7.5 - k * 16 });
+    var rect = this.freeRect(w, 15, pref);
+    if (!rect) { ctx.restore(); return; }
     this._tagRects.push(rect);
     ctx.beginPath();
     if (ctx.roundRect) ctx.roundRect(rect.x, rect.y, rect.w, rect.h, 3); else ctx.rect(rect.x, rect.y, rect.w, rect.h);
@@ -2979,7 +3096,7 @@
     if (phase !== 'label') {
       this._wBoxes = [];
       this._wGeo = null;
-      if (!state.show.w) return;
+      if (!vis('w')) return;
       var w = a.w;
       if (!w || !w.stage || w.stage === '실패') return;
       var q = w.pat;
@@ -3038,7 +3155,7 @@
 
     /* ---- 라벨 ---- */
     var gg = this._wGeo;
-    if (!gg || !state.show.w || this._wLabeled === gg) return;
+    if (!gg || !vis('w') || this._wLabeled === gg) return;
     this._wLabeled = gg;
     var boxes = (this._ewBoxes || []).concat(this._tagRects || []).concat(this._wBoxes || []);
     var hit = function (r) {
@@ -3105,14 +3222,6 @@
     var txtLo = '최저 ' + usd(lo) + ' (' + ds(a.dates[iLo]) + ') ' + pc(lo);
     var pTop = L.price.y + 1, pBot = L.price.y + L.price.h - 1;
     var xr = L.padL + L.plotW;
-    var boxes = (this._wBoxes || []).concat(this._ewBoxes || []).concat(this._tagRects || []);
-    var ov = function (r) {
-      for (var k = 0; k < boxes.length; k++) {
-        var b = boxes[k];
-        if (!(r.x + r.w < b.x - 1 || r.x > b.x + b.w + 1 || r.y + r.h < b.y - 1 || r.y > b.y + b.h + 1)) return true;
-      }
-      return false;
-    };
     var put = function (txt, px0, py0, col, bg, laneFirst) {
       ctx.font = '600 9.5px ui-monospace,SFMono-Regular,monospace';
       var tw = Math.round(ctx.measureText(txt).width) + 10, th = 15;
@@ -3127,36 +3236,20 @@
       lanes.forEach(function (ly) {
         [0, -70, 70, -140, 140, -210, 210].forEach(function (dx) { cands.push([px0 - tw / 2 + dx, ly]); });
       });
-      var drawn = false;
-      for (var c = 0; c < cands.length && !drawn; c++) {
-        var x0 = Math.max(L.padL + 1, Math.min(cands[c][0], xr - tw - 1));
-        var y0 = cands[c][1];
-        var r = { x: x0, y: y0, w: tw, h: th };
-        if (r.y < pTop || r.y + r.h > pBot) continue;
-        if (ov(r)) continue;
-        boxes.push(r); self._tagRects.push(r);
-        ctx.beginPath();
-        ctx.moveTo(px0, py0); ctx.lineTo(Math.max(r.x, Math.min(px0, r.x + r.w)), r.y + r.h / 2);
-        ctx.strokeStyle = bg.indexOf('56,10,22') >= 0 ? 'rgba(251,113,133,.45)' : 'rgba(52,211,153,.45)';
-        ctx.lineWidth = 1; ctx.setLineDash([2, 3]); ctx.stroke(); ctx.setLineDash([]);
-        ctx.beginPath();
-        if (ctx.roundRect) ctx.roundRect(r.x, r.y, r.w, r.h, 3); else ctx.rect(r.x, r.y, r.w, r.h);
-        ctx.fillStyle = bg; ctx.fill();
-        ctx.strokeStyle = 'rgba(255,255,255,.12)'; ctx.lineWidth = 1; ctx.stroke();
-        ctx.fillStyle = col; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-        ctx.fillText(txt, r.x + 4.5, r.y + 7.5);
-        drawn = true;
-      }
-      /* 그래도 자리가 없으면 왼쪽 아래 레인에 그대로 — 라벨을 통째로 잃지 않는다 */
-      if (!drawn) {
-        var fr = { x: L.padL + 2, y: pBot - th - 2, w: tw, h: th };
-        boxes.push(fr); self._tagRects.push(fr);
-        ctx.beginPath();
-        if (ctx.roundRect) ctx.roundRect(fr.x, fr.y, fr.w, fr.h, 3); else ctx.rect(fr.x, fr.y, fr.w, fr.h);
-        ctx.fillStyle = bg; ctx.fill();
-        ctx.fillStyle = col; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-        ctx.fillText(txt, fr.x + 4.5, fr.y + 7.5);
-      }
+      /* 우선 후보가 모두 막히면 freeRect 가 패널을 훑어 빈 자리를 잡는다 — 오른쪽 가격 태그와도 겹치지 않는다 */
+      var rect = self.freeRect(tw, th, cands.map(function (c) { return { x: c[0], y: c[1] }; }));
+      if (!rect) return;
+      self._tagRects.push(rect);
+      ctx.beginPath();
+      ctx.moveTo(px0, py0); ctx.lineTo(Math.max(rect.x, Math.min(px0, rect.x + rect.w)), rect.y + rect.h / 2);
+      ctx.strokeStyle = bg.indexOf('56,10,22') >= 0 ? 'rgba(251,113,133,.45)' : 'rgba(52,211,153,.45)';
+      ctx.lineWidth = 1; ctx.setLineDash([2, 3]); ctx.stroke(); ctx.setLineDash([]);
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(rect.x, rect.y, rect.w, rect.h, 3); else ctx.rect(rect.x, rect.y, rect.w, rect.h);
+      ctx.fillStyle = bg; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.12)'; ctx.lineWidth = 1; ctx.stroke();
+      ctx.fillStyle = col; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillText(txt, rect.x + 4.5, rect.y + 7.5);
     };
     /* 고점 표시 */
     var xH = this.x(iHi), yH = Y(hi);
@@ -3174,7 +3267,7 @@
      엔진 triDetect 결과의 상단·하단 수렴 추세선을 그리고, 4개 피벗과 단계를 라벨로 표시.
      매매 전략 진입·청산 조건에는 쓰지 않는다. */
   Chart.prototype.drawTri = function (ctx, a, L, Y, i0, i1, bw, phase) {
-    if (!state.show.tri) return;
+    if (!vis('tri')) return;
     var t = a.tri;
     if (!t) return;
     var self = this, xr = L.padL + L.plotW;
@@ -3228,7 +3321,7 @@
 
   /* ---------------- 엘리어트 파동 오버레이 ---------------- */
   Chart.prototype.drawWave = function (ctx, a, L, Y, i0, i1, bw) {
-    if (!state.show.ew) return;
+    if (!vis('ew')) return;
     var e = ewScnOf(a);
     if (!e) return;
     var self = this, up = e.dir > 0;
@@ -4014,6 +4107,27 @@
   var chart;
   function wire() {
     chart = new Chart($('#chart'), $('#hud'));
+    /* 진단용 — 검증 스크립트가 라벨 겹침·Y축 스케일을 그대로 읽어 갈 수 있게 (읽기 전용) */
+    window.APEX_DIAG = {
+      overlaps: function () { return chart.tagOverlaps(); },
+      labels: function () { return (chart._tagRects || []).slice(); },
+      axis: function () {
+        var L = chart._L || {};
+        return {
+          i0: chart.i0, i1: chart.i1, bars: chart.i1 - chart.i0 + 1,
+          lo: chart._lo, hi: chart._hi, cLo: chart._cLo, cHi: chart._cHi,
+          zoomed: !!chart._zoomed, priceH: L.price ? L.price.h : null,
+          avgBodyPx: (function () {
+            var a = chart.a; if (!a || chart._hi == null) return null;
+            var c = a.close, oo = (a.series || {}).o, n = chart.i1 - chart.i0 + 1, sum = 0;
+            for (var i = chart.i0; i <= chart.i1; i++) sum += Math.abs(c[i] - (oo && oo[i] != null ? oo[i] : c[i]));
+            return sum / Math.max(n, 1) / (chart._hi - chart._lo) * (L.price ? L.price.h : 0);
+          })(),
+          volH: L.vol ? L.vol.h : null, rsiH: L.rsi ? L.rsi.h : null, macdH: L.macd ? L.macd.h : null
+        };
+      },
+      state: function () { return { clean: !!state.clean, show: JSON.parse(JSON.stringify(state.show)), cur: state.cur, range: state.range }; }
+    };
     buildMaLegend();
     buildScoreExplain();
     wirePaper();
@@ -4151,10 +4265,18 @@
     $('#toggles').onclick = function (e) {
       var b = e.target.closest('button'); if (!b) return;
       var k = b.dataset.t;
+      if (!k) return;
       state.show[k] = !state.show[k];
       b.classList.toggle('on', state.show[k]);
       if (k === 'w') wPersist();
       if (k === 'sar' || k === 'env' || k === 'tri') xtogPersist();
+      chart.resize(); chart.draw();
+    };
+    /* 깔끔 보기 — 구름대·볼린저·엘리어트·패턴을 잠시 숨기고 캔들 + 20·240일선 + 고저점만 */
+    var cleanBtn = $('#cleanToggle');
+    if (cleanBtn) cleanBtn.onclick = function () {
+      state.clean = !state.clean;
+      cleanPersist(); cleanSync();
       chart.resize(); chart.draw();
     };
     var gs = $('#globalSearch');
@@ -4548,12 +4670,165 @@
     if (tg) tg.onclick = function () { eduCollapse(!card.classList.contains('closed')); };
   }
 
+  /* ============================================================
+     백업 · 복원 — 가상투자(모의매매) · 관심종목 · 차트 작도 · 전략/토글 설정
+     localStorage 의 apex.* 키만 하나의 JSON 으로 내보내고, 같은 형식의
+     파일을 검증한 뒤 되돌린다. 다른 사이트·앱의 키는 건드리지 않는다.
+     ============================================================ */
+  var BK_TAG = 'apex-quant-backup', BK_VER = 1;
+  function apexKeys() {
+    var out = [];
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && k.indexOf('apex.') === 0) out.push(k);
+      }
+    } catch (e) { /* 저장소 차단 환경 */ }
+    return out.sort();
+  }
+  var bkTimer = null;
+  function bkMsg(txt, kind) {
+    var el = $('#bkMsg');
+    if (!el) return;
+    el.textContent = txt || '';
+    el.className = 'bk-msg' + (kind ? ' ' + kind : '');
+    clearTimeout(bkTimer);
+    if (txt) bkTimer = setTimeout(function () { el.textContent = ''; el.className = 'bk-msg'; }, 12000);
+  }
+  function bkDate() {                          /* 한국시간 기준 YYYY-MM-DD (파일 이름) */
+    var d = new Date(Date.now() + 9 * 3600000);
+    return d.getUTCFullYear() + '-' + pad2(d.getUTCMonth() + 1) + '-' + pad2(d.getUTCDate());
+  }
+  function bkSummary(data) {
+    var p = null, w = null, dr = null;
+    try { p = JSON.parse(data['apex.paper.v1'] || 'null'); } catch (e) {}
+    try { w = JSON.parse(data['apex.watchlist.v1'] || 'null'); } catch (e) {}
+    try { dr = JSON.parse(data['apex.draw.v1'] || '{}'); } catch (e) {}
+    var fills = (p && Array.isArray(p.fills)) ? p.fills.length : 0;
+    var nw = Array.isArray(w) ? w.length : ((w && Array.isArray(w.t)) ? w.t.length : 0);
+    var nd = 0;
+    if (dr && typeof dr === 'object') Object.keys(dr).forEach(function (t) { if (Array.isArray(dr[t])) nd += dr[t].length; });
+    return { fills: fills, watch: nw, draw: nd };
+  }
+  function backupExport() {
+    var data = {};
+    apexKeys().forEach(function (k) { try { data[k] = localStorage.getItem(k); } catch (e) {} });
+    var pack = {
+      app: 'APEX QUANT', tag: BK_TAG, version: BK_VER,
+      title: '미국주식 차트분석기 백업 (가상투자 · 관심종목 · 차트 작도 · 전략/토글 설정)',
+      exportedAt: new Date().toISOString(), exportedAtKST: bkDate() + ' ' + new Date(Date.now() + 9 * 3600000).toISOString().slice(11, 16),
+      keys: Object.keys(data), data: data
+    };
+    var name = BK_TAG + '-' + bkDate() + '.json';
+    try {
+      var blob = new Blob([JSON.stringify(pack, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = name; a.style.display = 'none';
+      document.body.appendChild(a); a.click();
+      setTimeout(function () { try { URL.revokeObjectURL(url); } catch (e) {} if (a.parentNode) a.remove(); }, 2000);
+      var sm = bkSummary(data);
+      bkMsg('백업 내려받음 · ' + name + ' — 가상투자 체결 ' + sm.fills + '건 · 관심종목 ' + sm.watch + '개 · 작도 ' + sm.draw + '개 · 설정 ' + apexKeys().length + '항목', 'ok');
+    } catch (e) {
+      bkMsg('백업 파일을 만들지 못했습니다 — ' + (e && e.message ? e.message : '브라우저 저장소 제한'), 'err');
+    }
+  }
+  function bkValidate(o) {
+    if (!o || typeof o !== 'object' || Array.isArray(o)) return 'JSON 최상위가 객체가 아닙니다';
+    if (o.tag !== BK_TAG && o.app !== 'APEX QUANT') return '이 분석기의 백업 파일이 아닙니다';
+    if (!o.data || typeof o.data !== 'object' || Array.isArray(o.data)) return 'data 항목이 없습니다';
+    var keys = Object.keys(o.data);
+    if (!keys.length) return '복원할 항목이 없습니다';
+    if (keys.length > 60) return '항목 수가 너무 많습니다';
+    for (var i = 0; i < keys.length; i++) {
+      var k = keys[i], v = o.data[k];
+      if (k.indexOf('apex.') !== 0) return '허용되지 않는 키: ' + k;
+      if (typeof v !== 'string') return k + ' 값이 문자열이 아닙니다';
+      if (v.length > 4e6) return k + ' 값이 너무 큽니다';
+      if (v.length <= 64) continue;                      /* 'trend' 같은 짧은 설정 문자열은 그대로 허용 */
+      try { JSON.parse(v); } catch (e) { return k + ' 값이 JSON 이 아닙니다'; }
+    }
+    return '';
+  }
+  function bkApply(o) {
+    /* 백업에 담긴 항목만 되돌린다 — 백업 이후에 새로 만든 다른 기록은 건드리지 않는다 */
+    Object.keys(o.data).forEach(function (k) { try { localStorage.setItem(k, o.data[k]); } catch (e) {} });
+  }
+  function bkReloadState() {
+    /* 저장소에서 메모리 상태를 다시 읽고 화면을 그대로 다시 그린다 */
+    paper = { seed: 10000, fills: [], sim: null, simDate: null };
+    ptLoad();
+    state.watch = [];
+    watchRestore();
+    drawStore = {};
+    drawLoad();
+    state.show = { ma: true, ichi: true, bb: true, sig: true, rsi: true, macd: true, ew: true, w: true, sar: false, env: false, tri: false };
+    state.maOn = { 5: true, 20: true, 60: true, 120: true, 240: true };
+    state.clean = false;
+    state.strategy = 'trend';
+    wRestore(); xtogRestore(); cleanRestore(); stratRestore();
+    var last = lastIdx();
+    var sdi = paper.simDate ? M.dates.indexOf(paper.simDate) : -1;
+    state.simIdx = sdi >= 0 ? sdi : (paper.sim != null ? Math.max(0, Math.min(last, Math.round(paper.sim))) : last);
+    $$('#toggles .tg').forEach(function (b) { var k = b.dataset.t; if (k && k in state.show) b.classList.toggle('on', !!state.show[k]); });
+    wSyncToggle(); xtogSync(); cleanSync();
+    drawCount();
+    renderFavs(); renderScanner(); renderStrategy(); ptRender();
+    var fc = $('#favCount'); if (fc) fc.textContent = '관심 ' + state.watch.length + '종목';
+    var cf = $('#cFav'); if (cf) cf.textContent = state.watch.length;
+    select(state.cur, true);
+    chart.resize(); chart.draw();
+  }
+  function backupInit() {
+    var ex = $('#bkExport'), im = $('#bkImport'), fi = $('#bkFile');
+    if (!ex || !im || !fi) return;
+    ex.onclick = function () { backupExport(); };
+    im.onclick = function () { fi.value = ''; fi.click(); };
+    fi.onchange = function () {
+      var f = fi.files && fi.files[0];
+      if (!f) return;
+      var rd = new FileReader();
+      rd.onerror = function () { bkMsg('파일을 읽지 못했습니다', 'err'); };
+      rd.onload = function () {
+        var o = null;
+        try { o = JSON.parse(String(rd.result)); } catch (e) {
+          bkMsg('JSON 파일이 아닙니다 — 이 분석기에서 내보낸 백업 파일을 선택해 주세요', 'err');
+          return;
+        }
+        var bad = bkValidate(o);
+        if (bad) { bkMsg('복원할 수 없습니다 — ' + bad, 'err'); return; }
+        var sm = bkSummary(o.data || {});
+        var at = o.exportedAtKST ? (' (' + o.exportedAtKST + ' 백업)') : '';
+        var ok = window.confirm(
+          '백업 파일' + at + '을 복원합니다.\n\n' +
+          '· 가상투자 체결 ' + sm.fills + '건\n' +
+          '· 관심종목 ' + sm.watch + '개\n' +
+          '· 차트 작도 ' + sm.draw + '개\n' +
+          '· 전략·토글 설정 ' + Object.keys(o.data || {}).length + '항목\n\n' +
+          '백업에 담긴 항목만 이 내용으로 덮어씁니다(백업 이후 새로 만든 다른 기록은 그대로). 계속할까요?'
+        );
+        if (!ok) { bkMsg('복원을 취소했습니다 — 저장된 내용은 그대로입니다'); return; }
+        try {
+          bkApply(o);
+          bkReloadState();
+          bkMsg('복원 완료 — 가상투자 ' + sm.fills + '건 · 관심종목 ' + sm.watch + '개 · 작도 ' + sm.draw + '개 · 설정 ' + Object.keys(o.data).length + '항목을 되돌렸습니다', 'ok');
+        } catch (e) {
+          bkMsg('복원 중 오류 — ' + (e && e.message ? e.message : '저장소에 쓸 수 없습니다'), 'err');
+        }
+      };
+      rd.readAsText(f, 'utf-8');
+    };
+  }
+
   /* ---------------- go ---------------- */
   function start() {
     var h = (location.hash || '').replace('#', '');   /* boot()이 기본 종목을 고르기 전에 딥링크 보관 */
+    cleanRestore();                                  /* 깔끔 보기 저장 상태 — 첫 draw 전에 */
     accBuild();                                       /* 접힘 상태를 먼저 복원해 화면 깜빡임 방지 */
     eduInit();                                        /* 오늘의 주식 공부 카드 (날짜별 자동 변경) */
     wire();
+    cleanSync();                                     /* 깔끔 보기 버튼·툴바 상태 동기화 */
+    backupInit();                                    /* 가상투자·관심종목·작도·설정 백업/복원 */
     boot();
     xtogSync();                                       /* SAR · 엔벨로프 저장 상태 복원 */
     if (h && A[h]) select(h);
