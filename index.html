@@ -23,7 +23,7 @@
   --up:#10B981; --up2:#34D399; --mint:#00C896;
   --dn:#F43F5E; --dn2:#FB7185;
   --amber:#F59E0B; --indigo:#6366F1; --cyan:#38BDF8; --violet:#A78BFA;
-  --r:14px; --r-sm:10px;
+  --btn:#0E131C; --r:14px; --r-sm:10px;
   --mono:ui-monospace,"SF Mono",SFMono-Regular,"JetBrains Mono",Menlo,monospace;
   --sans:"Pretendard","Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Inter","Segoe UI",Roboto,"Noto Sans KR","Noto Sans CJK KR","Malgun Gothic","Helvetica Neue",Arial,sans-serif;
   --shadow:0 24px 48px -28px rgba(0,0,0,.9), 0 1px 0 rgba(255,255,255,.03) inset;
@@ -2433,6 +2433,7 @@ html[data-theme="light"] .bk-msg.err{color:#AD0015}
 /* >>> LIGHT-THEME MANUAL >>> */
 /* ---------- 라이트(화이트) 테마 — 수동 보정 ---------- */
 html[data-theme="light"]{
+  --btn:#FFFFFF;
   --bg:#EEF2F7; --bg2:#FFFFFF;
   --card:#FFFFFF; --card2:#FAFCFE; --elev:#FFFFFF;
   --hover:#EAF0F7; --line:rgba(15,23,42,.13); --line2:rgba(15,23,42,.08);
@@ -2576,7 +2577,7 @@ html[data-theme="light"] .theme-btn:hover{background:#E0F2FE;border-color:rgba(1
 <body>
 
 <header class="topbar">
-  <button class="icon-btn only-mobile" id="menuBtn" aria-label="종목 목록 열기" style="width:34px;height:34px;border-radius:9px;border:1px solid var(--line);place-items:center;background:#0E131C">
+  <button class="icon-btn only-mobile" id="menuBtn" aria-label="종목 목록 열기" style="width:34px;height:34px;border-radius:9px;border:1px solid var(--line);place-items:center;background:var(--btn)">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
   </button>
   <div class="brand">
