@@ -3058,7 +3058,7 @@ html[data-theme="light"] .pg-row.sell b{color:#0E7490}
         </div>
         <div class="nx-item nx-swing">
           <div class="nx-lab"><em>02</em><b>매매 실행 시</b><span>스윙 특화 전략</span></div>
-          <p>단기·중기 관점에서 적극적 매매를 실행할 경우에는 변동성 통제와 손익비 관리가 반영된 <b>스윙 특화 전략</b>을 보조 지표로 활용하시기 바랍니다. <em class="tm" style="display:block;margin:4px 0 0;white-space:normal;line-height:1.5">스윙형 진입 조건 · RSI(2) 10 미만 + QQQ 200일선 위 — 단, QQQ RSI(2) 5 미만(극단 패닉)이면 200일선 아래여도 허용</em></p>
+          <p>단기·중기 관점에서 적극적 매매를 실행할 경우에는 변동성 통제와 손익비 관리가 반영된 <b>스윙 특화 전략</b>을 보조 지표로 활용하시기 바랍니다. <em class="tm" style="display:block;margin:4px 0 0;white-space:normal;line-height:1.5">추세형 진입 조건 · 종합점수 50 이상 + QQQ 100일선 단계 (또는 QQQ RSI(2)&lt;5 극단 패닉 예외 · RSI(2)&lt;15 패닉일 청산 보류)</em> <em class="tm" style="display:block;margin:2px 0 0;white-space:normal;line-height:1.5">스윙형 진입 조건 · RSI(2) 10 미만 + QQQ 200일선 위 — 단, QQQ RSI(2) 5 미만(극단 패닉)이면 200일선 아래여도 허용</em></p>
         </div>
       </div>
       <p class="nx-foot">본 화면의 백테스트·모의매매 결과는 과거 데이터 기반 참고용 시뮬레이션이며, 특정 종목의 매수·매도 권유가 아닙니다.</p>
@@ -3071,7 +3071,7 @@ html[data-theme="light"] .pg-row.sell b{color:#0E7490}
       </div>
       <div class="strat-txt">
         <b id="stratTitle">추세형 (중기)</b>
-        <p id="stratDesc">종합 기술점수 50 이상 매수 · 시장 단계(100/50/0%)로 비중 조절 · 손절 6 ATR · 트레일 10 ATR 청산 — 둘 다 즉시 · 시장 위험 0% 청산은 진입 3거래일 이후</p>
+        <p id="stratDesc">종합 기술점수 50 이상 + QQQ 100일선 단계 (또는 QQQ RSI(2)&lt;5 극단 패닉 예외 · RSI(2)&lt;15 패닉일 청산 보류) → 다음 날 시가 매수 · 손절 6 ATR · 트레일 10 ATR 청산 — 둘 다 즉시 · 시장 위험 0% 청산은 진입 3거래일 이후</p>
       </div>
       <div class="strat-uni" id="stratUni"></div>
     </section>
@@ -3752,6 +3752,11 @@ html[data-theme="light"] .pg-row.sell b{color:#0E7490}
              ③ 시장 단계 0%(전량 청산) — 보유 3거래일(minHold) 미만은 보류
        (99종목 5년: 1~2일 시장약세 청산 0건 · 중앙 +63.62% · 평균 MDD -35.15%
         — work/stock/v5_upgrade/REPORT_TREND_BUFFER.md T6)
+     · 극단 공포 예외 (2026-11-27 · work/stock/v5_upgrade/REPORT_TREND_SWING_COMBO.md C2)
+         ④ 진입: 시장 위험(tw=0)이어도 QQQ RSI(2) < 5(극단 패닉)면 전액 비중 진입
+         ⑤ 청산: 시장약세 청산 판정일의 QQQ RSI(2) < 15면 그날은 청산하지 않고 다음 날 재판정
+       (99종목 5년: +118.89% → +133.90% · 중앙 +63.62% → +67.60% · MDD -35.15% → -34.74%
+        · 84/99종목 개선 · 표본 밖 2017~2021 +53.41% → +63.93%)
      · 미래참조 없음: 모든 판단은 당일 종가, 체결은 다음 거래일 시가
      · 매수·매도 각 FEE(0.03%)
      ============================================================ */
@@ -3763,6 +3768,8 @@ html[data-theme="light"] .pg-row.sell b{color:#0E7490}
     if (_regCache && _regCache.key === key) return _regCache.map;
     var c = MKT.series.QQQ.c, dts = MKT.dates, n = c.length;
     var ma100 = sma(c, 100), ma50 = sma(c, 50), ma20 = sma(c, 20);
+    /* QQQ RSI(2) — 추세형 '극단 공포 예외'의 공포 척도 (당일 종가 기준, 미래참조 없음) */
+    var r2 = rsi(c, 2);
     var map = {}, tw = 1, streak = 0;
     for (var j = 0; j < n; j++) {
       var sl = (j >= 20 && ma100[j] != null && ma100[j - 20] != null) ? ma100[j] - ma100[j - 20] : null;
@@ -3783,7 +3790,7 @@ html[data-theme="light"] .pg-row.sell b{color:#0E7490}
         else if (streak >= 2) tw = 0.5;
       }
       map[dts[j]] = { tw: tw, st: tw === 0 ? 'risk' : (tw < 1 ? 'caution' : 'normal'),
-        q: c[j], ma100: ma100[j], ma50: ma50[j], slope: sl };
+        q: c[j], ma100: ma100[j], ma50: ma50[j], slope: sl, r2: r2[j] == null ? null : r2[j] };
     }
     _regCache = { key: key, map: map };
     return map;
@@ -3793,10 +3800,14 @@ html[data-theme="light"] .pg-row.sell b{color:#0E7490}
      추세형 진입 판정 — 백테스트와 상단 카드의 단일 소스
      ------------------------------------------------------------
        진입 조건 (백테스트와 완전히 같은 함수를 쓴다)
-         ① 종합 기술점수 ≥ entry(50)   ② ATR > 0   ③ 시장 단계(QQQ 100일선) 노출목표 > 0
+         ① 종합 기술점수 ≥ entry(50)   ② ATR > 0
+         ③ 시장 단계(QQQ 100일선) 노출목표 > 0  또는  QQQ RSI(2) < 5 (극단 패닉 예외 · 전액 비중)
        노출목표 0% = 신규 진입 제한 · 50% = 절반 비중 · 100% = 전액
      ============================================================ */
-  var TREND_P = { entry: 50, stopAtr: 6, trailAtr: 10, trailStartAtr: 6, minHold: 3, fee: 0.0003, warmup: WARMUP };
+  var TREND_P = { entry: 50, stopAtr: 6, trailAtr: 10, trailStartAtr: 6, minHold: 3,
+    panicEntryRsi: 5,      /* 시장 위험(tw=0)에서도 진입을 허용하는 QQQ RSI(2) 문턱 — 극단 패닉 */
+    panicExitRsi: 15,      /* 시장약세 청산 판정일에 이 값 미만이면 청산을 다음 날로 미룸 */
+    fee: 0.0003, warmup: WARMUP };
   function trendOpts(o) {
     var out = {}, k;
     for (k in TREND_P) out[k] = TREND_P[k];
@@ -3804,7 +3815,8 @@ html[data-theme="light"] .pg-row.sell b{color:#0E7490}
     if (o) {
       for (k in o) {
         if (k === 'entry' || k === 'stopAtr' || k === 'trailAtr' || k === 'trailStartAtr' || k === 'minHold' ||
-            k === 'fee' || k === 'warmup' || k === 'marketFilter' || k === 'bars' || k === 'regime') out[k] = o[k];
+            k === 'fee' || k === 'warmup' || k === 'marketFilter' || k === 'bars' || k === 'regime' ||
+            k === 'panicEntryRsi' || k === 'panicExitRsi') out[k] = o[k];
       }
     }
     return out;
@@ -3813,15 +3825,24 @@ html[data-theme="light"] .pg-row.sell b{color:#0E7490}
     return tw === 1 ? { ko: '정상 100%', en: 'NORMAL' } : (tw > 0 ? { ko: '주의 50%', en: 'CAUTION' } : { ko: '위험 0%', en: 'RISK' });
   }
   /* bar i 종가 시점의 추세형 진입 상태 — rg 는 marketRegimeMap()[date] */
+  function PANIC_EXIT_TREND(o) {
+    return o && o.panicExitRsi != null ? o.panicExitRsi : TREND_P.panicExitRsi;
+  }
   function trendEntryAt(sc, ind, i, rg, o) {
     var score = sc.score[i];
     var scoreOk = score != null && score >= o.entry;
     var atrOk = nz(ind.atr[i], 0) > 0;
     var tw = rg ? rg.tw : 1;
+    var r2 = (rg && rg.r2 != null) ? rg.r2 : null;
+    var exTh = o.panicEntryRsi == null ? TREND_P.panicEntryRsi : o.panicEntryRsi;
+    /* 극단 패닉 예외 — 시장 위험(tw=0)이어도 QQQ RSI(2) < 5면 전액 비중으로 진입 */
+    var panic = (tw <= 0 && r2 != null && r2 < exTh);
     return {
       score: score, need: o.entry, scoreOk: scoreOk, atrOk: atrOk,
       marketOk: tw > 0, tw: tw, st: rg ? rg.st : (tw === 0 ? 'risk' : tw < 1 ? 'caution' : 'normal'),
-      ok: scoreOk && atrOk && tw > 0
+      r2: r2, panic: panic, exTh: exTh,
+      entryW: tw > 0 ? tw : 1,          /* 예외 진입은 시장 노출목표를 무시하고 전액 */
+      ok: scoreOk && atrOk && (tw > 0 || panic)
     };
   }
 
@@ -4325,6 +4346,7 @@ html[data-theme="light"] .pg-row.sell b{color:#0E7490}
     var opt = trendOpts(opts);
     var ENTRY = opt.entry, STOP_ATR = opt.stopAtr, TRAIL_ATR = opt.trailAtr, TRAIL_START = opt.trailStartAtr;
     var MIN_HOLD = opt.minHold || 0;
+    var PANIC_EXIT = opt.panicExitRsi == null ? TREND_P.panicExitRsi : opt.panicExitRsi;
     var FEE = opt.fee, WARM = opt.warmup, USE_REGIME = opt.marketFilter;
 
     var c = series.c, o = series.o, h = series.h, l = series.l, d = series.d;
@@ -4403,12 +4425,15 @@ html[data-theme="light"] .pg-row.sell b{color:#0E7490}
           /* 최소 보유 3거래일 — 진입 1~2일차에는 시장약세 청산도, 0% 비중축소도 하지 않는다.
              장중 6 ATR 손절·트레일은 위(2단계)에서 이미 즉시 적용된다. */
           if (MIN_HOLD > 0 && (i - pos.entryIdx) < MIN_HOLD) targetW = pos.w;
+          /* 청산 보류 — 공포일(QQQ RSI(2) < 15)에는 팔지 않고 다음 날 다시 판정한다.
+             그 사이 국면이 회복되면 계속 보유. (보고서 C2 · 거래 건수는 그대로, 파는 날만 미룸) */
+          else if (PANIC_EXIT > 0 && rg.r2 != null && rg.r2 < PANIC_EXIT) targetW = pos.w;
           else pendExit = '시장약세';
         } else targetW = rg.tw;
       } else {
         /* 진입 판정은 상단 카드와 같은 함수(trendEntryAt)를 쓴다 — 단일 소스 */
         var ent = trendEntryAt(sc, ind, i, rg, opt);
-        if (ent.ok) { pendEntry = true; pendW = ent.tw; }
+        if (ent.ok) { pendEntry = true; pendW = ent.entryW; }
       }
       equity[i] = eqAt(c[i]);
       bars++;
@@ -4416,6 +4441,8 @@ html[data-theme="light"] .pg-row.sell b{color:#0E7490}
     /* 마지막 봉 종가 기준 시장 단계 — 보유 중 관리 카드가 청산 발동 여부를 보여줄 때도 같은 값 */
     var rgNow = (RM && RM[d[n - 1]]) || { tw: 1, st: 'normal', q: null, ma100: null, slope: null };
     var heldNow = pos ? (n - 1) - pos.entryIdx : 0;
+    /* 마지막 봉이 공포일(QQQ RSI(2) < 15)이라 시장약세 청산을 하루 미룬 상태인지 */
+    var exitDeferredNow = !!(PANIC_EXIT > 0 && rgNow.r2 != null && rgNow.r2 < PANIC_EXIT);
     /* 마지막 봉 기준 보유 스냅숏 — 상단 '보유 중 관리'가 실제 적용 중인 기준가를 쓰도록 */
     var live = pos ? {
       entry: pos.entry, entryDate: pos.entryDate, entryIdx: pos.entryIdx, atr0: pos.atr0,
@@ -4424,7 +4451,9 @@ html[data-theme="light"] .pg-row.sell b{color:#0E7490}
       last: c[n - 1], ret: c[n - 1] / pos.entry - 1, date: d[n - 1],
       holdDays: heldNow, minHold: MIN_HOLD, twNow: rgNow.tw, marketSt: rgNow.st,
       marketExitArmed: heldNow >= MIN_HOLD,                 /* 3거래일 경과 — 시장약세 청산 발동 가능 */
-      marketExitPending: rgNow.tw === 0 && heldNow >= MIN_HOLD
+      marketExitPending: rgNow.tw === 0 && heldNow >= MIN_HOLD && !exitDeferredNow,
+      marketExitDeferred: rgNow.tw === 0 && heldNow >= MIN_HOLD && exitDeferredNow,
+      qqqRsi2: rgNow.r2, panicExitRsi: PANIC_EXIT
     } : null;
     if (pos) closePos(c[n - 1], n - 1, '보유중');
     equity[n - 1] = cash;
@@ -4495,28 +4524,32 @@ html[data-theme="light"] .pg-row.sell b{color:#0E7490}
     var stop = price - o.stopAtr * atr;
     var stage = marketStageText(e.tw);
     var slopeTxt = rg.slope == null ? '' : (rg.slope < 0 ? ' · 100일선 20일 하락' : ' · 100일선 20일 상승');
+    var r2Txt = e.r2 == null ? '' : ' · QQQ RSI(2) ' + e.r2.toFixed(1) + (e.panic ? ' (극단 패닉 예외 적용)' : '');
     var marketNote = rg.ma100 == null ? 'QQQ 100일선 데이터 없음'
       : (rg.q > rg.ma100
-        ? 'QQQ $' + px(rg.q) + ' > 100일선 $' + px(rg.ma100) + ' — 시장 상승 국면'
-        : 'QQQ $' + px(rg.q) + ' < 100일선 $' + px(rg.ma100) + slopeTxt);
+        ? 'QQQ $' + px(rg.q) + ' > 100일선 $' + px(rg.ma100) + ' — 시장 상승 국면' + r2Txt
+        : 'QQQ $' + px(rg.q) + ' < 100일선 $' + px(rg.ma100) + slopeTxt + r2Txt);
     var state = e.ok ? 'ready' : (e.scoreOk ? 'blocked' : 'wait');
     return {
       strategy: 'trend', date: series.d[i], state: state, signal: e.ok,
       score: e.score, need: e.need, scoreOk: e.scoreOk, atrOk: e.atrOk,
       marketOk: e.marketOk, tw: e.tw, marketSt: e.st, marketStage: stage.ko, marketStageEn: stage.en,
       marketNote: marketNote, qqq: rg.q, qqqMa: rg.ma100, qqqSlope: rg.slope,
+      qqqRsi2: e.r2, panicEntry: e.panic, panicEntryRsi: e.exTh, panicExitRsi: PANIC_EXIT_TREND(o),
       entryRef: price, entryZone: [price - 0.6 * atr, price + 0.25 * atr],
       atr: atr, atrPct: atr / price, stopPrice: stop, stopAtr: o.stopAtr,
       trailStartAtr: o.trailStartAtr, trailAtr: o.trailAtr,
       trailArmPrice: price + o.trailStartAtr * atr,
-      entryRule: '종합점수 ' + o.entry + ' 이상 + 시장 단계(QQQ 100일선) 100/50% → 다음 날 시가 매수',
+      entryRule: '종합점수 ' + o.entry + ' 이상 + QQQ 100일선 단계 (또는 QQQ RSI(2)<' + e.exTh + ' 극단 패닉 예외 · RSI(2)<' + PANIC_EXIT_TREND(o) + ' 패닉일 청산 보류) → 다음 날 시가 매수',
       stopRule: '기준 진입가 − ' + o.stopAtr + ' ATR',
       trailRule: '진입가 +' + o.trailStartAtr + ' ATR 도달 후 고점 − ' + o.trailAtr + ' ATR',
       minHold: o.minHold,
       exitRule: '손절 ' + o.stopAtr + ' ATR·트레일 ' + o.trailAtr + ' ATR는 즉시 · 시장 위험 0% 전량 청산은 진입 후 ' +
-        o.minHold + '거래일이 지나야 발동 (초단기 왕복 매매 방지)',
+        o.minHold + '거래일이 지나야 발동 (초단기 왕복 매매 방지) · QQQ RSI(2)<' + PANIC_EXIT_TREND(o) + '인 패닉일에는 청산을 다음 날로 미룸',
       reason: e.ok
-        ? (e.tw < 1 ? '종합점수 ' + e.score.toFixed(1) + ' ≥ ' + e.need + ' · 시장 주의(' + stage.ko + ') — 절반 비중 진입'
+        ? (e.panic ? '종합점수 ' + e.score.toFixed(1) + ' ≥ ' + e.need + ' · 시장 위험(' + stage.ko + ')이지만 QQQ RSI(2) ' +
+            (e.r2 == null ? '—' : e.r2.toFixed(1)) + ' < ' + e.exTh + ' 극단 패닉 — 전액 비중 예외 진입'
+          : e.tw < 1 ? '종합점수 ' + e.score.toFixed(1) + ' ≥ ' + e.need + ' · 시장 주의(' + stage.ko + ') — 절반 비중 진입'
           : '종합점수 ' + e.score.toFixed(1) + ' ≥ ' + e.need + ' · 시장 정상(' + stage.ko + ') — 진입 조건 충족')
         : (e.scoreOk
           ? '종합점수 ' + e.score.toFixed(1) + ' ≥ ' + e.need + ' 충족했지만 시장 단계 ' + stage.ko + ' — 신규 진입 제한'
@@ -7394,8 +7427,15 @@ var EDUFIG = (function () {
   /* 전략 설명은 엔진 파라미터에서 생성 — 상단 카드·백테스트와 같은 단일 소스 */
   function trendDesc() {
     var p = QE.trendParams || { entry: 50, stopAtr: 6, trailAtr: 10, trailStartAtr: 6, minHold: 3 };
-    return '종합 기술점수 ' + p.entry + ' 이상 + QQQ 100일선 시장 단계(100/50/0%) → 다음 날 시가 매수 · 손절 ' +
+    return '종합 기술점수 ' + p.entry + ' 이상 + ' + trendMktRule() + ' → 다음 날 시가 매수 · 손절 ' +
       p.stopAtr + ' ATR · 트레일 ' + p.trailAtr + ' ATR (진입 +' + p.trailStartAtr + ' ATR 발동) — 둘 다 즉시 · 시장 위험 0% 청산은 진입 ' + p.minHold + '거래일 이후';
+  }
+  /* 추세형 시장 필터 문구 — 엔진 파라미터(TREND_P.panicEntryRsi / panicExitRsi)에서 생성 */
+  function trendMktRule() {
+    var p = QE.trendParams || {};
+    var ex = p.panicEntryRsi == null ? 5 : p.panicEntryRsi;
+    var df = p.panicExitRsi == null ? 15 : p.panicExitRsi;
+    return 'QQQ 100일선 단계 (또는 QQQ RSI(2)<' + ex + ' 극단 패닉 예외 · RSI(2)<' + df + ' 패닉일 청산 보류)';
   }
   function swingDesc() {
     var p = QE.swingParams || { rsiEntry: 10, qqqMa: 200, stopAtr: 4.5, stopCap: 0.1, ma20Gate: 0.05, ma20Confirm: 2, coolLoss: 10 };
@@ -7409,7 +7449,7 @@ var EDUFIG = (function () {
     trend: {
       key: 'trend', title: '추세형', sub: '중기',
       desc: trendDesc(),
-      logSub: '종합점수 50 이상 매수 · 시장 단계(100/50/0%) 방어 · 손절 6 ATR·트레일 10 ATR 즉시 · 시장약세 전량 청산은 진입 3거래일 이후'
+      logSub: '종합점수 50 이상 매수 · ' + trendMktRule() + ' · 손절 6 ATR·트레일 10 ATR 즉시 · 시장약세 전량 청산은 진입 3거래일 이후'
     },
     swing: {
       key: 'swing', title: '스윙형', sub: '단기',
@@ -7970,7 +8010,8 @@ var EDUFIG = (function () {
   function marketNoteHtml() {
     var q = A['QQQ'];
     var tp = q && q.trendPlan, sw = q && q.swing;
-    var t1 = tp && tp.qqqMa != null ? 'QQQ $' + pxs(tp.qqq) + ' < 100일선 $' + pxs(tp.qqqMa) : 'QQQ 100일선 데이터 없음';
+    var t1 = tp && tp.qqqMa != null ? 'QQQ $' + pxs(tp.qqq) + ' < 100일선 $' + pxs(tp.qqqMa) +
+      (tp.qqqRsi2 != null ? ' · QQQ RSI(2) ' + tp.qqqRsi2.toFixed(1) + (tp.panicEntry ? ' (극단 패닉 예외 적용)' : '') : '') : 'QQQ 100일선 데이터 없음';
     var s1 = '';
     if (sw && sw.qqqMa != null) {
       s1 = sw.marketAbove ? 'QQQ 200일선 위'
@@ -8501,12 +8542,15 @@ var EDUFIG = (function () {
     }
     var t = QE.trendParams || {};
     var e = t.entry != null ? t.entry : 50;
+    var exTh = t.panicEntryRsi == null ? 5 : t.panicEntryRsi;
+    var exDf = t.panicExitRsi == null ? 15 : t.panicExitRsi;
     return {
       key: 'trend', name: '추세형(중기)', live: true,
-      buy: '종합 기술점수 ' + e + ' 이상 + 시장 단계(QQQ 100일선 기준) 100/50% — 다음 날 시가 매수',
+      buy: '종합 기술점수 ' + e + ' 이상 + ' + trendMktRule() + ' 100/50% — 다음 날 시가 매수. 시장 위험 0%여도 QQQ RSI(2)가 ' +
+        exTh + ' 미만인 극단 패닉 날은 전액 비중으로 허용',
       stop: '진입가 − ' + (t.stopAtr || 6) + ' ATR(변동성 기준 손절폭) — 진입 직후부터 즉시 적용',
       sell: '진입 +' + (t.trailStartAtr || 6) + ' ATR 이후 트레일링 ' + (t.trailAtr || 10) + ' ATR 청산 · 시장 위험 0%면 진입 ' +
-        (t.minHold || 3) + '거래일 뒤 전량 청산',
+        (t.minHold || 3) + '거래일 뒤 전량 청산 (단, QQQ RSI(2)<' + exDf + '인 패닉일은 그날 청산을 보류하고 다음 날 재판정)',
       foot: '점수는 차트 참고 점수이고, 실제 매매는 이 신호 기준입니다.'
     };
   }
@@ -8871,7 +8915,7 @@ var EDUFIG = (function () {
       $('#peZoneK').textContent = '진입 후보 구간';
       var z = tp.entryZone || [entryRef, entryRef];
       $('#peZone').textContent = usd(z[0]) + ' ~ ' + usd(z[1]);
-      $('#peCond').textContent = '실제 진입 조건 · ' + (tp.entryRule || '종합점수 50 이상 + 시장 단계 100/50% → 다음 날 시가 매수') +
+      $('#peCond').textContent = '실제 진입 조건 · ' + (tp.entryRule || '종합점수 50 이상 + ' + trendMktRule() + ' → 다음 날 시가 매수') +
         ' (참고가 ' + usd(entryRef) + ')' +
         (live ? ' — 홀드 중이라 추가 진입 대신 비중 조정만 반영' : '');
 
@@ -8893,6 +8937,11 @@ var EDUFIG = (function () {
           $('#phExit').className = 'neg';
           $('#phExit').textContent = '다음 시가';
           $('#phExitSub').textContent = '시장 위험 0%(QQQ 100일선 이탈) — 보유 ' + tHold + '거래일 · 다음 시가 전량 청산';
+        } else if (live.marketExitDeferred) {
+          $('#phExit').className = 'warn';
+          $('#phExit').textContent = '청산 보류';
+          $('#phExitSub').textContent = '시장 위험 0%지만 QQQ RSI(2) ' + (live.qqqRsi2 == null ? '—' : live.qqqRsi2.toFixed(1)) +
+            ' < ' + (live.panicExitRsi || 15) + ' 극단 패닉 — 오늘은 팔지 않고 다음 날 다시 판정합니다 (손절·트레일은 계속 작동)';
         } else if (tTw === 0 && !live.marketExitArmed) {
           $('#phExit').className = 'warn';
           $('#phExit').textContent = '유예 ' + tHold + '/' + tMin + '일';
@@ -12391,8 +12440,9 @@ var EDUFIG = (function () {
          '<p>모의매매 기능에서 수량과 비중(10·25·50·100%) 버튼으로 이 과정을 미리 연습해 보세요.</p>',
       tip: '분할은 감정 관리 도구입니다. 규칙을 정해 두고 기계적으로 실행하세요.' },
     { c: '차트·기법', t: '시장 레짐 필터', s: '개별 종목보다 시장이 먼저다',
-      b: '<p>아무리 좋은 종목도 시장이 무너지면 같이 빠집니다. 그래서 전략에는 <b>시장 필터</b>가 필요합니다. 이 분석기는 QQQ가 200일선 위일 때만 스윙 진입을 허용합니다 — 단, QQQ RSI(2)가 <b>5 미만</b>인 극단 공포일에는 200일선 아래여도 진입을 허용합니다(폭락일의 눌림 매수).</p>' +
-         '<p>필터가 없으면 하락장에서 RSI(2) 신호가 계속 떠서 물타기만 반복하게 됩니다. 5년 백테스트에서 필터 하나로 스윙 승률이 크게 달라졌습니다.</p>' +
+      b: '<p>아무리 좋은 종목도 시장이 무너지면 같이 빠집니다. 그래서 전략에는 <b>시장 필터</b>가 필요합니다. 추세형은 <b>QQQ 100일선 단계 (또는 QQQ RSI(2)&lt;5 극단 패닉 예외 · RSI(2)&lt;15 패닉일 청산 보류)</b>를 씁니다 — 시장이 위험(0%)이어도 QQQ RSI(2)가 5 미만인 극단 공포일에는 전액 비중으로 진입하고, 반대로 시장약세 청산 판정일의 QQQ RSI(2)가 15 미만이면 그날은 팔지 않고 다음 날 다시 판정합니다.</p>' +
+         '<p>스윙형은 QQQ가 200일선 위일 때만 진입하되, 같은 극단 공포일(RSI(2) 5 미만)에는 200일선 아래여도 진입을 허용합니다(폭락일의 눌림 매수).</p>' +
+         '<p>필터가 없으면 하락장에서 RSI(2) 신호가 계속 떠서 물타기만 반복하게 됩니다. 99종목 5년 백테스트에서 추세형에 공포 예외를 넣자 평균 +118.89% → <b>+133.90%</b>, 84/99종목이 개선됐습니다(2022년 −6.94% → −4.40%).</p>' +
          '<p>필터는 “수익을 늘리는 장치”라기보다 <b>큰 손실을 막는 장치</b>입니다.</p>',
       tip: 'QQQ가 100일선 아래면 스윙 신호는 참고만 하고 비중을 줄이세요.' },
     { c: '검색기 활용법', t: '시총 Top 30 + 실적 우량주 조합', s: '큰 회사 중에서 돈을 잘 버는 곳만',

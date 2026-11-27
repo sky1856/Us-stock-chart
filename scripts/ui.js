@@ -258,8 +258,15 @@
   /* 전략 설명은 엔진 파라미터에서 생성 — 상단 카드·백테스트와 같은 단일 소스 */
   function trendDesc() {
     var p = QE.trendParams || { entry: 50, stopAtr: 6, trailAtr: 10, trailStartAtr: 6, minHold: 3 };
-    return '종합 기술점수 ' + p.entry + ' 이상 + QQQ 100일선 시장 단계(100/50/0%) → 다음 날 시가 매수 · 손절 ' +
+    return '종합 기술점수 ' + p.entry + ' 이상 + ' + trendMktRule() + ' → 다음 날 시가 매수 · 손절 ' +
       p.stopAtr + ' ATR · 트레일 ' + p.trailAtr + ' ATR (진입 +' + p.trailStartAtr + ' ATR 발동) — 둘 다 즉시 · 시장 위험 0% 청산은 진입 ' + p.minHold + '거래일 이후';
+  }
+  /* 추세형 시장 필터 문구 — 엔진 파라미터(TREND_P.panicEntryRsi / panicExitRsi)에서 생성 */
+  function trendMktRule() {
+    var p = QE.trendParams || {};
+    var ex = p.panicEntryRsi == null ? 5 : p.panicEntryRsi;
+    var df = p.panicExitRsi == null ? 15 : p.panicExitRsi;
+    return 'QQQ 100일선 단계 (또는 QQQ RSI(2)<' + ex + ' 극단 패닉 예외 · RSI(2)<' + df + ' 패닉일 청산 보류)';
   }
   function swingDesc() {
     var p = QE.swingParams || { rsiEntry: 10, qqqMa: 200, stopAtr: 4.5, stopCap: 0.1, ma20Gate: 0.05, ma20Confirm: 2, coolLoss: 10 };
@@ -273,7 +280,7 @@
     trend: {
       key: 'trend', title: '추세형', sub: '중기',
       desc: trendDesc(),
-      logSub: '종합점수 50 이상 매수 · 시장 단계(100/50/0%) 방어 · 손절 6 ATR·트레일 10 ATR 즉시 · 시장약세 전량 청산은 진입 3거래일 이후'
+      logSub: '종합점수 50 이상 매수 · ' + trendMktRule() + ' · 손절 6 ATR·트레일 10 ATR 즉시 · 시장약세 전량 청산은 진입 3거래일 이후'
     },
     swing: {
       key: 'swing', title: '스윙형', sub: '단기',
@@ -834,7 +841,8 @@
   function marketNoteHtml() {
     var q = A['QQQ'];
     var tp = q && q.trendPlan, sw = q && q.swing;
-    var t1 = tp && tp.qqqMa != null ? 'QQQ $' + pxs(tp.qqq) + ' < 100일선 $' + pxs(tp.qqqMa) : 'QQQ 100일선 데이터 없음';
+    var t1 = tp && tp.qqqMa != null ? 'QQQ $' + pxs(tp.qqq) + ' < 100일선 $' + pxs(tp.qqqMa) +
+      (tp.qqqRsi2 != null ? ' · QQQ RSI(2) ' + tp.qqqRsi2.toFixed(1) + (tp.panicEntry ? ' (극단 패닉 예외 적용)' : '') : '') : 'QQQ 100일선 데이터 없음';
     var s1 = '';
     if (sw && sw.qqqMa != null) {
       s1 = sw.marketAbove ? 'QQQ 200일선 위'
@@ -1365,12 +1373,15 @@
     }
     var t = QE.trendParams || {};
     var e = t.entry != null ? t.entry : 50;
+    var exTh = t.panicEntryRsi == null ? 5 : t.panicEntryRsi;
+    var exDf = t.panicExitRsi == null ? 15 : t.panicExitRsi;
     return {
       key: 'trend', name: '추세형(중기)', live: true,
-      buy: '종합 기술점수 ' + e + ' 이상 + 시장 단계(QQQ 100일선 기준) 100/50% — 다음 날 시가 매수',
+      buy: '종합 기술점수 ' + e + ' 이상 + ' + trendMktRule() + ' 100/50% — 다음 날 시가 매수. 시장 위험 0%여도 QQQ RSI(2)가 ' +
+        exTh + ' 미만인 극단 패닉 날은 전액 비중으로 허용',
       stop: '진입가 − ' + (t.stopAtr || 6) + ' ATR(변동성 기준 손절폭) — 진입 직후부터 즉시 적용',
       sell: '진입 +' + (t.trailStartAtr || 6) + ' ATR 이후 트레일링 ' + (t.trailAtr || 10) + ' ATR 청산 · 시장 위험 0%면 진입 ' +
-        (t.minHold || 3) + '거래일 뒤 전량 청산',
+        (t.minHold || 3) + '거래일 뒤 전량 청산 (단, QQQ RSI(2)<' + exDf + '인 패닉일은 그날 청산을 보류하고 다음 날 재판정)',
       foot: '점수는 차트 참고 점수이고, 실제 매매는 이 신호 기준입니다.'
     };
   }
@@ -1735,7 +1746,7 @@
       $('#peZoneK').textContent = '진입 후보 구간';
       var z = tp.entryZone || [entryRef, entryRef];
       $('#peZone').textContent = usd(z[0]) + ' ~ ' + usd(z[1]);
-      $('#peCond').textContent = '실제 진입 조건 · ' + (tp.entryRule || '종합점수 50 이상 + 시장 단계 100/50% → 다음 날 시가 매수') +
+      $('#peCond').textContent = '실제 진입 조건 · ' + (tp.entryRule || '종합점수 50 이상 + ' + trendMktRule() + ' → 다음 날 시가 매수') +
         ' (참고가 ' + usd(entryRef) + ')' +
         (live ? ' — 홀드 중이라 추가 진입 대신 비중 조정만 반영' : '');
 
@@ -1757,6 +1768,11 @@
           $('#phExit').className = 'neg';
           $('#phExit').textContent = '다음 시가';
           $('#phExitSub').textContent = '시장 위험 0%(QQQ 100일선 이탈) — 보유 ' + tHold + '거래일 · 다음 시가 전량 청산';
+        } else if (live.marketExitDeferred) {
+          $('#phExit').className = 'warn';
+          $('#phExit').textContent = '청산 보류';
+          $('#phExitSub').textContent = '시장 위험 0%지만 QQQ RSI(2) ' + (live.qqqRsi2 == null ? '—' : live.qqqRsi2.toFixed(1)) +
+            ' < ' + (live.panicExitRsi || 15) + ' 극단 패닉 — 오늘은 팔지 않고 다음 날 다시 판정합니다 (손절·트레일은 계속 작동)';
         } else if (tTw === 0 && !live.marketExitArmed) {
           $('#phExit').className = 'warn';
           $('#phExit').textContent = '유예 ' + tHold + '/' + tMin + '일';
@@ -5255,8 +5271,9 @@
          '<p>모의매매 기능에서 수량과 비중(10·25·50·100%) 버튼으로 이 과정을 미리 연습해 보세요.</p>',
       tip: '분할은 감정 관리 도구입니다. 규칙을 정해 두고 기계적으로 실행하세요.' },
     { c: '차트·기법', t: '시장 레짐 필터', s: '개별 종목보다 시장이 먼저다',
-      b: '<p>아무리 좋은 종목도 시장이 무너지면 같이 빠집니다. 그래서 전략에는 <b>시장 필터</b>가 필요합니다. 이 분석기는 QQQ가 200일선 위일 때만 스윙 진입을 허용합니다 — 단, QQQ RSI(2)가 <b>5 미만</b>인 극단 공포일에는 200일선 아래여도 진입을 허용합니다(폭락일의 눌림 매수).</p>' +
-         '<p>필터가 없으면 하락장에서 RSI(2) 신호가 계속 떠서 물타기만 반복하게 됩니다. 5년 백테스트에서 필터 하나로 스윙 승률이 크게 달라졌습니다.</p>' +
+      b: '<p>아무리 좋은 종목도 시장이 무너지면 같이 빠집니다. 그래서 전략에는 <b>시장 필터</b>가 필요합니다. 추세형은 <b>QQQ 100일선 단계 (또는 QQQ RSI(2)&lt;5 극단 패닉 예외 · RSI(2)&lt;15 패닉일 청산 보류)</b>를 씁니다 — 시장이 위험(0%)이어도 QQQ RSI(2)가 5 미만인 극단 공포일에는 전액 비중으로 진입하고, 반대로 시장약세 청산 판정일의 QQQ RSI(2)가 15 미만이면 그날은 팔지 않고 다음 날 다시 판정합니다.</p>' +
+         '<p>스윙형은 QQQ가 200일선 위일 때만 진입하되, 같은 극단 공포일(RSI(2) 5 미만)에는 200일선 아래여도 진입을 허용합니다(폭락일의 눌림 매수).</p>' +
+         '<p>필터가 없으면 하락장에서 RSI(2) 신호가 계속 떠서 물타기만 반복하게 됩니다. 99종목 5년 백테스트에서 추세형에 공포 예외를 넣자 평균 +118.89% → <b>+133.90%</b>, 84/99종목이 개선됐습니다(2022년 −6.94% → −4.40%).</p>' +
          '<p>필터는 “수익을 늘리는 장치”라기보다 <b>큰 손실을 막는 장치</b>입니다.</p>',
       tip: 'QQQ가 100일선 아래면 스윙 신호는 참고만 하고 비중을 줄이세요.' },
     { c: '검색기 활용법', t: '시총 Top 30 + 실적 우량주 조합', s: '큰 회사 중에서 돈을 잘 버는 곳만',
