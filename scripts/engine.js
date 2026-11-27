@@ -807,6 +807,7 @@
     function closeAt(px, i, reason) {
       cash += pos.shares * px * (1 - o.fee);
       trades.push({ entryDate: pos.entryDate, entry: pos.entry, exitDate: D[i], exit: px,
+        entryIdx: pos.entryIdx, exitIdx: i,
         ret: cash / (pos.shares * pos.entry) - 1, hold: i - pos.entryIdx, reason: reason,
         atr0: pos.atr0, kind: pos.kind });
       pos = null;
@@ -932,6 +933,7 @@
     function closePos(px, idx, reason) {
       if (pos.shares > 1e-12) sell(pos.shares, px);
       trades.push({ entryDate: pos.entryDate, entry: pos.entry, exitDate: d[idx], exit: px,
+        entryIdx: pos.entryIdx, exitIdx: idx,
         ret: pos.realized, hold: idx - pos.entryIdx, reason: reason, w: pos.w, open: false });
       pos = null;
     }
@@ -1832,6 +1834,7 @@
     var FLOOR = 0.01;                      /* 주가 하한 — 음수 달러가 화면에 나오지 않게 클램프 */
     var w1 = cd.L.w1, w3 = cd.L.w3 || w1;
     var up = dir > 0;
+    var dirWord = up ? '상승' : '하락';
     var zone = function (name, a, b) {
       var rlo = Math.min(a, b), rhi = Math.max(a, b);
       if (!isFinite(rlo) || !isFinite(rhi) || rhi <= FLOOR) return { name: name, lo: FLOOR, hi: FLOOR, bad: true };
@@ -1848,6 +1851,12 @@
     var rtxt = function (a, b) { return px(Math.min(a, b)) + '~' + px(Math.max(a, b)); };
     var hiSide = up ? '고점' : '저점';
     var loSide = up ? '저점' : '고점';
+    /* 다음 예상 방향 · 확인 가격 — 카드 상단 4단계 블록과 요약이 같은 값을 쓴다 */
+    var cf = function (v, text) {
+      if (!isFinite(v) || v < FLOOR) return null;
+      return { price: v, side: v > price ? '돌파' : '이탈', text: text };
+    };
+    plan.next = ''; plan.confirm = null;
 
     if (cd.form === 'abc') {
       var aLen = Math.abs(P(1) - P(0)), cLen = Math.abs(P(3) - P(2));
@@ -1858,6 +1867,8 @@
       plan.comment = 'A-B-C 조정이 ' + (cd.L.w3 / cd.L.w1).toFixed(2) + '배(A 대비 C) 비율로 마무리된 자리입니다. ' +
         '조정 폭의 0.5~0.618 회복 ' + ztxt(t1) + '이 1차 목표이며, C파 ' + loSide + ' ' + px(P(3)) +
         ' 이탈 시 조정 연장(더블 지그재그)으로 봅니다.';
+      plan.next = '조정 완료 → 신규 ' + (up ? '하락' : '상승') + ' 1파 전개 (1차 목표 ' + ztxt(t1) + ')';
+      plan.confirm = cf(t1.hi, '조정 폭 0.5~0.618 회복 상단 ' + px(t1.hi) + ' ' + (up ? '이탈' : '돌파') + ' 시 신규 추세 확인');
       plan.bias = up ? 'bear' : 'bull';
       return plan;
     }
@@ -1872,6 +1883,8 @@
         plan.inv = { price: P(0), name: '1파 시작점' };
         plan.comment = '1파 ' + px(P(0)) + '→' + px(P(1)) + ' 완료 후 2파 조정 국면으로 봅니다. 0.5~0.618 되돌림 ' +
           rtxt(r500, r618) + '이 분할 매수 참고 구간이며, 1파 시작점 ' + px(P(0)) + ' 이탈 시 카운트가 무효입니다.';
+        plan.next = '2파 조정 후 3파 ' + dirWord + ' 재개 (1차 목표 ' + ztxt(plan.targets[0]) + ')';
+        plan.confirm = cf(P(1), '1파 ' + hiSide + ' ' + px(P(1)) + ' ' + (up ? '돌파' : '이탈') + ' 시 3파 진행 확인');
       } else if (k === 2) {
         var t2 = zone('1차 목표 · 1파의 1.382~1.618배', P(2) + dir * w1 * 1.382, P(2) + dir * w1 * 1.618);
         plan.targets.push(t2);
@@ -1880,6 +1893,8 @@
         plan.inv = { price: P(2), name: '2파 ' + loSide };
         plan.comment = '3파 진행 구간으로 파동 이론상 가장 힘 있는 자리입니다. 1차 목표 ' + ztxt(t2) +
           ', 2차 목표는 1파의 2.618배 확장 구간입니다. 2파 ' + loSide + ' ' + px(P(2)) + ' 이탈 시 카운트가 무효화됩니다.';
+        plan.next = '3파 ' + dirWord + ' 지속 → 1차 목표 ' + ztxt(t2) + ' 부근';
+        plan.confirm = cf(t2.lo, '1차 목표 구간 ' + px(t2.lo) + ' 진입 시 3파 전개 유효');
       } else if (k === 3) {
         var s4a = P(3) - dir * w3 * 0.382, s4b = P(3) - dir * w3 * 0.5;
         plan.supports.push({ name: '0.382 되돌림', price: s4a });
@@ -1890,6 +1905,8 @@
         plan.comment = '3파 완료 후 4파 조정 중입니다. 0.382~0.5 되돌림 ' + rtxt(s4b, s4a) + '이 1차 지지 후보이고, ' +
           '4파가 1파 ' + hiSide + ' ' + px(P(1)) + '과 겹치면 절대 규칙 위반으로 카운트를 다시 봐야 합니다.' +
           (plan.targets.length ? ' 조정 후 5파 목표는 ' + ztxt(plan.targets[0]) + ' 구간입니다.' : '');
+        plan.next = '4파 조정 완료 → 5파 ' + dirWord + ' 재개 (목표 ' + (plan.targets.length ? ztxt(plan.targets[0]) : '—') + ')';
+        plan.confirm = cf(P(3), '3파 ' + hiSide + ' ' + px(P(3)) + ' ' + (up ? '돌파' : '이탈') + ' 시 5파 진행 확인');
       } else if (k === 4) {
         var t5 = zone('5파 목표 · 1파의 1.0배 ~ 3파의 0.618배',
           P(4) + dir * Math.min(w1, w3 * 0.618), P(4) + dir * Math.max(w1, w3 * 0.618));
@@ -1898,6 +1915,8 @@
         plan.inv = { price: P(4), name: '4파 ' + loSide };
         plan.comment = '5파 진행 구간입니다. 목표 ' + ztxt(t5) + ' 부근에서 임펄스가 마무리될 수 있어 분할 익절이 유리하고, ' +
           '4파 ' + loSide + ' ' + px(P(4)) + ' 이탈 시 5파 카운트가 무효입니다.';
+        plan.next = '5파 목표 ' + ztxt(t5) + ' 도달 후 임펄스 마무리 → ABC 조정';
+        plan.confirm = cf(t5.lo, '5파 목표 하단 ' + px(t5.lo) + ' 진입 시 임펄스 완성 확인');
       }
     } else {
       var R = Math.abs(P(5) - P(0));
@@ -1909,17 +1928,25 @@
         plan.comment = '5파 완료 후 조정 국면입니다. 임펄스의 0.382~0.618 되돌림 ' + rtxt(P(5) - dir * R * 0.382, P(5) - dir * R * 0.618) +
           '까지 ABC 조정이 나올 수 있어, 신규 진입은 조정 완료 신호를 확인한 뒤가 안전합니다. 5파 ' + hiSide + ' ' + px(P(5)) +
           (up ? ' 돌파는 5파 연장' : ' 이탈은 하락 연장') + '으로 봅니다.';
+        plan.next = 'ABC 조정 전개 → 1차 목표 ' + ztxt(c1) + ' 부근';
+        plan.confirm = cf(c1.lo, '조정 1차 목표 ' + px(c1.lo) + ' 도달 시 ABC 진행 확인');
       } else if (post.length === 1) {
         var A0 = post[0].p, aLen0 = Math.abs(A0 - P(5));
         var bz = zone('B파 목표 · A파의 0.382~0.618 되돌림', A0 + dir * aLen0 * 0.382, A0 + dir * aLen0 * 0.618);
         var cMid = A0 + dir * aLen0 * 0.5 - dir * aLen0;
+        var bWord = up ? '반등' : '눌림';                  /* B는 A의 반대 방향 — 상승 임펄스 뒤 B는 반등 */
+        var cWord = up ? '하락' : '상승';                  /* C는 다시 A와 같은 방향 */
         plan.targets.push(bz);
         plan.supports.push({ name: 'A파 ' + loSide, price: A0 });
         plan.inv = { price: P(5), name: '5파 ' + hiSide };
         plan.comment = 'A파가 ' + px(P(5)) + '→' + px(A0) + ' (' + (aLen0 / Math.abs(P(5) - P(0)) * 100).toFixed(0) +
-          '% 되돌림)에서 완료되고 B파 되돌림이 진행 중입니다. B파 목표는 A파의 0.382~0.618 되돌림 ' + ztxt(bz) +
-          '이고, B파가 끝나면 C파가 A파와 등가(약 ' + pxsafe(cMid) + ')까지 열립니다. ' +
-          (up ? '5파 고점 ' : '5파 저점 ') + px(P(5)) + (up ? '을 다시 넘으면' : '을 다시 이탈하면') + ' 조정 카운트가 무효입니다.';
+          '% 되돌림)에서 완료되고 B파 ' + bWord + '이 진행 중입니다. B파 목표는 A파 ' + (up ? '하락폭' : '상승폭') +
+          '의 0.382~0.618 되돌림 ' + ztxt(bz) + '이고, B파가 끝나면 C파가 A파와 등가 수준(약 ' + pxsafe(cMid) + ')까지 ' +
+          cWord + '합니다. ' + (up ? '5파 고점 ' : '5파 저점 ') + px(P(5)) +
+          (up ? '을 다시 넘으면' : '을 다시 이탈하면') + ' 조정 카운트가 무효입니다.';
+        plan.next = 'B파 ' + bWord + ' 마무리 → C파 ' + cWord + ' (목표 ≈ ' + pxsafe(cMid) + ')';
+        plan.confirm = cf(A0, 'C파 전개 확인 — A파 ' + loSide + ' ' + px(A0) + ' ' + (up ? '이탈' : '돌파') +
+          ' 시 B파 종료·C파 진행으로 판단');
       } else if (post.length === 2) {
         var A2 = post[0].p, B2 = post[1].p, aLen3 = Math.abs(A2 - P(5));
         var cz = zone('C파 목표 · A파의 1.0~1.618배', A2 - dir * aLen3 * 1.618, A2 - dir * aLen3 * 1.0);
@@ -1930,6 +1957,8 @@
           (cz.bad ? 'C파 목표는 A파 대비 하락폭이 커 $0 미만(계산 불가)입니다. '
                   : 'C파 목표 ' + ztxt(cz) + '까지 열려 있고, ') +
           'B파 ' + hiSide + ' ' + px(B2) + ' 돌파 시 조정이 끝난 것으로 봅니다.';
+        plan.next = 'C파 ' + (up ? '하락' : '상승') + ' 진행 (목표 ' + ztxt(cz) + ')';
+        plan.confirm = cf(A2, 'A파 ' + loSide + ' ' + px(A2) + ' ' + (up ? '이탈' : '돌파') + ' 시 C파 확장 확인');
       } else if (post.length === 3) {
         var A3 = post[0].p, C3 = post[2].p, cw = Math.abs(A3 - P(5));
         var nz1 = zone('신규 ' + (up ? '상승' : '하락') + ' 1파 목표 · 조정 0.5~0.618 회복', C3 + dir * cw * 0.5, C3 + dir * cw * 0.618);
@@ -1938,6 +1967,8 @@
         plan.inv = { price: C3, name: 'C파 ' + loSide };
         plan.comment = 'ABC 조정이 마무리되고 신규 임펄스 1파가 시작되는 자리로 봅니다. 1차 목표는 조정 폭의 0.5~0.618 회복 ' +
           ztxt(nz1) + '이고, C파 ' + loSide + ' ' + px(C3) + ' 이탈 시 조정 연장입니다.';
+        plan.next = '신규 ' + dirWord + ' 1파 전개 (1차 목표 ' + ztxt(nz1) + ')';
+        plan.confirm = cf(nz1.hi, '조정 폭 0.5~0.618 회복 상단 ' + px(nz1.hi) + ' ' + (up ? '이탈' : '돌파') + ' 시 신규 추세 확인');
       } else {
         var eP = post[post.length - 1].p, wide = Math.abs(post[1].p - post[0].p);
         var thrust = eP + dir * wide * 0.618;
@@ -1945,6 +1976,8 @@
         plan.inv = { price: eP, name: (post.length === 4 ? 'D파' : 'E파') + ' ' + (up ? '저점' : '고점') };
         plan.comment = 'A-B-C-D(-E) 삼각수렴이 진행 중입니다. 수렴 완료 후 삼각 최대 폭의 0.618배 스러스트 ' + px(thrust) +
           '를 목표로 추세가 재개되는 패턴이고, 마지막 변곡점 ' + px(eP) + ' 이탈 시 무효입니다.';
+        plan.next = '삼각 수렴 완료 → 스러스트 ' + dirWord + ' (목표 ' + px(thrust) + ')';
+        plan.confirm = cf(thrust, '스러스트 ' + px(thrust) + ' 도달 시 추세 재개 확인');
       }
     }
     plan.bias = (k < 5) ? (up ? 'bull' : 'bear') : 'neu';
@@ -1972,7 +2005,9 @@
       else if (k === 4) { a = '5파 목표 도달 후 임펄스 종료 → ABC 조정'; b = '4파 이탈 시 5파 실패 · 추세 전환 신호'; }
       else { a = 'ABC 조정 진행 → 0.382~0.618 되돌림 후 신규 임펄스'; b = '5파 극단 ' + (up ? '돌파' : '이탈') + ' 시 파동 연장(확장 임펄스)'; }
     } else if (post.length === 1) {
-      a = 'A파 완료 → B파 반등 후 C파 재개'; b = '5파 극단 회복 시 조정 종료 · 기존 추세 재개';
+      /* B는 A의 반대 방향, C는 다시 A와 같은 방향 — 카드 라벨·주석과 같은 규칙 */
+      a = 'A파 완료 → B파 ' + (up ? '반등' : '눌림') + ' 후 C파 ' + (up ? '하락 재개' : '상승 전개');
+      b = (up ? '5파 고점 상향 돌파' : '5파 저점 하향 이탈') + ' 시 조정 종료 · 기존 추세 연장';
     } else if (post.length === 2) {
       a = 'B파 완료 → C파 목표까지 ' + (up ? '하락' : '상승'); b = 'B파 극단 ' + (up ? '돌파' : '이탈') + ' 시 조정 종료 · 신규 추세';
     } else if (post.length === 3) {
@@ -2017,7 +2052,7 @@
       badge = k === 1 ? '2' : k === 2 ? '3' : k === 3 ? '4' : '5';
       kindTxt = k >= 5 ? '임펄스 5파 완료' : '임펄스 ' + k + '파 완료';
     } else if (post.length === 1) {
-      label = dirWord + ' 5파 완료 · A파 완료 · B파 ' + (dirWord === '상승' ? '반등' : '눌림');
+      label = dirWord + ' 5파 완료 · A파 완료 · B파 ' + (dir > 0 ? '반등' : '눌림');
       badge = 'B';
       kindTxt = '5파 완료 · ABC 조정 (B파 진행)';
     } else if (post.length === 2) {
@@ -2100,6 +2135,7 @@
       degree: degree, degreeKo: degreeKo, degreeEn: degreeEn, span: span, thr: cd.thr, diag: !!cd.diag,
       rules: ewRules(cd), guidelines: guidelines, momentum: mom, corr: corr, channel: chan,
       targets: plan.targets, supports: plan.supports, inv: plan.inv, comment: plan.comment, bias: plan.bias,
+      next: plan.next || '', confirm: plan.confirm || null,
       scenario: ewScenarioText(cd, plan, leg), leg: leg, sub: sub, confluence: conf,
       path: path, legs: legs,
       from: { i: pts[0].i, p: pts[0].p, d: series.d[pts[0].i] },
@@ -2109,18 +2145,21 @@
     };
   }
 
-  /* 대안 카운트가 기본 카운트를 뒤집는 트리거 가격 */
-  function ewSwitch(prim, altCd, alt, price) {
+  /* 대안 카운트가 기본 카운트를 뒤집는 트리거 가격 — 각 시나리오 카드의 '무효화 가격'과 같은 값을 쓴다 */
+  function ewSwitch(prim, altCd, alt, price, primS) {
     var d = prim.dir, P = prim.pts[prim.k].p, A = altCd.pts[altCd.k].p;
     var side = function (v) { return v > price ? '돌파' : '이탈'; };
     if (altCd.dir === d && ((d > 0 && A > P) || (d < 0 && A < P))) {
-      return { price: P, text: px(P) + ' ' + (P > price ? '돌파' : '이탈') + ' 시 임펄스 연장 — 대안 카운트 우세', tone: 'on' };
+      return { price: P, text: px(P) + ' ' + side(P) + ' 시 임펄스 연장 — 대안 카운트 우세',
+        textAlt: px(P) + ' ' + side(P) + ' 시 임펄스 연장 — 기본 카운트 우세', tone: 'on' };
     }
-    var inv = alt.inv ? alt.inv.price : A;
+    var pInv = (primS && primS.inv && primS.inv.price) ? primS.inv.price : P;
+    var aInv = (alt && alt.inv && alt.inv.price) ? alt.inv.price : A;
     return {
-      price: inv,
-      text: px(inv) + ' ' + side(inv) + ' 시 대안 카운트 무효 — 기본 시나리오 유지',
-      textAlt: px(inv) + ' ' + side(inv) + ' 시 이 대안 카운트 무효 — 기본 시나리오로 복귀',
+      price: pInv,
+      text: px(pInv) + ' ' + side(pInv) + ' 시 기본 카운트 무효 — 대안 시나리오로 전환',
+      textAlt: px(aInv) + ' ' + side(aInv) + ' 시 이 대안 카운트 무효 — 기본 시나리오로 복귀',
+      altPrice: aInv, altSide: side(aInv),
       tone: 'off'
     };
   }
@@ -2209,7 +2248,7 @@
     if (altCd) {
       var S1 = ewBuild(altCd, series, ind, ctx);
       S1.name = '대안 시나리오';
-      S1.switch = ewSwitch(prim, altCd, S1, price);
+      S1.switch = ewSwitch(prim, altCd, S1, price, S0);
       S0.switch = S1.switch;
       scen.push(S1);
     }
@@ -2221,6 +2260,159 @@
     return out;
   }
 
+
+  /* ============================================================
+     삼각수렴(Triangle Consolidation) 탐지 — 표시 전용
+     ------------------------------------------------------------
+       work/stock/v5_upgrade/tlib.py · REPORT_TRIANGLE.md 이식
+       · 최근 45봉 안의 확정 피벗 고점2+저점2로 상·하단 추세선을 만들고 수렴 여부를 판정
+       · 유형은 **대칭삼각 / 상승삼각 / 하락삼각**만 인정 — 양쪽 경계가 같은 방향으로
+         움직이는 쐐기(wedge)·추세채널은 제외한다 (보고서 §1-3)
+       · 단계: 돌파(최근 5봉 안 상단선 상향 교체) / 임박(폭 8% 이내·삼각 내 상단 절반)·apex 25봉 이내) / 진행
+       ※ **스캐너·오버레이 참고 전용** — 추세형/스윙형 진입·청산 조건에는 쓰지 않는다.
+         5년 검증에서 삼각 돌파 진입은 같은 청산의 무작위 진입과 구분되지 않았다.
+     ============================================================ */
+  var TRI_P = {
+    k: 2, win: 45, minAge: 12, gap: 5,
+    maxW0: 0.30, minW0: 0.04, minWidthBrk: 0.012, apexFrac: 0.60,
+    shrinkMax: 0.80, widthMax: 0.15, touchTol: 0.02, minTouch: 2,
+    flatTol: 0.0006, violTol: 0.01, brkMargin: 0.001, maxExt: 0.05, brkRecent: 5,
+    nearWidth: 0.08, nearPos: 0.5, nearApex: 25
+  };
+  /* 좌우 k봉 극값 — 동률이면 왼쪽만 인정(tlib.pivots 와 동일 규칙) */
+  function triPivots(a, k, low) {
+    var out = [], n = a.length;
+    for (var j = k; j < n - k; j++) {
+      var v = a[j];
+      if (v == null) continue;
+      var ok = true;
+      for (var m = 1; m <= k; m++) {
+        var x = a[j - m], y = a[j + m];
+        if (x == null || y == null) { ok = false; break; }
+        if (low) { if (v > x || v >= y) { ok = false; break; } }
+        else { if (v < x || v <= y) { ok = false; break; } }
+      }
+      if (ok) out.push(j);
+    }
+    return out;
+  }
+  function triLine(a, b, va, vb, j) { return va + (vb - va) * (j - a) / (b - a); }
+
+  /* 후보 삼각형을 form봉 시점의 정보만으로 검증 (미래참조 없음) */
+  function triCheck(s, p, q, form, PH, PL) {
+    var h = s.h, l = s.l, c = s.c;
+    var ha = q.ha, hb = q.hb, la = q.la, lb = q.lb;
+    var s0 = Math.min(ha, la), t0 = Math.max(ha, la);
+    if (form - t0 < 1) return null;
+    var seq = [[ha, 1], [hb, 1], [la, 0], [lb, 0]].sort(function (a, b) { return a[0] - b[0]; });
+    for (var m = 0; m < 3; m++) if (seq[m][1] === seq[m + 1][1]) return null;   /* 고-저 교대 배열만 */
+    var su = (h[hb] - h[ha]) / (hb - ha), sl = (l[lb] - l[la]) / (lb - la);
+    var uf = triLine(ha, hb, h[ha], h[hb], form), lf = triLine(la, lb, l[la], l[lb], form);
+    var u0 = triLine(ha, hb, h[ha], h[hb], t0), l0 = triLine(la, lb, l[la], l[lb], t0);
+    if (!(uf > lf && u0 > l0)) return null;
+    var denom = su - sl;
+    if (Math.abs(denom) < 1e-12) return null;
+    var apex = ha + (l[la] + sl * (ha - la) - h[ha]) / denom;
+    if (apex <= form) return null;
+    var cf = c[form];
+    if (!(cf > 0)) return null;
+    var pu = su / cf, pl = sl / cf, ft = p.flatTol, typ;
+    if (pu < -ft && pl > ft) typ = '대칭';
+    else if (pl > ft && Math.abs(pu) <= ft) typ = '상승';
+    else if (pu < -ft && Math.abs(pl) <= ft) typ = '하락';
+    else return null;                  /* 쐐기(양쪽 동일 방향)·추세채널 제외 */
+    var w0 = u0 - l0;
+    if (w0 < p.minW0 * cf || w0 > p.maxW0 * cf) return null;
+    var shrink = (uf - lf) / w0;
+    if (!(shrink > 0) || shrink > p.shrinkMax) return null;
+    if ((uf - lf) > p.widthMax * cf) return null;
+    for (var j = t0; j <= form; j++) {
+      if (c[j] == null) continue;
+      var uj = triLine(ha, hb, h[ha], h[hb], j), lj = triLine(la, lb, l[la], l[lb], j);
+      if (c[j] > uj * (1 + p.violTol) || c[j] < lj * (1 - p.violTol)) return null;
+    }
+    var tu = 0, tl = 0, kk;
+    for (kk = 0; kk < PH.length; kk++) {
+      var jh = PH[kk];
+      if (jh < s0 || jh > form - p.k) continue;
+      if (Math.abs(h[jh] - triLine(ha, hb, h[ha], h[hb], jh)) <= p.touchTol * h[jh]) tu++;
+    }
+    for (kk = 0; kk < PL.length; kk++) {
+      var jl = PL[kk];
+      if (jl < s0 || jl > form - p.k) continue;
+      if (Math.abs(l[jl] - triLine(la, lb, l[la], l[lb], jl)) <= p.touchTol * l[jl]) tl++;
+    }
+    if (tu < p.minTouch || tl < p.minTouch) return null;
+    if (form - t0 < p.minAge) return null;
+    return {
+      ha: ha, hb: hb, la: la, lb: lb, t0: t0, s0: s0, form: form, apex: apex,
+      hva: h[ha], hvb: h[hb], lva: l[la], lvb: l[lb],
+      su: su, sl: sl, u0: u0, l0: l0, u: uf, l: lf, typ: typ, w0: w0, shrink: shrink,
+      width: (uf - lf) / cf, pos: (cf - lf) / Math.max(uf - lf, 1e-9),
+      age: form - t0, toApex: apex - form, tu: tu, tl: tl,
+      score: (tu + tl) * 10 - shrink * 6 - (t0 - (form - p.win)) * 0.02
+    };
+  }
+
+  function triDetect(series, prm) {
+    var p = {}, kk;
+    for (kk in TRI_P) p[kk] = TRI_P[kk];
+    if (prm) for (kk in prm) p[kk] = prm[kk];
+    var h = series.h, l = series.l, c = series.c, n = c.length, i = n - 1;
+    if (i < p.minAge + p.k + 2) return null;
+    var PH = triPivots(h, p.k, false), PL = triPivots(l, p.k, true);
+    var lo0 = i - p.win;
+    var hs = PH.filter(function (j) { return j >= lo0 && j <= i - p.k; });
+    var ls = PL.filter(function (j) { return j >= lo0 && j <= i - p.k; });
+    if (hs.length < 2 || ls.length < 2) return null;
+    var best = null, brkBest = null;
+    for (var a = 0; a < hs.length - 1; a++) {
+      for (var b = a + 1; b < hs.length; b++) {
+        var ha = hs[a], hb = hs[b];
+        if (hb - ha < p.gap) continue;
+        for (var u = 0; u < ls.length - 1; u++) {
+          for (var v = u + 1; v < ls.length; v++) {
+            var la = ls[u], lb = ls[v];
+            if (lb - la < p.gap) continue;
+            var q = { ha: ha, hb: hb, la: la, lb: lb };
+            /* 1) 최근 5봉 안 상단선 돌파 — 돌파 직전 봉에서 구조를 검증 */
+            for (var j = i; j >= Math.max(i - p.brkRecent, 0); j--) {
+              if (j - 1 < 0) continue;
+              var cand = triCheck(series, p, q, j - 1, PH, PL);
+              if (!cand) continue;
+              var uj = triLine(ha, hb, h[ha], h[hb], j), lj = triLine(la, lb, l[la], l[lb], j);
+              var upPrev = triLine(ha, hb, h[ha], h[hb], j - 1);
+              if (c[j] > uj * (1 + p.brkMargin) && c[j - 1] <= upPrev * (1 + p.violTol) &&
+                  c[j] <= uj * (1 + p.maxExt) && (uj - lj) >= p.minWidthBrk * c[j] &&
+                  cand.apex > j && (cand.apex - j) <= p.apexFrac * (j - cand.t0)) {
+                var br = {};
+                for (kk in cand) br[kk] = cand[kk];
+                br.stage = '돌파'; br.brk = j; br.form = j; br.date = series.d[j];
+                br.u = uj; br.l = lj; br.width = (uj - lj) / c[j]; br.pos = (c[j] - lj) / Math.max(uj - lj, 1e-9);
+                br.score = cand.score + 25;
+                if (!brkBest || br.score > brkBest.score) brkBest = br;
+              }
+            }
+            /* 2) 아직 돌파 전인 현재 삼각형 */
+            var cur = triCheck(series, p, q, i, PH, PL);
+            if (!cur) continue;
+            cur.stage = (cur.width <= p.nearWidth && cur.pos >= p.nearPos && cur.toApex <= p.nearApex) ? '임박' : '진행';
+            cur.brk = null; cur.date = series.d[i];
+            if (!best || cur.score > best.score) best = cur;
+          }
+        }
+      }
+    }
+    var win = brkBest && (!best || brkBest.score >= best.score) ? brkBest : best;
+    if (!win) return null;
+    win.dtStart = series.d[win.t0];
+    win.dtEnd = series.d[win.form];
+    win.piv = [[win.ha, 'H'], [win.hb, 'H'], [win.la, 'L'], [win.lb, 'L']].map(function (q) {
+      return { i: q[0], t: q[1], p: q[1] === 'H' ? h[q[0]] : l[q[0]], d: series.d[q[0]] };
+    });
+    win.typKo = win.typ === '대칭' ? '대칭삼각' : (win.typ === '상승' ? '상승삼각' : '하락삼각');
+    return win;
+  }
 
   /* ============================================================
      미너비니 Trend Template + VCP(변동성 축소) 스캔
@@ -2380,6 +2572,7 @@
     rec.wsig = wsig;              /* 기간 전환 백테스트가 W 신호를 다시 계산하지 않도록 보관 */
     rec.w = wnow;                 /* 차트 오버레이·스캐너 필터용 현재 W 상태 */
     rec.vcp = vcpScan(series);    /* 스캐너 VCP 필터 (표시 전용) */
+    rec.tri = triDetect(series);  /* 스캐너·차트 삼각수렴 (표시 전용 — 전략 진입·청산 미적용) */
     rec.elliott = ewAnalyze(series, ind);
     /* 두 전략을 함께 산출 — 전환 탭은 다시 계산하지 않고 이 결과를 골라 쓴다 */
     rec.strategyMode = mode;
@@ -2412,6 +2605,7 @@
     trendStatus: trendStatus, trendEntryAt: trendEntryAt, trendParams: TREND_P,
     swingEntryAt: swingEntryAt, marketRegimeMap: marketRegimeMap, marketStageText: marketStageText,
     trendTemplate: trendTemplate, vcpSetup: vcpSetup, vcpScan: vcpScan, VCP_P: VCP_P,
+    triDetect: triDetect, TRI_P: TRI_P,
     clamp: clamp, elliott: ewAnalyze
   };
 
