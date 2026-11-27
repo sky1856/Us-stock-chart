@@ -657,10 +657,12 @@
      Swing strategy — 중간 길이 눌림 반등 (RSI(2) 과매도 · QQQ 200일선 · 20일선 이탈 청산)
      --------------------------------------------
      work/stock/v5_upgrade/longlib.py (REPORT_LONG_SWING.md '중간 길이' 안) 을 이 엔진에 이식.
-       진입 ① RSI(2) < 15                          (주력)
+       진입 ① RSI(2) < 10                          (주력 — REPORT_SWING_LOSS.md I4안)
             ② W 쌍바닥 넥라인 상향 돌파              (보조 — REPORT_W_BOTTOM.md 권고안)
                전일 종가 ≤ N, 당일 종가 > N → 신호, 다음 거래일 시가 매수
             ① ② 모두 QQQ 종가 > QQQ 200일 단순이동평균 조건에서만
+            ★ 손절(진입가 아래)로 청산한 뒤 10거래일은 그 종목 신규 진입 금지 (① ② 모두)
+              — REPORT_SWING_LOSS.md §6-1 I4안. 같은 종목에서 손절이 연달아 나는 것을 막는다
        청산 고정 보유기간 없음 — 종가에 아래 조건을 확인해 다음 날 시가 매도
             ① 손절  min(진입가 − 4.5 × ATR(14), 진입가 −10%)  (장중 지정가, 갭이면 시가)
             ② 이익 상태(평가수익 +5% 이상)에서 종가가 20일 단순이동평균 아래로
@@ -668,15 +670,17 @@
        비용  매수·매도 각 0.03%
      지표·신호는 당일 종가까지만 사용 — 미래참조 없음
      손절 상한: 진입가 −10% (4.5 ATR 손절선이 그보다 멀 때만 적용) — 대형 손절 방어
-     백테스트 (99종목, 2021-11-26~2026-11-25 5년, 2022년 하락장 포함): 이익 +5% 게이트 + -10% 상한 + 20일선 2일 연속 확인
-       W 보조 루트 포함 평균 +98.59% · 중앙 +64.47% · 평균 MDD -36.40% · -15% 초과 13건(기존 16) · -20% 초과 4건(기존 7)
-       (20일선 2일 확인 적용 전 기준: 평균 +91.33% · 중앙 +58.23% · 승률 57.5% · 평균 MDD -36.96% · -15% 초과 16건)
+     백테스트 (99종목, 2021-11-26~2026-11-25 5년, 2022년 하락장 포함): RSI(2)<10 + 손절 후 10거래일 금지
+       이익 +5% 게이트 + -10% 상한 + 20일선 2일 연속 확인 + W 보조 루트 포함
+       평균 +104.99% · 중앙 +43.50% · 평균 MDD -33.73% · 패배 732건(전체 1,644거래) · 평균 PF 2.00
+       -15% 초과 10건 · -20% 초과 1건 (REPORT_SWING_LOSS.md I4안 — 직전 기준선: 평균 +98.59% · 중앙 +64.47% · MDD -36.40% · 패배 956건 · PF 1.81)
      ============================================================ */
   var SWING_P = {
-    rsiLen: 2, rsiEntry: 15, qqqMa: 200, useMarketFilter: true,
+    rsiLen: 2, rsiEntry: 10, qqqMa: 200, useMarketFilter: true,
+    coolLoss: 10,              /* 손절(진입가 아래) 청산 후 그 종목 신규 진입 금지 거래일 — 0이면 끔 */
     ma20Exit: true,            /* 이익 상태에서 종가 < 20일선이 2거래일 연속이면 다음 날 시가 청산 */
     ma20Confirm: 2,            /* 20일선 이탈 확인 거래일 수 — 1이면 기존(하루 이탈 즉시) */
-    ma20Gate: 0.05,            /* '이익 상태' = 평가수익 +5% 이상 (99종목 5년 평균 +98.59% · 중앙 +64.47% · MDD -36.40%) */
+    ma20Gate: 0.05,            /* '이익 상태' = 평가수익 +5% 이상 (99종목 5년 평균 +104.99% · 중앙 +43.50% · MDD -33.73%) */
     stopAtr: 4.5,              /* 진입가 − 4.5 × ATR */
     stopCap: 0.10,             /* 손절 상한 — 4.5 ATR이 −10%보다 멀면 −10%에서 먼저 청산 (대형 손절 방어) */
     wRoute: true,              /* W 쌍바닥 넥라인 돌파 보조 루트 (포지션이 없을 때만 — 스윙 신호가 먼저) */
@@ -734,7 +738,16 @@
     return k;
   }
 
-  /* bar i 종가 시점의 스윙형 진입 판정 — swingStatus(상단 카드)와 swingBacktest 가 같이 쓰는 단일 소스 */
+  /* 손절 후 재진입 금지 잔여 거래일 — 0이면 해제. 마지막 손절 봉(lastStopIdx)부터 coolLoss 거래일까지 막는다
+     (신호일 i 와 손절 봉 s 가 같으면 i−s=0 → coolLoss일 남음. swing_loss_study.js I4안과 같은 계산) */
+  function swingCoolLeft(o, lastStopIdx, i) {
+    if (!(o.coolLoss > 0) || lastStopIdx == null || lastStopIdx < -1e8) return 0;
+    var left = o.coolLoss - (i - lastStopIdx);
+    return left > 0 ? left : 0;
+  }
+
+  /* bar i 종가 시점의 스윙형 진입 판정 — swingStatus(상단 카드)와 swingBacktest 가 같이 쓰는 단일 소스
+     env.cool = 남은 쿨다운 거래일(>0이면 신규 진입 금지) */
   function swingEntryAt(series, ind, i, o, env) {
     var rNow = env && env.r2 ? env.r2[i] : null;
     var mktOk = (env && env.map) ? swingMktAt(env.map, series.d, i) : true;
@@ -742,15 +755,21 @@
     var rsiOk = (rNow != null && rNow < o.rsiEntry);
     var wBrk = !!(o.wRoute && env && env.wbreak && env.wbreak[i]);
     var route = (rsiOk && atrOk) ? '스윙' : (wBrk ? 'W돌파' : null);
+    var cool = (env && env.cool > 0) ? env.cool : 0;
+    var coolBlock = !!route && cool > 0;          /* 쿨다운 중 — 스윙·W돌파 모든 루트 진입 금지 */
+    var routeRaw = route;
+    if (coolBlock) route = null;
     return {
       rsi2: rNow, rsiOk: rsiOk, atrOk: atrOk, marketOk: mktOk, wBreak: !!wBrk,
-      route: route, ok: !!route && mktOk,
-      state: (route && !mktOk) ? 'blocked' : (route && mktOk ? 'ready' : 'wait')
+      route: route, routeRaw: routeRaw, cool: cool, coolBlock: coolBlock,
+      ok: !!route && mktOk,
+      state: cool > 0 ? 'cool' : ((route && !mktOk) ? 'blocked' : (route && mktOk ? 'ready' : 'wait'))
     };
   }
 
-  /* 마지막 봉 기준 신호 상태 · 청산 계획 (전환 탭의 손절/청산기준 안내에 사용) */
-  function swingStatus(series, ind, opts, wsig) {
+  /* 마지막 봉 기준 신호 상태 · 청산 계획 (전환 탭의 손절/청산기준 안내에 사용)
+     lastStopIdx 를 넘기면 그 값을 쓰고(백테스트와 같은 계산), 없으면 같은 규칙으로 한 번 돌려 구한다. */
+  function swingStatus(series, ind, opts, wsig, lastStopIdx) {
     var o = swingOpts(opts), n = series.c.length, i = n - 1;
     if (i < 1) return null;
     var r2 = rsi(series.c, o.rsiLen);
@@ -760,7 +779,10 @@
     var r14 = ind.rsi[i];
     /* W 쌍바닥 — 오늘 넥라인 돌파 신호인지, 아니면 어느 단계인지 */
     var w = wsig || wSignals(series);
-    var ent = swingEntryAt(series, ind, i, o, { r2: r2, map: map, wbreak: w.wbreak });
+    var lsi = lastStopIdx;
+    if (lsi == null && o.coolLoss > 0) lsi = swingSim(series, ind, o, w).lastStopIdx;
+    var coolLeft = swingCoolLeft(o, lsi, i);
+    var ent = swingEntryAt(series, ind, i, o, { r2: r2, map: map, wbreak: w.wbreak, cool: coolLeft });
     var rNow = ent.rsi2, mktOk = ent.marketOk;
     var breakToday = ent.wBreak && mktOk;
     var wnow = wScan(series, w);
@@ -770,10 +792,12 @@
     if (breakToday) { wNeck = w.brkinfo[i].neck; wGap = series.c[i] / wNeck - 1; }
     else if (wnow.pat) { wNeck = wnow.pat.neck; wGap = series.c[i] / wNeck - 1; }
     return {
-      strategy: 'swing', date: series.d[i], signal: !!sig, route: route, state: ent.state,
+      strategy: 'swing', date: series.d[i], signal: !!sig, route: route, routeRaw: ent.routeRaw, state: ent.state,
       rsi2: rNow, rsi2Prev: r2[i - 1], r14: r14, rsiOk: ent.rsiOk, ma5: ind.ma5[i], ma20: ind.ma20[i],
       qqq: rec ? rec.qqq : null, qqqMa: rec ? rec.ma : null, marketOk: mktOk,
       wStage: wnow.stage, wBreak: breakToday, wNeck: wNeck, wGap: wGap, wPat: wnow.pat,
+      coolLeft: coolLeft, coolTotal: o.coolLoss || 0, coolActive: coolLeft > 0,
+      coolFromDate: coolLeft > 0 ? series.d[lsi] : null,
       entryRef: series.c[i],                 /* 다음 거래일 시가 체결 — 참고가는 당일 종가 */
       stopPrice: Math.max(series.c[i] - o.stopAtr * atrNow, series.c[i] * (1 - o.stopCap)),
       stopAtrPrice: series.c[i] - o.stopAtr * atrNow,
@@ -783,16 +807,21 @@
       ma20Gate: o.ma20Gate, ma20Confirm: o.ma20Confirm, rsiEntry: o.rsiEntry,
       exitNow: null,                          /* 보유 중일 때만 — 이익 상태 & 20일선 2일 연속 아래 */
       exitRule: '손절 min(' + o.stopAtr + ' ATR, -' + Math.round(o.stopCap * 100) + '%) · 이익(+' + Math.round(o.ma20Gate * 100) + '% 이상) 중 20일선 아래 2거래일 연속 마감 → 다음 날 시가 청산 (고정 보유기간 없음)',
-      entryRule: 'RSI(2) ' + o.rsiEntry + ' 미만 (주력) · W 쌍바닥 넥라인 돌파 (보조) · 둘 다 QQQ ' + o.qqqMa + '일선 위 — 다음 날 시가 매수',
+      entryRule: 'RSI(2) ' + o.rsiEntry + ' 미만 (주력) · W 쌍바닥 넥라인 돌파 (보조) · 둘 다 QQQ ' + o.qqqMa + '일선 위 — 다음 날 시가 매수' +
+        (o.coolLoss > 0 ? ' · 손절 후 ' + o.coolLoss + '거래일 재진입 금지' : ''),
       reason: sig
         ? (route === 'W돌파'
           ? 'W 쌍바닥 넥라인 ' + usdNeck(wNeck) + ' 상향 돌파 — 보조 루트 (다음 시가 매수)'
           : 'RSI(2) ' + rNow.toFixed(1) + ' — 과매도 극단 · QQQ 200일선 위 (다음 시가 매수)')
-        : (ent.state === 'blocked'
-          ? (route === 'W돌파' ? 'W 넥라인 돌파는 나왔지만 QQQ 200일선 아래 — 진입 제한'
-            : 'RSI(2) ' + (rNow == null ? '—' : rNow.toFixed(1)) + ' 과매도이나 QQQ 200일선 아래 — 진입 제한')
-          : 'RSI(2) ' + (rNow == null ? '—' : rNow.toFixed(1)) + ' — 기준 ' + o.rsiEntry + ' 미만 대기' +
-            (mktOk ? ' · QQQ 200일선 위' : ' · QQQ 200일선 아래'))
+        : (ent.state === 'cool'
+          ? '손절 후 재진입 대기 (' + coolLeft + '/' + o.coolLoss + '일) — ' + series.d[lsi] + ' 손절 청산 이후 신규 진입 금지' +
+            (ent.routeRaw ? ' · ' + (ent.routeRaw === 'W돌파' ? 'W 돌파' : 'RSI(2) ' + (rNow == null ? '—' : rNow.toFixed(1))) + ' 신호는 나왔지만 대기' : '') +
+            (mktOk ? '' : ' · QQQ ' + o.qqqMa + '일선 아래')
+          : (ent.state === 'blocked'
+            ? (route === 'W돌파' ? 'W 넥라인 돌파는 나왔지만 QQQ 200일선 아래 — 진입 제한'
+              : 'RSI(2) ' + (rNow == null ? '—' : rNow.toFixed(1)) + ' 과매도이나 QQQ 200일선 아래 — 진입 제한')
+            : 'RSI(2) ' + (rNow == null ? '—' : rNow.toFixed(1)) + ' — 기준 ' + o.rsiEntry + ' 미만 대기' +
+              (mktOk ? ' · QQQ 200일선 위' : ' · QQQ 200일선 아래')))
     };
   }
   function usdNeck(v) {
@@ -800,9 +829,10 @@
     return '$' + (Math.abs(v) >= 1000 ? v.toFixed(0) : v.toFixed(2));
   }
 
-  function swingBacktest(series, ind, opts, wsig) {
-    var o = swingOpts(opts);
-    var c = series.c, O = series.o, H = series.h, L = series.l, D = series.d, n = c.length;
+  /* 스윙형 시뮬레이션 코어 — swingBacktest(기간 백테스트)와 swingStatus(상단 카드)가 같은 규칙을 공유한다.
+     반환: 거래·자산곡선 + 마지막 손절 봉(lastStopIdx — 손절 후 재진입 금지 계산용) + 기말 보유 스냅숏 */
+  function swingSim(series, ind, o, wsig) {
+    var c = series.c, O = series.o, L = series.l, D = series.d, n = c.length;
     var A = ind.atr;
     var r2 = rsi(c, o.rsiLen);
     var map = swingMarketMap(o);
@@ -811,6 +841,7 @@
     var first = btFirst(n, o.warmup, o.bars);
     var cash = 1, pos = null, pendEntry = false, pendExit = null, pendKind = null;
     var trades = [], equity = new Array(n).fill(null), bars = 0, inMkt = 0;
+    var lastStopIdx = -1e9;          /* 손절(진입가 아래)로 청산한 마지막 봉 인덱스 */
 
     function openAt(px, i, kind) {
       if (!(px > 0)) return;
@@ -838,7 +869,11 @@
       if (pos) {
         /* 손절 = min(진입가 − 4.5 ATR, 진입가 −10%) — 두 선 중 더 가까운(높은) 가격에서 먼저 청산 */
         var lvl = Math.max(pos.entry - o.stopAtr * pos.atr0, pos.entry * (1 - o.stopCap));
-        if (L[i] <= lvl) closeAt(Math.min(O[i], lvl), i, lvl >= pos.entry ? '이익보전' : '손절');
+        if (L[i] <= lvl) {
+          var lost = lvl < pos.entry;
+          closeAt(Math.min(O[i], lvl), i, lost ? '손절' : '이익보전');
+          if (lost) lastStopIdx = i;      /* 손절 후 재진입 금지 기준 봉 */
+        }
       }
       /* 3) 종가 판단 — 차트 청산 / 신규 진입 */
       if (pos) {
@@ -846,13 +881,26 @@
         if (why) pendExit = why;
       } else if (i < n - 1) {
         /* 진입 판정은 상단 카드와 같은 함수(swingEntryAt) — 단일 소스 */
-        var se = swingEntryAt(series, ind, i, o, { r2: r2, map: map, wbreak: wb });
+        var se = swingEntryAt(series, ind, i, o, { r2: r2, map: map, wbreak: wb, cool: swingCoolLeft(o, lastStopIdx, i) });
         if (se.ok) { pendEntry = true; pendKind = se.route === 'W돌파' ? 'W돌파' : '스윙'; }
       }
       equity[i] = cash + (pos ? pos.shares * c[i] : 0);
       bars++; if (pos) inMkt++;
     }
-    /* 마지막 봉 기준 보유 스냅숏 — 상단 '보유 중 관리' 표시용 */
+    /* 기말 보유 스냅숏(청산 전) — 상단 '보유 중 관리'·쿨다운 계산용 */
+    var posSnap = pos ? { entry: pos.entry, entryDate: pos.entryDate, entryIdx: pos.entryIdx, atr0: pos.atr0, kind: pos.kind } : null;
+    if (pos) { closeAt(c[n - 1], n - 1, '보유중'); equity[n - 1] = cash; }
+    return { trades: trades, equity: equity, bars: bars, inMkt: inMkt, first: first,
+      cash: cash, pos: posSnap, lastStopIdx: lastStopIdx };
+  }
+
+  function swingBacktest(series, ind, opts, wsig) {
+    var o = swingOpts(opts);
+    var c = series.c, D = series.d, n = c.length;
+    var sim = swingSim(series, ind, o, wsig);
+    var trades = sim.trades, equity = sim.equity, first = sim.first;
+    var bars = sim.bars, inMkt = sim.inMkt, cash = sim.cash, pos = sim.pos;
+    /* 마지막 봉 기준 보유 상태 — 상단 '보유 중 관리' 표시용 */
     var swBelow = ma20BelowStreak(series, ind, 3);
     var swRetNow = pos ? c[n - 1] / pos.entry - 1 : 0;
     var liveSw = pos ? {
@@ -865,7 +913,6 @@
       exitWatch: swRetNow >= o.ma20Gate && swBelow === 1,
       date: D[n - 1]
     } : null;
-    if (pos) { closeAt(c[n - 1], n - 1, '보유중'); equity[n - 1] = cash; }
 
     /* ---- stats (추세형과 같은 필드) ---- */
     var bh = c[n - 1] / c[first] - 1;
@@ -905,6 +952,7 @@
 
     return {
       trades: trades, equity: equity, startIdx: first, reasons: reasons, live: liveSw,
+      lastStopIdx: sim.lastStopIdx,       /* 손절 후 재진입 금지 — swingStatus 와 같은 기준 */
       stats: {
         totalReturn: total, bhReturn: bh, alpha: total - bh,
         winRate: trades.length ? wins.length / trades.length : 0,
@@ -2574,7 +2622,7 @@
     var bt = backtestRun(series, ind, sc, opts);
     var wsig = wSignals(series);
     var sw = swingBacktest(series, ind, opts, wsig);
-    var swPlan = swingStatus(series, ind, opts, wsig);
+    var swPlan = swingStatus(series, ind, opts, wsig, sw.lastStopIdx);   /* 같은 시뮬레이션의 마지막 손절 봉 → 쿨다운 판정 일치 */
     var wnow = wScan(series, wsig);
     var mode = (opts && opts.strategyMode === 'swing') ? 'swing' : 'trend';
     var n = series.c.length;

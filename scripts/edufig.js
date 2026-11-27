@@ -244,7 +244,7 @@ var EDUFIG = (function () {
     var i0 = 17;
     s += dot(K.cx(i0), K.Y(cl[i0]), 3.2, { c: C.am, f: C.am });
     s += line(K.cx(i0), K.Y(cl[i0]) + 4, K.cx(i0), 138, { c: 'rgba(245,185,66,.6)', w: 1, dash: '2 3' });
-    s += chip(K.cx(i0), 146, 'RSI(2) 11 · 과매도', { a: 'middle', c: C.am, bd: 'rgba(245,185,66,.45)' });
+    s += chip(K.cx(i0), 146, 'RSI(2) 8 · 과매도', { a: 'middle', c: C.am, bd: 'rgba(245,185,66,.45)' });
     s += arrow(K.cx(22), 138, K.cx(22), 118, { c: C.up, w: 1.7 });
     s += T(K.cx(22) + 5, 134, '매수', { c: C.up, fs: 8, w: 600 });
     /* RSI 패널 */
@@ -254,14 +254,14 @@ var EDUFIG = (function () {
     var R2 = function (v) { return py1 - (Math.max(0, Math.min(100, v)) / 100) * (py1 - py0); };
     var pts = [];
     for (var i = 0; i < rv.length; i++) pts.push([x0 + (x1 - x0) / (n - 2) * (i + 0.5), R2(rv[i])]);
-    s += line(x0, R2(15), x1, R2(15), { c: C.dn, w: 1, dash: '4 4', o: 0.75 });
-    s += T(x0, R2(15) - 3.5, '15', { c: C.dn, fs: 7.6, w: 600 });
+    s += line(x0, R2(10), x1, R2(10), { c: C.dn, w: 1, dash: '4 4', o: 0.75 });
+    s += T(x0, R2(10) - 3.5, '10', { c: C.dn, fs: 7.6, w: 600 });
     s += poly(pts, { c: C.vi, w: 1.5 });
     s += dot(pts[15][0], pts[15][1], 3.2, { c: C.am, f: C.am });
     s += T(x0, py0 - 4, 'RSI(2)', { c: C.vi, fs: 7.8, w: 600 });
-    s += T(x1, py0 - 4, '15 아래 = 과매도', { a: 'end', c: C.mu, fs: 7.8 });
+    s += T(x1, py0 - 4, '10 아래 = 과매도', { a: 'end', c: C.mu, fs: 7.8 });
     return { svg: wrap(s, { label: 'RSI(2) 과매도 스윙 도해' }),
-      cap: '상승 추세에서 <b>RSI(2) 15 이하</b>로 급락 → 반등 시 매수. 하락장에서는 5 아래로도 계속 내려갑니다' };
+      cap: '상승 추세에서 <b>RSI(2) 10 이하</b>로 급락 → 반등 시 매수. 손절 뒤에는 10거래일 쉬고, 하락장에서는 5 아래로도 계속 내려갑니다' };
   };
 
   /* 03. 240일선 기준선 ----------------------------------------- */
@@ -769,7 +769,7 @@ var EDUFIG = (function () {
     for (j = 3; j < 24; j += 5) s += dot(p2[j][0], p2[j][1], 2.4, { c: '#BFE9FF', f: '#BFE9FF' });
     s += T(34, 146, '점수 50+ · 6 ATR 손절', { c: C.mu, fs: 7.8 });
     s += T(34, 157, '10 ATR 트레일 · 보유 김', { c: C.mu, fs: 7.8 });
-    s += T(202, 146, 'RSI(2)<15 · 4.5 ATR', { c: C.mu, fs: 7.8 });
+    s += T(202, 146, 'RSI(2)<10 · 4.5 ATR', { c: C.mu, fs: 7.8 });
     s += T(202, 157, '짧게 진입 · 짧게 청산', { c: C.mu, fs: 7.8 });
     s += chip(190, 178, '시장 장세를 보고 전환', { a: 'middle', c: C.am, bd: 'rgba(245,185,66,.45)' });
     s += T(24, 200, '전환은 최소 몇 주 유지 · 자주 바꾸면 비용만 늘어남', { c: C.dim, fs: 7.6 });

@@ -169,9 +169,10 @@
       p.stopAtr + ' ATR · 트레일 ' + p.trailAtr + ' ATR (진입 +' + p.trailStartAtr + ' ATR 발동) — 둘 다 즉시 · 시장 위험 0% 청산은 진입 ' + p.minHold + '거래일 이후';
   }
   function swingDesc() {
-    var p = QE.swingParams || { rsiEntry: 15, qqqMa: 200, stopAtr: 4.5, stopCap: 0.1, ma20Gate: 0.05, ma20Confirm: 2 };
-    return 'RSI(2) ' + p.rsiEntry + ' 미만 + QQQ ' + p.qqqMa + '일선 위 → 다음 날 시가 매수 · W 쌍바닥 넥라인 돌파 보조 · 이익 +' +
-      Math.round(p.ma20Gate * 100) + '% 이상에서 20일선 아래 ' + p.ma20Confirm + '거래일 연속 마감 → 다음 날 시가 청산 · 손절 ' + p.stopAtr + ' ATR (최대 -' +
+    var p = QE.swingParams || { rsiEntry: 10, qqqMa: 200, stopAtr: 4.5, stopCap: 0.1, ma20Gate: 0.05, ma20Confirm: 2, coolLoss: 10 };
+    return 'RSI(2) ' + p.rsiEntry + ' 미만 + QQQ ' + p.qqqMa + '일선 위 → 다음 날 시가 매수 · W 쌍바닥 넥라인 돌파 보조' +
+      (p.coolLoss ? ' · 손절 후 ' + p.coolLoss + '거래일 재진입 금지' : '') +
+      ' · 이익 +' + Math.round(p.ma20Gate * 100) + '% 이상에서 20일선 아래 ' + p.ma20Confirm + '거래일 연속 마감 → 다음 날 시가 청산 · 손절 ' + p.stopAtr + ' ATR (최대 -' +
       Math.round(p.stopCap * 100) + '%)';
   }
   var STRAT = {
@@ -183,7 +184,7 @@
     swing: {
       key: 'swing', title: '스윙형', sub: '단기',
       desc: swingDesc(),
-      logSub: 'RSI(2) 15 미만 + QQQ 200일선 위 매수 · W 쌍바닥 넥라인 돌파 보조 루트 · 손절 4.5 ATR (최대 -10%) · 이익 중 20일선 아래 2거래일 연속 마감 시 다음 날 시가 청산'
+      logSub: 'RSI(2) 10 미만 + QQQ 200일선 위 매수 · W 쌍바닥 넥라인 돌파 보조 루트 · 손절 후 10거래일 재진입 금지 · 손절 4.5 ATR (최대 -10%) · 이익 중 20일선 아래 2거래일 연속 마감 시 다음 날 시가 청산'
     }
   };
   function stratKey() { return state.strategy === 'swing' ? 'swing' : 'trend'; }
@@ -579,10 +580,16 @@
       sell = true; kind = 'blocked';
       why = '진입 제한' + (swing ? ' · QQQ 200일선 아래' : ' · 시장 단계 위험');
     }
+    /* 손절 후 재진입 금지 기간 — 신규 진입 제한 상태(백테스트와 같은 판정) */
+    if (!sell && swing && st && st.state === 'cool') {
+      sell = true; kind = 'cool';
+      why = '손절 후 재진입 대기 (' + st.coolLeft + '/' + st.coolTotal + '일)' +
+        (st.coolFromDate ? ' — ' + st.coolFromDate + ' 손절 이후' : '') + ' · 신규 진입 금지 (W 돌파 포함)';
+    }
     return { buy: buy && !sell, sell: sell, held: held, why: why, kind: kind };
   }
   function scanCounts(scoped) {
-    var c = { all: 0, buy: 0, sell: 0, entry: 0, held: 0, blocked: 0, fav: 0 };
+    var c = { all: 0, buy: 0, sell: 0, entry: 0, held: 0, blocked: 0, cool: 0, fav: 0 };
     M.tickers.forEach(function (x) {
       var a = A[x.t]; if (!a) return;
       if (scoped && !presetMembers(a)) return;          /* 프리셋 안에서만 집계 */
@@ -595,6 +602,7 @@
       if (st && st.signal) c.entry++;
       if (g.held) c.held++;
       if (st && st.state === 'blocked') c.blocked++;
+      if (st && st.state === 'cool') c.cool++;
     });
     return c;
   }
@@ -615,6 +623,7 @@
       var cond = state.strategy === 'swing' ? 'QQQ 200일선 아래' : '시장 단계 위험';
       return '<i class="sigb n" title="시장대기 · ' + cond + ' — 시장 약세로 신규 매수 보류 중 (오른쪽 숫자는 기술평가 점수, 매도 신호 아님)">시장대기</i>';
     }
+    if (g.kind === 'cool') return '<i class="sigb n" title="' + g.why + '">손절대기</i>';
     if (g.sell) return '<i class="sigb s" title="' + g.why + '">청산</i>';
     if (!g.buy) return '';
     return '<i class="sigb b" title="' + g.why + '">' + (g.held ? '보유' : '진입') + '</i>';
@@ -698,7 +707,8 @@
     }
     if (state.filter === 'buy' || state.filter === 'sell') {
       return '<b>' + stratName + ' · ' + filterName() + '</b> — 백테스트와 같은 전략 조건으로 집계 · ' +
-        '진입 조건 충족 <b>' + c.entry + '</b> · 보유 중 <b>' + c.held + '</b> · 청산/진입 제한 <b>' + c.blocked + '</b> · 마지막 종가 기준';
+        '진입 조건 충족 <b>' + c.entry + '</b> · 보유 중 <b>' + c.held + '</b> · 청산/진입 제한 <b>' + c.blocked + '</b>' +
+        (c.cool ? ' · 손절 후 재진입 대기 <b>' + c.cool + '</b>' : '') + ' · 마지막 종가 기준';
     }
     if (state.filter === 'fav') {
       return '<b>관심종목</b> ' + state.watch.length + '종목 · 지금 ' + shown + '종목 표시 · 프리셋을 함께 켜면 교집합으로 좁혀집니다';
@@ -732,21 +742,22 @@
   function swingRankOf(a) {
     var st = a.swing, live = a.strategy && a.strategy.swing && a.strategy.swing.live;
     var sc = rowOf(a).score;
-    var thr = (QE.swingParams && QE.swingParams.rsiEntry) || 15;
+    var thr = (QE.swingParams && QE.swingParams.rsiEntry) || 10;
     var r2 = st ? st.rsi2 : null, w = st ? st.wStage : null;
     var rsiComp = 0;
     if (r2 != null) rsiComp = r2 <= thr ? 45 - Math.max(0, r2) * 0.6 : Math.max(0, 45 - (r2 - thr) * 1.6);
     var wComp = w === '돌파' ? 25 : w === '임박' ? 20 : w === '진행' ? 12 : 0;
     var fit = Math.max(0, Math.min(100, Math.round(rsiComp + wComp + sc * 0.3)));
-    var tier = (st && st.signal) ? 3 : (live ? 2 : (st && st.state === 'blocked' ? 1 : 0));
-    return { tier: tier, fit: fit, score: sc, rsi2: r2, w: w, route: st ? st.route : null };
+    var tier = (st && st.signal) ? 3 : (live ? 2 : ((st && (st.state === 'blocked' || st.state === 'cool')) ? 1 : 0));
+    return { tier: tier, fit: fit, score: sc, rsi2: r2, w: w, route: st ? st.route : null,
+      cool: (st && st.state === 'cool') ? st.coolLeft : 0, coolTotal: (st && st.coolTotal) || 0 };
   }
   function rankInfo(a) { return state.strategy === 'swing' ? swingRankOf(a) : trendRankOf(a); }
   function rankTierText(a, r) {
     if (state.strategy === 'swing') {
       if (r.tier === 3) return r.route === 'W돌파' ? 'W 넥라인 돌파 진입' : 'RSI(2) 과매도 진입';
       if (r.tier === 2) return '스윙 보유 중';
-      if (r.tier === 1) return '진입 제한 · QQQ 200일선 아래';
+      if (r.tier === 1) return r.cool ? '손절 후 재진입 대기 (' + r.cool + '/' + (r.coolTotal || 10) + '일)' : '진입 제한 · QQQ 200일선 아래';
       return '스윙 신호 대기';
     }
     if (r.tier === 3) return '진입 조건 충족';
@@ -1123,22 +1134,28 @@
       var sp = a.plan || a.swing || {};
       entryRef = sp.entryRef != null ? sp.entryRef : a.price;
       stopPrice = sp.stopPrice != null ? sp.stopPrice : entryRef * 0.9;
-      var sKind = sp.state === 'ready' ? 'ready' : (sp.state === 'blocked' ? 'blocked' : 'wait');
-      pbState($('#peState'), sKind, sp.state === 'ready' ? '조건 충족' : (sp.state === 'blocked' ? '진입 제한' : '대기'));
+      var sCool = sp.state === 'cool';
+      var sKind = sp.state === 'ready' ? 'ready' : ((sp.state === 'blocked' || sCool) ? 'blocked' : 'wait');
+      pbState($('#peState'), sKind, sp.state === 'ready' ? '조건 충족' : (sCool ? '손절 후 대기' : (sp.state === 'blocked' ? '진입 제한' : '대기')));
       $('#peSigK').textContent = '스윙형 진입';
       var sig = $('#peSig');
       var spMa = (QE.swingParams && QE.swingParams.qqqMa) || 200;
-      sig.className = (sp.rsiOk || sp.wBreak) ? 'pos' : 'dim';
-      sig.textContent = (sp.rsiOk ? 'RSI 과매도 충족' : (sp.wBreak ? 'W 돌파 신호' : 'RSI 조건 미달')) +
+      sig.className = (sp.rsiOk || sp.wBreak) && !sCool ? 'pos' : 'dim';
+      sig.textContent = (sCool ? '재진입 금지 ' + sp.coolLeft + '/' + sp.coolTotal + '일' :
+        (sp.rsiOk ? 'RSI 과매도 충족' : (sp.wBreak ? 'W 돌파 신호' : 'RSI 조건 미달'))) +
         ' / QQQ ' + spMa + '일선 ' + (sp.marketOk ? '위' : '아래');
-      pbWhy([
-        { cls: sp.rsiOk ? 'on' : 'off', html: 'RSI(2) <b>' + (sp.rsi2 == null ? '—' : sp.rsi2.toFixed(1)) + '</b> / 기준 ' + (sp.rsiEntry || 15) + ' 미만 — ' + (sp.rsiOk ? '충족' : '미달') },
+      var swWhy = [];
+      if (sp.coolActive) swWhy.push({ cls: 'wait', html: '손절 후 재진입 대기 <b>' + sp.coolLeft + '/' + sp.coolTotal + '일</b>' +
+        (sp.coolFromDate ? ' — ' + sp.coolFromDate + ' 손절 청산 이후' : '') + ' · 이 종목 신규 진입 금지 (W 돌파 포함)' });
+      swWhy.push(
+        { cls: sp.rsiOk ? 'on' : 'off', html: 'RSI(2) <b>' + (sp.rsi2 == null ? '—' : sp.rsi2.toFixed(1)) + '</b> / 기준 ' + (sp.rsiEntry || 10) + ' 미만 — ' + (sp.rsiOk ? '충족' : '미달') },
         { cls: sp.marketOk ? 'on' : 'off', html: 'QQQ ' + spMa + '일선 <b>' + (sp.marketOk ? '위' : '아래') + '</b>' + (sp.qqq != null && sp.qqqMa != null ? ' — $' + pxs(sp.qqq) + (sp.marketOk ? ' > ' : ' < ') + '$' + pxs(sp.qqqMa) : '') },
         { cls: sp.wBreak ? 'on' : (sp.wStage ? 'wait' : ''), html: 'W 쌍바닥 <b>' + (sp.wStage || '없음') + '</b>' + (sp.wNeck != null ? ' — 넥라인 $' + pxs(sp.wNeck) : '') }
-      ]);
+      );
+      pbWhy(swWhy);
       $('#peZoneK').textContent = '진입 시점';
       $('#peZone').textContent = '다음 시가 (참고 ' + usd(entryRef) + ')';
-      $('#peCond').textContent = '실제 진입 조건 · ' + (sp.entryRule || 'RSI(2) 15 미만 · QQQ 200일선 위 → 다음 날 시가 매수') +
+      $('#peCond').textContent = '실제 진입 조건 · ' + (sp.entryRule || 'RSI(2) 10 미만 · QQQ 200일선 위 → 다음 날 시가 매수 · 손절 후 10거래일 재진입 금지') +
         (live ? ' — 보유 중에는 신규 진입 신호를 쓰지 않습니다' : '');
 
       /* 보유 중 관리 */
@@ -4486,8 +4503,8 @@
          '<p>이 검색기의 <b>W 쌍바닥</b> 오버레이는 넥라인(점선)과 두 바닥을 차트에 그려 줍니다. 쌍바닥 프리셋은 돌파·임박·진행 단계로 후보를 좁혀 줍니다.</p>',
       tip: '넥라인까지의 상승 여력보다, 돌파 후 지지로 바뀌는지가 실제 승부처입니다.' },
     { c: '차트·기법', t: 'RSI(2) 과매도 스윙', s: '아주 짧은 과매도만 골라 반등을 먹는 단기 기법',
-      b: '<p>RSI(2)는 <b>최근 2일</b>만으로 과매수·과매도를 계산합니다. 14일 RSI보다 훨씬 민감해서, 정상적인 상승 추세에서도 잠깐씩 15 아래로 떨어지는 자리가 자주 생깁니다.</p>' +
-         '<p>이 검색기의 스윙형 전략은 <em>RSI(2) &lt; 15 + QQQ가 200일선 위</em>일 때 다음 날 시가 매수, 이익이 난 상태에서 20일선 아래로 2거래일 연속 마감하면 다음 날 시가 청산하는 구조입니다. 99종목 5년 백테스트 승률 56%대가 나온 이유는 <b>자연스러운 상승장에서만 진입</b>하기 때문입니다.</p>' +
+      b: '<p>RSI(2)는 <b>최근 2일</b>만으로 과매수·과매도를 계산합니다. 14일 RSI보다 훨씬 민감해서, 정상적인 상승 추세에서도 잠깐씩 10 아래로 떨어지는 자리가 생깁니다.</p>' +
+         '<p>이 검색기의 스윙형 전략은 <em>RSI(2) &lt; 10 + QQQ가 200일선 위</em>일 때 다음 날 시가 매수, 이익이 난 상태에서 20일선 아래로 2거래일 연속 마감하면 다음 날 시가 청산하는 구조입니다. 손절로 끝난 종목은 <b>10거래일 동안 다시 사지 않습니다</b>(같은 종목에서 손절이 연달아 나는 것을 막는 규칙). 99종목 5년 백테스트 승률 55%대·패배 732건이 나온 이유는 <b>자연스러운 상승장에서만 진입</b>하고 손실 뒤에는 쉬기 때문입니다.</p>' +
          '<p>RSI(2)는 하락장에서 5 아래로도 계속 내려갑니다. 시장 필터 없이 쓰면 물타기가 됩니다.</p>',
       tip: '지표가 낮다는 이유만으로 사지 말고, 시장이 200일선 위인지 먼저 봅니다.' },
     { c: '차트·기법', t: '240일선, 장기 기준선 읽기', s: '연간 흐름을 정하는 가장 굵은 선',
