@@ -1961,3 +1961,13 @@ body{font-variant-numeric:tabular-nums}
   .srow .spark{width:52px}
 }
 .side-foot .upd,.mfoot .upd,.upd{color:var(--txt3)}
+
+/* 가상투자 카드 헤더 — 백업/복원 버튼이 붙어도 제목 줄이 눌리지 않게(제목은 한 줄 전체, 버튼은 아래 줄) */
+.paper-card .panel-h{flex-wrap:wrap;row-gap:8px}
+.paper-card .panel-h>div:first-child{flex:1 1 100%;min-width:0}
+.paper-card .panel-h>.acc-wrap{flex:1 1 100%;justify-content:flex-end;margin-left:0}
+.pt-backup{flex:0 0 auto}
+.pt-acct{flex:0 1 auto;border-left:1px solid var(--line);padding-left:12px}
+@media (max-width:900px){
+  .pt-acct{border-left:0;padding-left:0}
+}
