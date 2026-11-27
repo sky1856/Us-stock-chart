@@ -753,6 +753,46 @@
       name: key === 'swing' ? '스윙형(단기)' : '추세형(중기)' };
     return win70Cache[key];
   }
+  /* ---------------- 6개월(126거래일) 모멘텀 Top 5 — 참고 배지 · 프리셋 (표시 전용) ----------------
+     최근 126거래일 = 종가 126개(오늘 포함) 구간 수익률 = c[마지막] / c[마지막-125] - 1.
+     126봉을 채우지 못한 종목(신규 상장·데이터 부족)은 순위에서 제외한다.
+     매매 전략(추세형·스윙형)의 진입·청산·백테스트 규칙에는 어떤 값도 넘기지 않는다. */
+  var MOM6_BARS = 126, MOM6_TOP = 5;
+  var mom6Cache = null;
+  function mom6Counts() {
+    if (mom6Cache) return mom6Cache;
+    var rows = [];
+    M.tickers.forEach(function (x) {
+      var a = A[x.t];
+      if (!a || !a.close || a.close.length < MOM6_BARS) return;
+      var i = a.close.length - 1, j = i - (MOM6_BARS - 1);
+      var base = a.close[j], last = a.close[i];
+      if (!(base > 0)) return;
+      rows.push({ t: x.t, nk: x.nk, r: last / base - 1, px0: base, px1: last,
+        from: a.series.d[j], to: a.series.d[i] });
+    });
+    rows.sort(function (p, q) { return q.r - p.r || (p.t < q.t ? -1 : 1); });
+    var set = {}, rank = {}, byT = {}, top = [];
+    rows.forEach(function (r, i) {
+      r.k = i + 1; byT[r.t] = r;
+      if (r.k <= MOM6_TOP) { set[r.t] = 1; rank[r.t] = r.k; top.push(r); }
+    });
+    mom6Cache = { set: set, rank: rank, byT: byT, rows: rows, top: top,
+      list: top.map(function (r) { return r.t; }), n: top.length, pool: rows.length,
+      bars: MOM6_BARS, asOf: M.asOf,
+      from: rows.length ? rows[0].from : M.asOf, to: rows.length ? rows[0].to : M.asOf };
+    return mom6Cache;
+  }
+  function mom6Tip(r) {
+    return '6M 모멘텀 ' + r.k + '위 — 최근 ' + MOM6_BARS + '거래일 ' + pct(r.r, 2) +
+      ' (' + r.from + ' $' + pxs(r.px0) + ' → ' + r.to + ' $' + pxs(r.px1) + ')' +
+      ' · 위성 10~15% 참고용 · 매매 규칙 미적용(전략 신호는 그대로)';
+  }
+  function mom6Badge(a) {
+    var c = mom6Counts(), r = a && c.byT[a.sym];
+    if (!r || r.k > MOM6_TOP) return '';
+    return '<i class="mom6" title="' + mom6Tip(r) + '">6M Top5</i>';
+  }
   function bkLevelTxt(b) { return b.level + '일 신고가'; }
   function bkTip(a) {
     var b = a && a.bk;
@@ -891,12 +931,12 @@
   }
   /* ---------------- 필터 · 프리셋 (서로 독립 · AND 교집합) ----------------
      상단 탭 state.filter = all | buy | sell | fav
-     프리셋  state.preset = '' | top30 | quality | w | vcp | tri | div | bk  (같은 버튼을 다시 누르면 해제)
+     프리셋  state.preset = '' | top30 | quality | w | vcp | tri | div | bk | win70 | mom6  (같은 버튼을 다시 누르면 해제)
      둘을 함께 켜면 교집합으로 좁히고, 전략을 바꿔도 이 조합은 유지된다. */
   var PRESET_META = {
     top30: { name: '시총 Top 30' }, quality: { name: '실적 우량주' },
     w: { name: 'W 쌍바닥' }, vcp: { name: 'VCP' }, tri: { name: '삼각수렴' }, div: { name: '다이버전스' },
-    bk: { name: '거래량 돌파' }, win70: { name: '승률 70%+' }
+    bk: { name: '거래량 돌파' }, win70: { name: '승률 70%+' }, mom6: { name: '6M모멘텀 Top 5' }
   };
   function presetActive() { return !!(state.preset && PRESET_META[state.preset]); }
   function presetMembers(a) {
@@ -909,6 +949,7 @@
     if (p === 'div') return !!divCounts().set[a.sym];
     if (p === 'bk') return !!bkCounts().set[a.sym];
     if (p === 'win70') return !!win70Counts().set[a.sym];
+    if (p === 'mom6') return !!mom6Counts().set[a.sym];
     return true;
   }
   function filterMembers(a) {
@@ -944,6 +985,13 @@
       var vc = vcpCounts(), c = vc.cnt;
       return '<b>VCP · 대형 우량주 한정</b> · 정배열(TT) + 변동성 축소 임박/돌파 · 시총 Top 30 ∪ 실적 우량주 ' + c.pool + '종목 중' +
         ' TT <b>' + c.tt + '</b> · 돌파 <b>' + c.brk + '</b> · 임박 <b>' + c.near + '</b> · ' + vc.asOf + ' 종가 기준';
+    }
+    if (state.preset === 'mom6') {
+      var m6 = mom6Counts();
+      return '<b>6M모멘텀 Top 5</b> · 최근 ' + m6.bars + '거래일 수익률 상위 <b>' + m6.n + '</b>종목/' + m6.pool +
+        ' · ' + m6.to + ' 종가 기준 · ' +
+        m6.top.map(function (r) { return r.t + ' ' + pct(r.r, 1); }).join(' · ') +
+        ' · 참고 필터(매매 규칙 불변)';
     }
     if (state.preset === 'win70') {
       var w7 = win70Counts();
@@ -1108,6 +1156,7 @@
     var cDv = $('#cDiv'); if (cDv) cDv.textContent = divCounts().n;
     var cBk = $('#cBk'); if (cBk) cBk.textContent = bkCounts().n;
     var cW70 = $('#cWin70'); if (cW70) cW70.textContent = win70Counts().n;   /* 0건이면 0 그대로 */
+    var cM6 = $('#cMom6'); if (cM6) cM6.textContent = mom6Counts().n;
     var pn = $('#presetNote');
     if (pn) {
       pn.innerHTML = presetNoteHtml(rows.length);
@@ -1132,7 +1181,7 @@
       return '<div class="srow' + (state.cur === x.t ? ' on' : '') + '" data-t="' + x.t + '"' +
         (recMode ? ' data-tier="' + rk.tier + '" data-fit="' + rk.fit + '"' : '') + '>' +
         '<div class="' + rkCls + '"' + rkTt + '>' + rkTx + '</div>' +
-        '<div class="tk"><b><i class="fstar' + (isWatch(x.t) ? ' on' : '') + '" data-f="' + x.t + '" role="button" title="' + (isWatch(x.t) ? '관심종목에서 제거' : '관심종목에 추가') + '">' + (isWatch(x.t) ? '★' : '☆') + '</i>' + x.t + ewb + divBadge(a) + bkBadge(a) + vcpBadge(a) + earnChip(x.t) + '</b><span>' + x.nk + '</span></div>' +
+        '<div class="tk"><b><i class="fstar' + (isWatch(x.t) ? ' on' : '') + '" data-f="' + x.t + '" role="button" title="' + (isWatch(x.t) ? '관심종목에서 제거' : '관심종목에 추가') + '">' + (isWatch(x.t) ? '★' : '☆') + '</i>' + x.t + mom6Badge(a) + ewb + divBadge(a) + bkBadge(a) + vcpBadge(a) + earnChip(x.t) + '</b><span>' + x.nk + '</span></div>' +
         spark(a, rv.i) +
         '<div class="px"><b>' + (rv.price >= 1000 ? rv.price.toFixed(0) : rv.price.toFixed(2)) + '</b>' +
         '<span class="' + cls(rv.change) + '">' + pct(rv.change, 2) + '</span></div>' +
@@ -1152,10 +1201,10 @@
     }
     $('#scanList').innerHTML = listHtml;
     /* 행 안 배지가 잘리면(좁은 사이드바·모바일) 우선순위대로 양보한다:
-       엘리어트 차수 → VCP → 다이버전스 → 돌파 → 실적 배지 축약('실적 D-3' → 'D-3'). 전략 배지(시장대기·진입·보유·청산)는 끝까지 남긴다. */
+       엘리어트 차수 → VCP → 다이버전스 → 돌파 → 6M모멘텀 → 실적 배지 축약('실적 D-3' → 'D-3'). 전략 배지(시장대기·진입·보유·청산)는 끝까지 남긴다. */
     $$('#scanList .srow .tk b').forEach(function (b) {
       if (b.scrollWidth <= b.clientWidth) return;
-      ['.ewb', '.vcpb', '.divb', '.bkb'].forEach(function (sel) {
+      ['.ewb', '.vcpb', '.divb', '.bkb', '.mom6'].forEach(function (sel) {
         if (b.scrollWidth <= b.clientWidth) return;
         var e = b.querySelector(sel);
         if (e) e.parentNode.removeChild(e);
@@ -1428,7 +1477,12 @@
       buy: '종가가 20일 최고가를 넘고 그날 거래량이 20일 평균의 1.5배 이상일 때 — 다음 날 시가 진입',
       stop: '돌파한 기준선(직전 20봉 고점) 아래 — 다시 아래로 내려오면 거짓 돌파',
       sell: '+5~10% 뒤 20일선 아래로 마감하거나, 거래량이 급감하며 밀릴 때',
-      foot: '표시 전용 기법입니다 — 실제 진입·청산은 스윙형/추세형 신호로 판단하세요.' }
+      foot: '표시 전용 기법입니다 — 실제 진입·청산은 스윙형/추세형 신호로 판단하세요.' },
+    mom6: { name: '6M 모멘텀 Top 5', live: false,
+      buy: '최근 126거래일(약 6개월) 수익률 상위 5종목 — 위성 10~15% 비중의 참고 후보로만 봅니다',
+      stop: '진입·손절·청산은 지금 선택한 추세형/스윙형 신호 그대로 — 이 필터는 매매 규칙을 바꾸지 않습니다',
+      sell: '상위 5에서 밀려나면 목록에서 빠집니다 (보유 중이라면 전략 청산 조건까지 그대로 유지)',
+      foot: '6M모멘텀 5: 최근 126거래일 수익률 상위 5종목(위성 10~15% 참고용 · 매매 규칙 불변)' }
   };
   function renderPresetGuide() {
     var el = $('#presetGuide');
@@ -1437,11 +1491,15 @@
     if (p && TGUIDE[p]) g = TGUIDE[p];
     else g = strategyGuide(state.strategy);        /* 전체 · Top 30 · 실적 우량주 · 승률 70%+ → 선택한 전략 가이드 */
     if (!g) { el.className = 'pguide'; el.innerHTML = ''; return; }
-    var isWin = p === 'win70';
+    var isWin = p === 'win70', isMom = p === 'mom6';
     var w7 = isWin ? win70Counts() : null;
+    var m6 = isMom ? mom6Counts() : null;
     var tag = isWin ? '<span class="pg-tag">참고 필터 · 5년 승률 70%+</span>'
+      : isMom ? '<span class="pg-tag mom">참고 필터 · 6개월 모멘텀</span>'
       : (g.live ? '<span class="pg-tag live">실제 진입 규칙</span>' : '<span class="pg-tag">참고용 기법</span>');
-    var head = isWin ? ('현재 전략 · ' + w7.name + ' — 5년 승률 70% 이상 ' + w7.n + '종목') : ((p && TGUIDE[p] ? '이 기법' : '지금 전략') + ' · ' + g.name);
+    var head = isWin ? ('현재 전략 · ' + w7.name + ' — 5년 승률 70% 이상 ' + w7.n + '종목')
+      : isMom ? ('6M모멘텀 Top ' + m6.n + ' · ' + m6.top.map(function (r) { return r.t + ' ' + pct(r.r, 1); }).join(' · '))
+      : ((p && TGUIDE[p] ? '이 기법' : '지금 전략') + ' · ' + g.name);
     var foot = isWin
       ? ('현재 전략 5년 백테스트 승률 70% 이상 종목 · 참고 필터(과거 성과 기반) — 승률이 높아도 손익비·최대낙폭은 따로 봐야 하고, 미래 수익을 보장하지 않습니다. ' + (g.foot || ''))
       : g.foot;

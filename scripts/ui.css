@@ -177,8 +177,8 @@ input,select{font-family:inherit;color:inherit}
 .seg-state button[data-f="wait"] .c{color:#FCD34D}
 .seg-state button[data-f="sell"] .c{color:#FDA4AF}
 .seg-state button[data-f="fav"] .c{color:#FBBF24}
-/* 프리셋 필터 (시총 Top 30 · 실적 우량주) — 기본 탭과 같은 필터 상태를 공유하되 알약형으로 구분 */
-.seg-pre{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding-top:0}
+/* 프리셋 필터 (시총 Top 30 · 실적 우량주 · W쌍바닥 · VCP · 삼각수렴 · 다이버전스 · 거래량 · 승률70% · 6M모멘텀) — 9개라 3×3 격자로 고르게 */
+.seg-pre{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding-top:0}
 .seg-pre button{
   font-size:11px;padding:4px 4px;border-radius:999px;border:1px solid rgba(56,189,248,.22);
   color:#A9B6C9;display:inline-flex;align-items:center;justify-content:center;gap:3px;
@@ -190,10 +190,21 @@ input,select{font-family:inherit;color:inherit}
 /* 켜진 프리셋은 같은 버튼을 다시 누르면 해제 — × 힌트로 표시 (상단 탭과 교집합으로 함께 적용) */
 .seg-pre button.on::after{content:'×';margin-left:3px;font-size:10px;line-height:1;opacity:.6}
 .seg-pre[data-on="1"] button.on{box-shadow:0 0 0 1px rgba(56,189,248,.18) inset,0 0 18px -10px rgba(56,189,248,1)}
+/* 6M모멘텀 Top 5 — 행 배지와 같은 바이올렛 톤으로 다른 참고 필터와 구분 */
+.seg-pre button[data-f="mom6"]{border-color:rgba(167,139,250,.30);color:#BCB2E8}
+.seg-pre button[data-f="mom6"]:hover{color:#EFEAFF;border-color:rgba(196,181,253,.55);background:rgba(167,139,250,.10)}
+.seg-pre button[data-f="mom6"] .c{color:#A99BD8}
+.seg-pre button[data-f="mom6"].on{color:#F2EDFF;background:linear-gradient(180deg,rgba(167,139,250,.26),rgba(167,139,250,.09));border-color:rgba(196,181,253,.66);
+  box-shadow:0 0 0 1px rgba(167,139,250,.18) inset,0 0 18px -10px rgba(167,139,250,1)}
+.seg-pre button[data-f="mom6"].on .c{color:rgba(242,237,255,.85)}
 .preset-note{padding:0;font-size:11.5px;line-height:1.45;color:var(--txt4);
   overflow-wrap:anywhere}
 .preset-note b{color:var(--txt2);font-weight:500}
 .preset-note.on{color:var(--txt3)}
+/* 6M모멘텀 5 안내 — 전략 가이드(접힘/펼침) 안에서 한 줄 */
+.mom-note{margin-top:5px;padding:3px 0 3px 7px;border-left:2px solid rgba(167,139,250,.5);color:#A99BD8;font-size:11px}
+.si-body .mom-note{padding:3px 0 3px 7px}
+.mom-note:hover{color:#C9BDFB}
 @media (max-width:420px){.seg-pre button{font-size:10.5px;padding:4px 3px}.seg-state button{font-size:11px}}
 .side-tools{display:flex;gap:5px;padding:0 10px 7px}
 .side-tools input{
@@ -1209,6 +1220,10 @@ table.tbl{width:100%;border-collapse:collapse;font-size:12.5px;min-width:660px}
   padding:1px 4px;border-radius:4px;vertical-align:1px;font-family:var(--sans);
   color:#A8B3C4;background:rgba(148,163,184,.13);border:1px solid rgba(148,163,184,.32)}
 .srow .tk b .bkb.strong{color:#93C5FD;background:rgba(56,189,248,.16);border:1px solid rgba(56,189,248,.42)}
+/* 6개월(126거래일) 모멘텀 Top 5 — 참고 배지 (전략 배지가 아니므로 매매 신호를 바꾸지 않는다) */
+.srow .tk b .mom6{font-style:normal;font-size:10px;font-weight:600;letter-spacing:.01em;margin-left:4px;
+  padding:1px 4px;border-radius:4px;vertical-align:1px;font-family:var(--sans);
+  color:#C4B5FD;background:rgba(167,139,250,.16);border:1px solid rgba(167,139,250,.36)}
 .div-strip{display:none}
 .div-strip.on{display:flex;align-items:center;gap:7px;flex-wrap:wrap;grid-column:1/-1;
   padding:8px 11px;border-radius:9px;color:#A7F3D0;font-size:12.5px;line-height:1.45;
@@ -2036,6 +2051,8 @@ body{font-variant-numeric:tabular-nums}
   .srow .tk b .vcpb{font-size:10.5px;padding:1px 3px;margin-left:4px}
   .srow .tk b .divb{font-size:10.5px;padding:1px 3px;margin-left:4px}
   .srow .tk b .bkb{font-size:10.5px;padding:1px 3px;margin-left:4px}
+  .srow .tk b .mom6{font-size:9.5px;padding:1px 3px;margin-left:3px}
+  .seg-pre button{font-size:10.5px;padding:4px 2px}
   .market-badge .upd{font-size:11px}
 }
 
@@ -2575,6 +2592,12 @@ html[data-theme="light"] .srow .tk b .bkb{color:#4A5568;background:rgba(100,116,
 html[data-theme="light"] .srow .tk b .bkb.strong{color:#075985;background:rgba(56,189,248,.18);border-color:rgba(14,116,144,.42)}
 html[data-theme="light"] .srow .tk b .vcpb.brk{color:#047857;background:rgba(16,185,129,.16);border-color:rgba(5,150,105,.40)}
 html[data-theme="light"] .srow .tk b .vcpb.near{color:#8A5A06;background:rgba(245,158,11,.16);border-color:rgba(180,83,9,.35)}
+html[data-theme="light"] .srow .tk b .mom6{color:#5B21B6;background:rgba(139,92,246,.16);border-color:rgba(109,40,217,.38)}
+html[data-theme="light"] .seg-pre button[data-f="mom6"]{border-color:rgba(109,40,217,.28);color:#5B21B6}
+html[data-theme="light"] .seg-pre button[data-f="mom6"] .c{color:#6D28D9}
+html[data-theme="light"] .seg-pre button[data-f="mom6"].on{color:#3B1D8F;background:linear-gradient(180deg,rgba(139,92,246,.22),rgba(139,92,246,.07));border-color:rgba(109,40,217,.55)}
+html[data-theme="light"] .seg-pre button[data-f="mom6"].on .c{color:#3B1D8F}
+html[data-theme="light"] .mom-note{color:#5B21B6;border-left-color:rgba(109,40,217,.45)}
 html[data-theme="light"] .pb-state{background:#F1F5F9}
 html[data-theme="light"] .pb-state.live{color:#0369A1;background:#E0F2FE;border-color:rgba(14,116,144,.40)}
 html[data-theme="light"] .pb-state.ready{color:#047857;background:#DCFCE7;border-color:rgba(5,150,105,.40)}
@@ -2750,6 +2773,8 @@ html[data-theme="light"] .theme-btn:hover{background:#E0F2FE;border-color:rgba(1
   border:1px solid rgba(245,158,11,.45);color:var(--amber);background:rgba(245,158,11,.10);
 }
 .pg-h .pg-tag.live{border-color:rgba(16,185,129,.45);color:var(--up);background:rgba(16,185,129,.10)}
+.pg-h .pg-tag.mom{border-color:rgba(167,139,250,.45);color:#C4B5FD;background:rgba(167,139,250,.12)}
+html[data-theme="light"] .pg-h .pg-tag.mom{color:#5B21B6;background:rgba(139,92,246,.14);border-color:rgba(109,40,217,.40)}
 .pg-row{display:grid;grid-template-columns:44px minmax(0,1fr);gap:6px;padding:2px 0;align-items:start}
 .pg-row b{
   font-size:10px;font-weight:700;line-height:1.5;letter-spacing:-.01em;color:var(--txt3);

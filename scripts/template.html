@@ -84,6 +84,7 @@
       <button data-f="vcp" title="VCP — 대형 우량주(시총 Top 30 ∪ 실적 우량주) 한정 · 미너비니 Trend Template(정배열) 충족 + 변동성 축소 · 피벗 돌파/임박 · 다시 누르면 해제">VCP<span class="c" id="cVcp">0</span></button>
       <button data-f="tri" title="삼각수렴 — 최근 45봉 안 피벗 고점 2·저점 2 수렴(대칭/상승/하락, 쐐기 제외) · 돌파(최근 5봉)/임박/진행 · 표시 전용 · 다시 누르면 해제">삼각수렴<span class="c" id="cTri">0</span></button>
       <button data-f="div" title="상승 다이버전스 — 10일 신저가인데 RSI(14)가 5~60봉 전 저점보다 높은 종목 · 최근 3거래일 내 발생 기준 · 참고용(매매 조건 미적용) · 다시 누르면 해제">다이버전스<span class="c" id="cDiv">0</span></button>
+      <button data-f="mom6" class="mom" title="6M모멘텀 5 — 최근 126거래일(약 6개월) 수익률 상위 5종목만 표시 · 위성 10~15% 참고용 · 매매 규칙 불변 · 상단 탭과 교집합 · 다시 누르면 해제">6M모멘텀<span class="c" id="cMom6">5</span></button>
     </div>
     <div class="side-tools">
       <input id="listSearch" type="text" placeholder="목록 내 검색" autocomplete="off" spellcheck="false">
@@ -114,6 +115,7 @@
       <div class="si-body" id="siBody">
         <div class="pguide" id="presetGuide" aria-live="polite"></div>
         <div class="preset-note" id="presetNote">상단 탭(전체 · 매수 · 홀드 · 관망 · 매도 · 관심)과 프리셋은 함께 적용됩니다 — 프리셋을 다시 누르면 해제 · 검색·정렬과 함께 적용</div>
+        <div class="preset-note mom-note" id="momNote" title="최근 126거래일(약 6개월) 수익률 상위 5종목을 왼쪽 목록의 6M Top5 배지와 이 필터로 표시합니다 — 위성 10~15% 비중의 참고용이며 매매 규칙은 바꾸지 않습니다">6M모멘텀 5: 최근 126거래일 수익률 상위 5종목(위성 10~15% 참고용 · 매매 규칙 불변)</div>
       </div>
     </div>
     <div class="side-foot">Yahoo Finance 일봉 · <span id="footAsOf">—</span> 종가 기준<span class="upd" id="footUpd"></span> · 투자 권유 아님</div>
