@@ -8,12 +8,13 @@
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
 
   /* 이동평균선 5·20·60·120·240일 (단순이동평균)
-     중요한 선(20일·240일)만 굵고 선명하게, 5·60·120일은 가늘고 낮은 투명도로 뒤로 뺀다 */
+     핵심선(20일·240일)만 굵고 선명하게 두고, 5·60·120일은 핵심선보다 가늘게 유지하되
+     눈으로 또렷하게 따라갈 수 있는 수준(1.25~1.3px / alpha 0.75~0.8)까지 올린다 */
   var MA = [
-    { p: 5, label: '5일', color: '#38BDF8', w: 0.95, a: 0.5, heavy: false },
+    { p: 5, label: '5일', color: '#38BDF8', w: 1.3, a: 0.8, heavy: false },
     { p: 20, label: '20일', color: '#FBBF24', w: 2.3, a: 1, heavy: true },
-    { p: 60, label: '60일', color: '#34D399', w: 0.95, a: 0.42, heavy: false },
-    { p: 120, label: '120일', color: '#A78BFA', w: 0.95, a: 0.42, heavy: false },
+    { p: 60, label: '60일', color: '#34D399', w: 1.25, a: 0.76, heavy: false },
+    { p: 120, label: '120일', color: '#A78BFA', w: 1.25, a: 0.75, heavy: false },
     { p: 240, label: '240일', color: '#F97316', w: 2.85, a: 1, heavy: true }   /* 장기 기준선 — 가장 굵게 */
   ];
 
@@ -1324,7 +1325,7 @@
     FG_BANDS.forEach(function (x, i) {
       var on = i === bi, narrowSeg = (x.max - x.min) < 20;
       out.push('<text fill="' + (on ? x.color : '#5c6a80') + '" font-size="' + (narrowSeg ? 9.5 : 10.5) +
-        '" font-weight="' + (on ? 800 : 700) + '" letter-spacing=".02em" text-anchor="middle">' +
+        '" font-weight="' + (on ? 600 : 500) + '" letter-spacing=".02em" text-anchor="middle">' +
         '<textPath href="#fgL' + i + '" startOffset="50%">' + x.ko + '</textPath></text>');
     });
     /* 0~100 눈금 점선(5점 간격) */
@@ -1339,7 +1340,7 @@
     [[0, '0'], [25, '25'], [50, '50'], [75, '75'], [100, '100']].forEach(function (n) {
       var q = fgPt(FGG.num, fgAng(n[0]));
       out.push('<text x="' + q[0].toFixed(1) + '" y="' + q[1].toFixed(1) + '" fill="#64748b" font-size="10.5"' +
-        ' font-weight="700" text-anchor="middle" dominant-baseline="middle">' + n[1] + '</text>');
+        ' font-weight="500" text-anchor="middle" dominant-baseline="middle">' + n[1] + '</text>');
     });
     /* 가운데 원 + 점수 + 등급 (숫자는 항상 맨 위 레이어) */
     out.push('<circle cx="' + FGG.cx + '" cy="' + FGG.cy + '" r="' + FGG.hub + '" fill="#0d1422" stroke="#243247" stroke-width="1.5"/>');
@@ -1355,9 +1356,9 @@
     out.push('<circle cx="' + tip[0].toFixed(1) + '" cy="' + tip[1].toFixed(1) + '" r="2.9" fill="' + b.color +
       '" stroke="#0b0e14" stroke-width="1.1"/>');
     out.push('<circle cx="' + base[0].toFixed(1) + '" cy="' + base[1].toFixed(1) + '" r="2.2" fill="#f1f5f9"/>');
-    out.push('<text x="' + FGG.cx + '" y="200" fill="#f8fafc" font-size="31" font-weight="900" text-anchor="middle"' +
+    out.push('<text x="' + FGG.cx + '" y="200" fill="#f8fafc" font-size="31" font-weight="700" text-anchor="middle"' +
       ' style="font-variant-numeric:tabular-nums;letter-spacing:-.02em">' + Math.round(score) + '</text>');
-    out.push('<text x="' + FGG.cx + '" y="219" fill="' + b.color + '" font-size="9" font-weight="800" text-anchor="middle"' +
+    out.push('<text x="' + FGG.cx + '" y="219" fill="' + b.color + '" font-size="9" font-weight="600" text-anchor="middle"' +
       ' letter-spacing=".04em">' + b.ko + '</text>');
     return out.join('');
   }
@@ -2916,7 +2917,7 @@
       return false;
     };
     var tag = function (px, py, text, align, tone) {
-      ctx.font = '700 9px ui-monospace,SFMono-Regular,monospace';
+      ctx.font = '600 9px ui-monospace,SFMono-Regular,monospace';
       var tw = Math.round(ctx.measureText(text).width) + 9;
       var baseX = align === 'right' ? px - tw : (align === 'center' ? px - tw / 2 : px);
       baseX = Math.max(L.padL + 1, Math.min(baseX, xr - tw - 1));
@@ -2981,7 +2982,7 @@
       return false;
     };
     var put = function (txt, px0, py0, col, bg, laneFirst) {
-      ctx.font = '700 9.5px ui-monospace,SFMono-Regular,monospace';
+      ctx.font = '600 9.5px ui-monospace,SFMono-Regular,monospace';
       var tw = Math.round(ctx.measureText(txt).width) + 10, th = 15;
       var cands = [
         [px0 - tw / 2, py0 - th - 9], [px0 - tw / 2, py0 + 9],
@@ -3174,7 +3175,7 @@
       ctx.fillStyle = '#0B0E14'; ctx.fill();
       ctx.strokeStyle = colOf(pt.seg); ctx.lineWidth = 2.2; ctx.stroke();
       if (!labOn) continue;
-      ctx.font = '800 10.5px ui-monospace,SFMono-Regular,monospace';
+      ctx.font = '600 10.5px ui-monospace,SFMono-Regular,monospace';
       var tw = Math.max(ctx.measureText(pt.lab).width + 11, 18);
       var bx = px1 - tw / 2, by = isHigh ? py1 - 25 : py1 + 9;
       var topLim = L.price.y + 1, botLim = L.price.y + L.price.h - 18;
@@ -3208,7 +3209,7 @@
 
     /* 2b) 소파동 라벨 — 대파동 배지 뒤에 그려 자리를 양보한다 */
     if (state.ewShow.sub !== false && sub && sub.ok && sub.path && sub.path.length > 2 && bw >= 2.2 && subSpan >= 10) {
-        ctx.font = '700 9px ui-monospace,SFMono-Regular,monospace';
+        ctx.font = '600 9px ui-monospace,SFMono-Regular,monospace';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         for (var sj = 0; sj < sub.path.length; sj++) {
           var sp = sub.path[sj];

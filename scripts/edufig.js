@@ -41,14 +41,14 @@ var EDUFIG = (function () {
     var bx = o.a === 'end' ? x - w : o.a === 'middle' ? x - w / 2 : x;
     return '<rect x="' + R(bx) + '" y="' + R(y - h / 2) + '" width="' + R(w) + '" height="' + R(h) + '" rx="' + R(h / 2) +
       '" fill="' + (o.bg || 'rgba(7,16,30,.94)') + '" stroke="' + (o.bd || 'rgba(120,190,230,.34)') + '" stroke-width=".8"/>' +
-      T(bx + w / 2, y + fs * 0.36, s, { c: o.c || C.cy2, fs: fs, w: 700, a: 'middle' });
+      T(bx + w / 2, y + fs * 0.36, s, { c: o.c || C.cy2, fs: fs, w: 600, a: 'middle' });
   }
   function badge(x, y, s, o) {
     o = o || {};
     var r = o.r || 7.2, fs = o.fs || 8.4;
     return '<circle cx="' + R(x) + '" cy="' + R(y) + '" r="' + r + '" fill="' + (o.bg || 'rgba(7,16,30,.95)') +
       '" stroke="' + (o.c || C.cy) + '" stroke-width="' + (o.sw || 1.1) + '"/>' +
-      T(x, y + fs * 0.36, s, { c: o.c || C.cy, fs: fs, w: 800, a: 'middle' });
+      T(x, y + fs * 0.36, s, { c: o.c || C.cy, fs: fs, w: 600, a: 'middle' });
   }
   function line(x1, y1, x2, y2, o) {
     o = o || {};
@@ -114,7 +114,7 @@ var EDUFIG = (function () {
       var it = items[i], fs = 8.2, lead = it.line !== false;
       if (lead) s += line(x, y - 2.8, x + 13, y - 2.8, { c: it.c, w: 1.8, dash: it.dash });
       x += lead ? 18 : 0;
-      s += T(x, y, it.t, { c: it.c2 || it.c, fs: fs, w: 700 });
+      s += T(x, y, it.t, { c: it.c2 || it.c, fs: fs, w: 600 });
       x += tw(it.t, fs) + 14;
     }
     return s;
@@ -246,7 +246,7 @@ var EDUFIG = (function () {
     s += line(K.cx(i0), K.Y(cl[i0]) + 4, K.cx(i0), 138, { c: 'rgba(245,185,66,.6)', w: 1, dash: '2 3' });
     s += chip(K.cx(i0), 146, 'RSI(2) 11 · 과매도', { a: 'middle', c: C.am, bd: 'rgba(245,185,66,.45)' });
     s += arrow(K.cx(22), 138, K.cx(22), 118, { c: C.up, w: 1.7 });
-    s += T(K.cx(22) + 5, 134, '매수', { c: C.up, fs: 8, w: 800 });
+    s += T(K.cx(22) + 5, 134, '매수', { c: C.up, fs: 8, w: 600 });
     /* RSI 패널 */
     var py0 = 158, py1 = 200;
     s += line(x0, py0, x1, py0, { c: 'rgba(148,178,214,.18)', w: 1 });
@@ -255,10 +255,10 @@ var EDUFIG = (function () {
     var pts = [];
     for (var i = 0; i < rv.length; i++) pts.push([x0 + (x1 - x0) / (n - 2) * (i + 0.5), R2(rv[i])]);
     s += line(x0, R2(15), x1, R2(15), { c: C.dn, w: 1, dash: '4 4', o: 0.75 });
-    s += T(x0, R2(15) - 3.5, '15', { c: C.dn, fs: 7.6, w: 700 });
+    s += T(x0, R2(15) - 3.5, '15', { c: C.dn, fs: 7.6, w: 600 });
     s += poly(pts, { c: C.vi, w: 1.5 });
     s += dot(pts[15][0], pts[15][1], 3.2, { c: C.am, f: C.am });
-    s += T(x0, py0 - 4, 'RSI(2)', { c: C.vi, fs: 7.8, w: 700 });
+    s += T(x0, py0 - 4, 'RSI(2)', { c: C.vi, fs: 7.8, w: 600 });
     s += T(x1, py0 - 4, '15 아래 = 과매도', { a: 'end', c: C.mu, fs: 7.8 });
     return { svg: wrap(s, { label: 'RSI(2) 과매도 스윙 도해' }),
       cap: '상승 추세에서 <b>RSI(2) 15 이하</b>로 급락 → 반등 시 매수. 하락장에서는 5 아래로도 계속 내려갑니다' };
@@ -273,9 +273,9 @@ var EDUFIG = (function () {
     var ma = smooth(cl, 4), pts = [], i;
     for (i = 0; i < n; i++) pts.push([K.cx(i), K.Y(ma[i])]);
     s += poly(pts, { c: C.or, w: 2.8 });
-    s += T(x0, 42, '240일선', { c: C.or, fs: 8.4, w: 800 });
-    s += T(X1 - 4, 56, '가격 ↑ = 상승장 · 눌림은 지지', { a: 'end', c: C.up, fs: 8.2, w: 700 });
-    s += T(X1 - 4, 184, '가격 ↓ = 하락장 · 반등은 저항', { a: 'end', c: C.dn, fs: 8.2, w: 700 });
+    s += T(x0, 42, '240일선', { c: C.or, fs: 8.4, w: 600 });
+    s += T(X1 - 4, 56, '가격 ↑ = 상승장 · 눌림은 지지', { a: 'end', c: C.up, fs: 8.2, w: 600 });
+    s += T(X1 - 4, 184, '가격 ↓ = 하락장 · 반등은 저항', { a: 'end', c: C.dn, fs: 8.2, w: 600 });
     return { svg: wrap(s, { label: '240일선 장기 기준선 도해' }),
       cap: '주황 굵은 <b>240일선 위 = 상승장(지지)</b>, 아래 = 하락장(반등은 저항). 선의 기울기까지 봅니다' };
   };
@@ -298,8 +298,8 @@ var EDUFIG = (function () {
     s += band(top.slice(0, cut + 1), bot.slice(0, cut + 1), { f: 'rgba(251,113,133,.28)', c: 'rgba(251,113,133,.7)', w: 1 });
     s += band(top.slice(cut), bot.slice(cut), { f: 'rgba(56,189,248,.26)', c: 'rgba(56,189,248,.75)', w: 1 });
     s += K.svg;
-    s += T(x0 + 2, 182, '양운 (빨강) = 지지', { c: '#FB9AA8', fs: 8.4, w: 800 });
-    s += T(X1 - 6, 58, '음운 (파랑) = 저항', { a: 'end', c: '#77CBF7', fs: 8.4, w: 800 });
+    s += T(x0 + 2, 182, '양운 (빨강) = 지지', { c: '#FB9AA8', fs: 8.4, w: 600 });
+    s += T(X1 - 6, 58, '음운 (파랑) = 저항', { a: 'end', c: '#77CBF7', fs: 8.4, w: 600 });
     s += chip(X0 + 2, 164, '구름 안 = 방향 불명', { c: C.mu, bd: 'rgba(120,190,230,.3)' });
     return { svg: wrap(s, { label: '일목균형표 구름대 도해' }),
       cap: '구름 <b>위 = 강세(양운이 지지)</b>, 구름 <b>아래 = 약세(음운이 저항)</b>. 구름이 두꺼울수록 뚫기 어렵습니다' };
@@ -319,8 +319,8 @@ var EDUFIG = (function () {
       var up = P[i][1] > P[i - 1][1];
       s += badge(pts[i][0], pts[i][1] + (up ? -12 : 12), lab[i - 1], { c: up ? C.up : C.dn, r: 6.8, fs: 8 });
     }
-    s += T(x0, 50, '상승 1-5파 + 조정 A-B-C', { c: C.cy2, fs: 8.4, w: 800 });
-    s += T(pts[3][0] + 6, pts[3][1] - 21, '3파 = 가장 길다', { c: C.tx, fs: 8.2, w: 700 });
+    s += T(x0, 50, '상승 1-5파 + 조정 A-B-C', { c: C.cy2, fs: 8.4, w: 600 });
+    s += T(pts[3][0] + 6, pts[3][1] - 21, '3파 = 가장 길다', { c: C.tx, fs: 8.2, w: 600 });
     s += T(x0 + 2, 184, '2파는 1파 출발점을 깨지 않음', { c: C.mu, fs: 8 });
     s += line(pts[0][0], Y(60), pts[1][0] + 8, Y(60), { c: C.dn, w: 1, dash: '3 3', o: 0.7 });
     return { svg: wrap(s, { label: '엘리어트 파동 1-5 A-B-C 도해' }),
@@ -338,7 +338,7 @@ var EDUFIG = (function () {
     for (i = 18; i < n; i++) s += dot(K.cx(i), K.Y(cl[i]) - 11, 2.3, { c: '#F472B6', f: '#F472B6' });
     s += legend([{ t: '점 아래 = 상승', c: '#2FE3D0' }, { t: '점 위 = 하락', c: '#F472B6', line: false }], 20);
     s += line(K.cx(17) + K.step / 2, 40, K.cx(17) + K.step / 2, 182, { c: 'rgba(244,114,182,.45)', w: 1, dash: '4 4' });
-    s += T(K.cx(17) + K.step / 2 + 5, 44, '전환', { c: '#F9A8D4', fs: 7.6, w: 700 });
+    s += T(K.cx(17) + K.step / 2 + 5, 44, '전환', { c: '#F9A8D4', fs: 7.6, w: 600 });
     return { svg: wrap(s, { label: '파라볼릭 SAR 도해' }),
       cap: '청록 점이 캔들 <b>아래 = 상승 추세(자동 손절선)</b>, 점이 위로 넘어가면 <b>하락 전환</b>. 횡보장에선 신호가 잦습니다' };
   };
@@ -378,11 +378,11 @@ var EDUFIG = (function () {
       var b = boxes[i];
       s += rectW(K.cx(b[0]) - 3, K.Y(b[2]) - 3, K.cx(b[1]) - K.cx(b[0]) + 6, K.Y(b[3]) - K.Y(b[2]) + 6,
         { c: 'rgba(167,139,250,.65)', f: 'rgba(167,139,250,.14)', w: 1, rx: 3, dash: '3 3' });
-      s += T(K.cx(b[0]) - 3, K.Y(b[2]) - 7, b[4], { c: C.vi, fs: 8, w: 800 });
+      s += T(K.cx(b[0]) - 3, K.Y(b[2]) - 7, b[4], { c: C.vi, fs: 8, w: 600 });
     }
     var pv = 140;
     s += line(K.cx(22), K.Y(pv), X1 - 4, K.Y(pv), { c: C.am, w: 1.2, dash: '5 4' });
-    s += T(K.cx(22) - 2, K.Y(pv) - 6, '피벗 (직전 고점)', { a: 'end', c: C.am, fs: 8, w: 700 });
+    s += T(K.cx(22) - 2, K.Y(pv) - 6, '피벗 (직전 고점)', { a: 'end', c: C.am, fs: 8, w: 600 });
     s += arrow(K.cx(36), K.Y(pv) + 18, K.cx(36), K.Y(pv) - 2, { c: C.up, w: 1.8 });
     s += chip(X1 - 6, K.Y(pv) + 30, '돌파 + 거래량', { a: 'end', c: C.up, bd: 'rgba(47,217,166,.45)' });
     return { svg: wrap(s, { label: 'VCP 변동성 축소 도해' }),
@@ -405,7 +405,7 @@ var EDUFIG = (function () {
     s += chip(A[27][0], A[27][1] - 12, 'DXY ↑ 달러 강세', { a: 'end', c: C.am, bd: 'rgba(245,185,66,.45)' });
     s += chip(B[27][0], B[27][1] + 13, '빅테크 ↓', { a: 'end', c: C.cy, bd: 'rgba(56,189,248,.45)' });
     s += T(X0 + 2, 44, '달러 강세 = 해외 매출 환산액 감소 → 실적 역풍', { c: C.mu, fs: 8.2 });
-    s += T(X0 + 2, 186, '해외 비중 큰 종목: AAPL · MSFT · NVDA', { c: C.tx, fs: 8, w: 700 });
+    s += T(X0 + 2, 186, '해외 비중 큰 종목: AAPL · MSFT · NVDA', { c: C.tx, fs: 8, w: 600 });
     return { svg: wrap(s, { label: '달러 지수와 빅테크 역상관 도해' }),
       cap: 'DXY가 오르면 해외 매출이 큰 <b>빅테크는 역풍</b>. 실적 D-3과 함께 보면 위험 구간이 보입니다' };
   };
@@ -427,9 +427,9 @@ var EDUFIG = (function () {
     s += poly(pts, { c: C.cy, w: 1.9 });
     s += line(x0, Y(zero), x1, Y(zero), { c: 'rgba(220,235,250,.7)', w: 1.2, dash: '6 4' });
     s += T(X1 - 4, Y(zero) - 6, '금리차 0', { a: 'end', c: C.tx, fs: 7.8 });
-    s += T(x0 + 6, Y(zero) - 9, '＋ 정상', { c: C.up, fs: 8.2, w: 800 });
+    s += T(x0 + 6, Y(zero) - 9, '＋ 정상', { c: C.up, fs: 8.2, w: 600 });
     s += chip(x0 + 236, Y(zero) + 34, '역전 (−)', { c: C.dn, bd: 'rgba(251,113,133,.45)' });
-    s += T(x0 + 2, 44, '10년물 − 2년물', { c: C.mu, fs: 8.4, w: 700 });
+    s += T(x0 + 2, 44, '10년물 − 2년물', { c: C.mu, fs: 8.4, w: 600 });
     s += T(X1 - 4, 44, '역전은 침체의 선행 신호', { a: 'end', c: C.mu, fs: 8.2 });
     return { svg: wrap(s, { label: '장단기 금리차 역전 도해' }),
       cap: '10년물 − 2년물이 <b>마이너스 = 수익률 곡선 역전</b>. 침체는 역전이 <b>풀린 뒤</b> 오는 경우가 많았습니다' };
@@ -449,7 +449,7 @@ var EDUFIG = (function () {
     vols[23] = 24; vols[24] = 22;
     s += bars(vols, x0, x1, 174, 202, { col: function (i) { return (i === 23 || i === 24) ? 'rgba(47,217,166,.9)' : 'rgba(120,170,210,.33)'; } });
     s += T(x0, 164, '거래량', { c: C.dim, fs: 7.6 });
-    s += T(x0 + 2, 146, '돌파 봉 거래량 = 20일 평균의 1.5~2배', { c: C.up, fs: 8, w: 700 });
+    s += T(x0 + 2, 146, '돌파 봉 거래량 = 20일 평균의 1.5~2배', { c: C.up, fs: 8, w: 600 });
     s += badge(K.cx(23), ry - 13, '↑', { c: C.am, r: 6.4, fs: 7.6 });
     return { svg: wrap(s, { label: '돌파와 거래량 도해' }),
       cap: '저항 돌파 날 거래량이 <b>1.5~2배</b>로 늘어야 진짜 돌파. 2~3일 안에 넥라인 아래로 돌아오면 실패' };
@@ -465,13 +465,13 @@ var EDUFIG = (function () {
     s += line(x0 - 6, yE, x1, yE, { c: '#C7D6E6', w: 1.2, dash: '4 4' });
     s += line(x0 - 6, yS, x1, yS, { c: C.dn, w: 1.4, dash: '5 4' });
     s += line(x0 - 6, yC, x1, yC, { c: C.am, w: 1.2, dash: '2 3' });
-    s += T(X0 + 2, yC - 6, '−10% 상한', { c: C.am, fs: 8, w: 700 });
-    s += T(X0 + 2, yS + 12, '−4.5 ATR', { c: C.dn, fs: 8, w: 700 });
-    s += T(X0 + 2, yE - 7, '진입 120', { c: '#C7D6E6', fs: 8, w: 700 });
+    s += T(X0 + 2, yC - 6, '−10% 상한', { c: C.am, fs: 8, w: 600 });
+    s += T(X0 + 2, yS + 12, '−4.5 ATR', { c: C.dn, fs: 8, w: 600 });
+    s += T(X0 + 2, yE - 7, '진입 120', { c: '#C7D6E6', fs: 8, w: 600 });
     s += bracket(x0 - 20, yE, x0 - 20, K.Y(entry - 4), { c: C.mu });
     s += T(x0 - 24, (yE + K.Y(entry - 4)) / 2 + 3, '1 ATR', { a: 'end', c: C.mu, fs: 7.6 });
     s += chip(X1 - 6, 54, 'ATR = 평균 진폭', { a: 'end', c: C.cy2 });
-    s += T(X0 + 2, 196, '실제 손절 = 두 선 중 가까운 쪽', { c: C.tx, fs: 8, w: 700 });
+    s += T(X0 + 2, 196, '실제 손절 = 두 선 중 가까운 쪽', { c: C.tx, fs: 8, w: 600 });
     return { svg: wrap(s, { label: 'ATR 손절 거리 도해' }),
       cap: '손절은 가격이 아니라 <b>ATR 배수</b>로. 스윙형은 4.5 ATR과 <b>−10% 중 가까운 쪽</b>을 씁니다' };
   };
@@ -527,7 +527,7 @@ var EDUFIG = (function () {
     s += dot(mp[7][0], mp[7][1], 3, { c: C.vi, f: C.vi });
     s += dot(mp[18][0], mp[18][1], 3, { c: C.vi, f: C.vi });
     s += line(mp[7][0], mp[7][1] - 4, mp[18][0], mp[18][1] - 4, { c: C.dn, w: 1.2, dash: '4 3' });
-    s += T(x0, py0 - 4, 'MACD', { c: C.vi, fs: 7.8, w: 700 });
+    s += T(x0, py0 - 4, 'MACD', { c: C.vi, fs: 7.8, w: 600 });
     s += T(x1, py0 - 4, '히스토그램 · 선은 더 낮은 고점', { a: 'end', c: C.mu, fs: 7.8 });
     return { svg: wrap(s, { label: 'MACD 약세 다이버전스 도해' }),
       cap: '가격 고점은 올라가는데 <b>MACD 고점은 내려가면 약세 다이버전스</b>. 타이밍이 아니라 확인용입니다' };
@@ -541,7 +541,7 @@ var EDUFIG = (function () {
     s += K.svg;
     var hiY = K.Y(152), loY = K.Y(72);
     s += bracket(X0 + 5, hiY, X0 + 5, loY, { c: C.mu, w: 1 });
-    s += T(X0 + 9, (hiY + loY) / 2 + 3, '52주', { c: C.mu, fs: 8, w: 700 });
+    s += T(X0 + 9, (hiY + loY) / 2 + 3, '52주', { c: C.mu, fs: 8, w: 600 });
     s += line(x0, hiY, x1, hiY, { c: C.cy, w: 1, dash: '4 4', o: 0.7 });
     s += chip(x1 - 6, hiY - 12, '신고가권 = 위쪽 매물 없음', { a: 'end', c: C.cy2 });
     s += chip(x0 + 4, 116, '바닥권 = 반등마다 본전 매물', { c: C.mu, bd: 'rgba(120,190,230,.28)' });
@@ -569,7 +569,7 @@ var EDUFIG = (function () {
     var ry = Y(112);
     s += line(px0 - 12, ry, X1 - 2, ry, { c: C.am, w: 1, dash: '4 4', o: 0.75 });
     s += legend([{ t: '거래 집중 가격대 = 저항', c: C.am, dash: '4 4' }], 20);
-    s += T(X0 + 2, 40, '매물대 = 거래 집중 구간', { c: C.mu, fs: 7.8, w: 700 });
+    s += T(X0 + 2, 40, '매물대 = 거래 집중 구간', { c: C.mu, fs: 7.8, w: 600 });
     s += chip(K.cx(26), ry + 30, '뚫고 지지로 전환', { a: 'middle', c: C.up, bd: 'rgba(47,217,166,.45)' });
     return { svg: wrap(s, { label: '지지와 저항 매물대 도해' }),
       cap: '지지·저항은 선이 아니라 <b>거래가 쌓인 가격대(매물대)</b>. 뚫은 뒤 지지로 바뀌는지가 재진입 자리' };
@@ -588,10 +588,10 @@ var EDUFIG = (function () {
     s += line(x0, yT, x1, yT, { c: C.up, w: 1.2, dash: '5 4' });
     s += line(x0, yS, x1, yS, { c: C.dn, w: 1.2, dash: '5 4' });
     s += K.svg;
-    s += T(x0 + 4, yE - 7, '진입', { c: '#C7D6E6', fs: 8, w: 700 });
-    s += T(x0 + 4, yT + 12, '목표 +2R', { c: C.up, fs: 8, w: 700 });
-    s += T(x0 + 4, yS - 7, '손절 −1R', { c: C.dn, fs: 8, w: 700 });
-    s += T(x0 + 2, 46, '승률 40% × 2R − 60% × 1R = +0.2R', { c: C.cy2, fs: 8.6, w: 800 });
+    s += T(x0 + 4, yE - 7, '진입', { c: '#C7D6E6', fs: 8, w: 600 });
+    s += T(x0 + 4, yT + 12, '목표 +2R', { c: C.up, fs: 8, w: 600 });
+    s += T(x0 + 4, yS - 7, '손절 −1R', { c: C.dn, fs: 8, w: 600 });
+    s += T(x0 + 2, 46, '승률 40% × 2R − 60% × 1R = +0.2R', { c: C.cy2, fs: 8.6, w: 600 });
     s += T(X1 - 6, 192, '손익비 1.5 미만이면 건너뛰기', { a: 'end', c: C.mu, fs: 8 });
     return { svg: wrap(s, { label: '손익비 1대2 도해' }),
       cap: '목표 <b>+2R</b>, 손절 <b>−1R</b>이면 승률 40%로도 기대값은 플러스. 진입 전에 두 선을 먼저 긋습니다' };
@@ -631,7 +631,7 @@ var EDUFIG = (function () {
     s += chip(K.cx(10) + 22, K.Y(110), '갭 −22%', { c: C.dn, bd: 'rgba(251,113,133,.45)' });
     s += line(x0, K.Y(111), x1, K.Y(111), { c: 'rgba(251,113,133,.8)', w: 1, dash: '2 3' });
     s += chip(X1 - 6, K.Y(111) - 16, '−10% 손절선', { a: 'end', c: C.dn, bd: 'rgba(251,113,133,.4)' });
-    s += T(X1 - 6, 172, '시가 체결 → 손절선 무력', { a: 'end', c: C.tx, fs: 8.2, w: 700 });
+    s += T(X1 - 6, 172, '시가 체결 → 손절선 무력', { a: 'end', c: C.tx, fs: 8.2, w: 600 });
     s += T(x0 + 2, 182, 'D-3 이내 = 신규 진입 보류 · 비중 축소', { c: C.mu, fs: 7.8 });
     return { svg: wrap(s, { label: '실적 갭 하락 도해' }),
       cap: '실적은 <b>갭</b>으로 출발. −10% 손절을 걸어도 시가가 −22%면 그 가격에 체결됩니다 → <b>D-3부터 비중 축소</b>' };
@@ -668,7 +668,7 @@ var EDUFIG = (function () {
     for (i = 0; i < buys.length; i++) {
       var yb = K.Y(buys[i][1]);
       s += arrow(K.cx(buys[i][0]) + 3, yb + 34, K.cx(buys[i][0]) + 3, yb + 12, { c: C.up, w: 1.4 });
-      s += T(K.cx(buys[i][0]) + 8, yb + 37, '1/3', { c: C.up, fs: 8, w: 800 });
+      s += T(K.cx(buys[i][0]) + 8, yb + 37, '1/3', { c: C.up, fs: 8, w: 600 });
     }
     var avg = 89.3;
     s += line(x0, K.Y(avg), x1, K.Y(avg), { c: C.am, w: 1.2, dash: '5 4' });
@@ -696,7 +696,7 @@ var EDUFIG = (function () {
     s += legend([{ t: 'QQQ 100일선', c: C.am }], 196);
     var cx0 = K.cx(27), cx1 = K.cx(35);
     s += rectW(cx0, y0, cx1 - cx0, y1 - y0, { f: 'rgba(251,113,133,.10)', c: 'rgba(251,113,133,.35)', w: 1, rx: 3, dash: '3 3' });
-    s += T((cx0 + cx1) / 2, y0 + 12, '진입 금지', { a: 'middle', c: C.dn, fs: 8, w: 700 });
+    s += T((cx0 + cx1) / 2, y0 + 12, '진입 금지', { a: 'middle', c: C.dn, fs: 8, w: 600 });
     s += chip(X1 - 6, 200, '아래 = 스윙 OFF', { a: 'end', c: C.dn, bd: 'rgba(251,113,133,.45)' });
     s += T(x0 + 2, 40, '개별 종목 신호보다 시장이 먼저', { c: C.mu, fs: 7.8 });
     return { svg: wrap(s, { label: '시장 레짐 필터 도해' }),
@@ -714,12 +714,12 @@ var EDUFIG = (function () {
     for (i = 0; i < rows.length; i++) {
       var r = rows[i];
       s += rectW(r.x, r.y, r.w, 26, { f: r.f, c: r.c, w: 1, rx: 7 });
-      s += T(r.x + 11, r.y + 17, r.lab, { c: C.tx, fs: 8.6, w: 700 });
-      s += T(r.x + r.w - 11, r.y + 17, r.val, { a: 'end', c: C.cy2, fs: i === 2 ? 7.8 : 9, w: 800 });
+      s += T(r.x + 11, r.y + 17, r.lab, { c: C.tx, fs: 8.6, w: 600 });
+      s += T(r.x + r.w - 11, r.y + 17, r.val, { a: 'end', c: C.cy2, fs: i === 2 ? 7.8 : 9, w: 600 });
     }
     s += arrow(190, 78, 190, 82, { c: 'rgba(143,231,255,.55)', w: 1.2 });
     s += arrow(190, 112, 190, 116, { c: 'rgba(143,231,255,.55)', w: 1.2 });
-    s += T(92, 156, 'EPS 흑자 · 매출 +5% · 순익률 15%', { c: C.up, fs: 8, w: 700 });
+    s += T(92, 156, 'EPS 흑자 · 매출 +5% · 순익률 15%', { c: C.up, fs: 8, w: 600 });
     s += T(34, 182, '정렬: 점수 높은순 / RSI 낮은순', { c: C.mu, fs: 8 });
     s += chip(34, 196, '남은 목록은 “더 볼 목록”', { c: C.am, bd: 'rgba(245,185,66,.45)' });
     return { svg: wrap(s, { label: '시총 상위와 실적 우량주 조합 도해' }),
@@ -730,20 +730,20 @@ var EDUFIG = (function () {
   F[23] = function () {
     var s = frame();
     s += rectW(30, 46, 200, 74, { f: 'rgba(20,34,54,.75)', c: 'rgba(96,222,255,.32)', rx: 9 });
-    s += T(42, 66, 'NVDA', { c: C.tx, fs: 10.5, w: 800 });
+    s += T(42, 66, 'NVDA', { c: C.tx, fs: 10.5, w: 600 });
     s += T(42, 80, 'NVIDIA Corp · 반도체', { c: C.mu, fs: 7.6 });
-    s += T(42, 100, '$182.44', { c: C.tx, fs: 12, w: 800 });
-    s += T(110, 100, '+1.8%', { c: C.up, fs: 8.4, w: 700 });
+    s += T(42, 100, '$182.44', { c: C.tx, fs: 12, w: 600 });
+    s += T(110, 100, '+1.8%', { c: C.up, fs: 8.4, w: 600 });
     s += rectW(150, 54, 68, 20, { f: 'rgba(245,185,66,.16)', c: 'rgba(245,185,66,.6)', rx: 10 });
-    s += T(184, 68, '실적 D-3', { a: 'middle', c: C.am, fs: 8.6, w: 800 });
+    s += T(184, 68, '실적 D-3', { a: 'middle', c: C.am, fs: 8.6, w: 600 });
     s += arrow(238, 68, 266, 68, { c: C.am, w: 1.6 });
     s += rectW(272, 50, 94, 36, { f: 'rgba(245,185,66,.10)', c: 'rgba(245,185,66,.45)', rx: 8, dash: '3 3' });
-    s += T(319, 64, '신규 진입 보류', { a: 'middle', c: C.tx, fs: 8.2, w: 700 });
+    s += T(319, 64, '신규 진입 보류', { a: 'middle', c: C.tx, fs: 8.2, w: 600 });
     s += T(319, 77, '보유분 비중 축소', { a: 'middle', c: C.mu, fs: 7.8 });
     s += line(30, 132, X1 - 6, 132, { c: 'rgba(148,178,214,.2)', w: 1 });
     s += T(30, 148, '트레이드 로그에도 보유 종목의 실적 일정 표시', { c: C.mu, fs: 8.2 });
     s += rectW(30, 158, 326, 28, { f: 'rgba(120,170,210,.06)', c: 'rgba(120,190,230,.22)', rx: 7 });
-    s += T(42, 176, 'NVDA', { c: C.tx, fs: 8.4, w: 700 });
+    s += T(42, 176, 'NVDA', { c: C.tx, fs: 8.4, w: 600 });
     s += T(96, 176, '보유 12일 · +8.4%', { c: C.mu, fs: 8 });
     s += chip(340, 172, 'D-3', { a: 'end', c: C.am, bd: 'rgba(245,185,66,.5)' });
     s += T(30, 200, '배지는 “위험”이 아니라 “갭이 날 수 있다”는 뜻', { c: C.dim, fs: 7.6 });
@@ -756,8 +756,8 @@ var EDUFIG = (function () {
     var s = frame();
     s += rectW(24, 44, 164, 118, { f: 'rgba(47,217,166,.07)', c: 'rgba(47,217,166,.35)', rx: 9 });
     s += rectW(192, 44, 164, 118, { f: 'rgba(56,189,248,.07)', c: 'rgba(56,189,248,.35)', rx: 9 });
-    s += T(34, 60, '추세형 (중기)', { c: C.up, fs: 9.2, w: 800 });
-    s += T(202, 60, '스윙형 (단기)', { c: C.cy, fs: 9.2, w: 800 });
+    s += T(34, 60, '추세형 (중기)', { c: C.up, fs: 9.2, w: 600 });
+    s += T(202, 60, '스윙형 (단기)', { c: C.cy, fs: 9.2, w: 600 });
     var t1 = curve([[0, 66], [10, 84], [20, 80], [30, 110]], 24, 0.8, 381);
     var p1 = [], i;
     for (i = 0; i < 24; i++) p1.push([34 + i * 6.2, 130 - (t1[i] - 60) / 60 * 46]);
@@ -784,16 +784,16 @@ var EDUFIG = (function () {
     for (i = 0; i < labs.length; i++) {
       var on = i === 4;
       s += rectW(x, 48, 52, 22, { f: on ? 'rgba(56,189,248,.20)' : 'rgba(255,255,255,.03)', c: on ? 'rgba(96,222,255,.7)' : 'rgba(120,190,230,.28)', rx: 6 });
-      s += T(x + 26, 63, labs[i], { a: 'middle', c: on ? '#DCF6FF' : C.mu, fs: 9.2, w: 800 });
+      s += T(x + 26, 63, labs[i], { a: 'middle', c: on ? '#DCF6FF' : C.mu, fs: 9.2, w: 600 });
       x += 57;
     }
     var cl = curve([[0, 110], [6, 92], [10, 74], [16, 86], [24, 104], [30, 118], [34, 140]], 34, 1.4, 401);
     var K = candles(toCand(cl, 1.6, 411), 30, X1 - 8, 84, 158, { pad: 0.14 });
     s += K.svg;
     s += rectW(K.cx(6), 84, K.cx(16) - K.cx(6), 74, { f: 'rgba(251,113,133,.12)', c: 'rgba(251,113,133,.35)', w: 1, rx: 2, dash: '3 3' });
-    s += T((K.cx(6) + K.cx(16)) / 2, 96, '2022 하락장', { a: 'middle', c: C.dn, fs: 8, w: 700 });
+    s += T((K.cx(6) + K.cx(16)) / 2, 96, '2022 하락장', { a: 'middle', c: C.dn, fs: 8, w: 600 });
     s += line(30, 168, X1 - 8, 168, { c: 'rgba(148,178,214,.2)', w: 1 });
-    s += T(30, 184, '차트 범위와 백테스트 기간이 함께 바뀜', { c: C.tx, fs: 8.6, w: 700 });
+    s += T(30, 184, '차트 범위와 백테스트 기간이 함께 바뀜', { c: C.tx, fs: 8.6, w: 600 });
     s += T(30, 198, '5Y = MDD · 1Y = 최근 성과 확인', { c: C.mu, fs: 7.8 });
     return { svg: wrap(s, { label: '기간 버튼 도해' }),
       cap: '<b>3M~5Y 버튼 = 차트 범위 + 백테스트 기간</b>. 5Y로 MDD를, 1Y로 최근 성과를 확인합니다' };
@@ -807,16 +807,16 @@ var EDUFIG = (function () {
     for (var i = 0; i < rows.length; i++) {
       var y = 58 + i * 26;
       s += rectW(30, y, 322, 22, { f: i % 2 ? 'rgba(120,170,210,.05)' : 'rgba(120,170,210,.09)', c: 'rgba(120,190,230,.18)', rx: 5 });
-      s += T(40, y + 15, rows[i][0], { c: C.tx, fs: 8.4, w: 700 });
+      s += T(40, y + 15, rows[i][0], { c: C.tx, fs: 8.4, w: 600 });
       s += T(104, y + 15, rows[i][1], { c: C.mu, fs: 8.2 });
-      s += T(178, y + 15, rows[i][2], { c: rows[i][4], fs: 8.4, w: 700 });
+      s += T(178, y + 15, rows[i][2], { c: rows[i][4], fs: 8.4, w: 600 });
       s += T(258, y + 15, rows[i][3], { c: C.mu, fs: 8.2 });
     }
-    s += T(30, 158, '청산 사유 분포', { c: C.tx, fs: 8.4, w: 700 });
+    s += T(30, 158, '청산 사유 분포', { c: C.tx, fs: 8.4, w: 600 });
     var segs = [[30, 158, '목표 50%', 'rgba(47,217,166,.65)'], [190, 96, '손절 30%', 'rgba(251,113,133,.6)'], [288, 64, '추세 20%', 'rgba(56,189,248,.6)']];
     for (var k = 0; k < segs.length; k++) {
       s += rectW(segs[k][0], 164, segs[k][1], 16, { f: segs[k][3], c: 'none', w: 0, rx: 4 });
-      s += T(segs[k][0] + segs[k][1] / 2, 175, segs[k][2], { a: 'middle', c: '#071019', fs: 7.8, w: 800 });
+      s += T(segs[k][0] + segs[k][1] / 2, 175, segs[k][2], { a: 'middle', c: '#071019', fs: 7.8, w: 600 });
     }
     s += T(30, 196, '연속 손실 구간을 찾아 “내가 버틸 길이”인지 확인', { c: C.mu, fs: 7.8 });
     return { svg: wrap(s, { label: '트레이드 로그 읽기 도해' }),
@@ -827,7 +827,7 @@ var EDUFIG = (function () {
   F[27] = function () {
     var s = frame();
     s += rectW(28, 42, 324, 132, { f: 'rgba(16,28,46,.6)', c: 'rgba(96,222,255,.28)', rx: 9 });
-    s += T(40, 60, '가상투자 · 모의매매', { c: C.tx, fs: 9.2, w: 800 });
+    s += T(40, 60, '가상투자 · 모의매매', { c: C.tx, fs: 9.2, w: 600 });
     s += chip(340, 56, '시드 $10,000', { a: 'end', c: C.cy2 });
     var eq = curve([[0, 100], [12, 112], [24, 104], [34, 126], [44, 120], [52, 138]], 40, 1.2, 421);
     var pts = [], i;
@@ -852,11 +852,11 @@ var EDUFIG = (function () {
     s += T(30, 44, '5개 팩터 가중 합 · 50 = 중립', { c: C.mu, fs: 8 });
     for (i = 0; i < fac.length; i++) {
       var y = 66 + i * 25, v = fac[i][1], w = Math.abs(v) * sc;
-      s += T(30, y + 4, fac[i][0], { c: C.tx, fs: 8.4, w: 700 });
+      s += T(30, y + 4, fac[i][0], { c: C.tx, fs: 8.4, w: 600 });
       s += rectW(zero - 92, y - 5, 184, 11, { f: 'rgba(120,170,210,.06)', c: 'none', w: 0, rx: 5 });
       if (v >= 0) s += rectW(zero, y - 5, w, 11, { f: 'rgba(47,217,166,.72)', c: 'none', w: 0, rx: 5 });
       else s += rectW(zero - w, y - 5, w, 11, { f: 'rgba(251,113,133,.72)', c: 'none', w: 0, rx: 5 });
-      s += T(v >= 0 ? zero + w + 6 : zero - w - 6, y + 4, (v > 0 ? '+' : '−') + Math.abs(v), { a: v >= 0 ? 'start' : 'end', c: v >= 0 ? C.up : C.dn, fs: 8, w: 800 });
+      s += T(v >= 0 ? zero + w + 6 : zero - w - 6, y + 4, (v > 0 ? '+' : '−') + Math.abs(v), { a: v >= 0 ? 'start' : 'end', c: v >= 0 ? C.up : C.dn, fs: 8, w: 600 });
     }
     s += line(zero, 58, zero, 192, { c: 'rgba(220,235,250,.45)', w: 1, dash: '4 3' });
     s += T(zero, 202, '기준 50', { a: 'middle', c: C.mu, fs: 7.6 });
@@ -873,8 +873,8 @@ var EDUFIG = (function () {
       var y = 46 + i * 28;
       s += rectW(28, y, 324, 24, { f: i % 2 ? 'rgba(120,170,210,.05)' : 'rgba(120,170,210,.09)', c: 'rgba(120,190,230,.18)', rx: 6 });
       s += '<path d="M44 ' + (y + 8) + 'l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3.1-5.4 3.1 1.2-6-4.5-4.2 6.1-.7z" fill="' + C.am + '" opacity=".9"/>';
-      s += T(66, y + 16, rows[i][0], { c: C.tx, fs: 9, w: 800 });
-      s += T(342, y + 16, rows[i][1], { a: 'end', c: rows[i][2], fs: 8.6, w: 700 });
+      s += T(66, y + 16, rows[i][0], { c: C.tx, fs: 9, w: 600 });
+      s += T(342, y + 16, rows[i][1], { a: 'end', c: rows[i][2], fs: 8.6, w: 600 });
     }
     s += T(28, 202, '실적 일정과 차트를 매일 확인할 수 있는 수', { c: C.mu, fs: 8 });
     s += chip(340, 202, '5 / 5', { a: 'end', c: C.cy2 });
@@ -895,9 +895,9 @@ var EDUFIG = (function () {
     var nx = cx + Math.cos(ang) * (r - 30), ny = cy + Math.sin(ang) * (r - 30);
     s += line(cx, cy, nx, ny, { c: '#EAF2FF', w: 2.6 });
     s += dot(cx, cy, 5.2, { c: '#EAF2FF', f: '#EAF2FF' });
-    s += T(82, 188, '공포 0', { c: '#FB7185', fs: 7.8, w: 700 });
-    s += T(298, 188, '탐욕 100', { a: 'end', c: C.up, fs: 7.8, w: 700 });
-    s += T(190, 52, '중립 50', { a: 'middle', c: C.mu, fs: 7.8, w: 700 });
+    s += T(82, 188, '공포 0', { c: '#FB7185', fs: 7.8, w: 600 });
+    s += T(298, 188, '탐욕 100', { a: 'end', c: C.up, fs: 7.8, w: 600 });
+    s += T(190, 52, '중립 50', { a: 'middle', c: C.mu, fs: 7.8, w: 600 });
     s += chip(cx, 200, '18 · 극단적 공포 → 분할 매수', { a: 'middle', c: C.am, bd: 'rgba(245,185,66,.5)' });
     return { svg: wrap(s, { label: '공포 탐욕 시계 도해' }),
       cap: '25 이하 <b>극단적 공포 = 분할 매수 구간</b>, 75 이상 탐욕 = 추격 자제. 비중 조절 도구로 씁니다' };
@@ -911,7 +911,7 @@ var EDUFIG = (function () {
       var x = Ws[i][0], y = 52;
       var on = i === 2;
       s += rectW(x, y, 100, 92, { f: on ? 'rgba(47,217,166,.10)' : 'rgba(120,170,210,.06)', c: on ? 'rgba(47,217,166,.5)' : 'rgba(120,190,230,.26)', rx: 9 });
-      s += T(x + 50, y + 16, Ws[i][1], { a: 'middle', c: on ? C.up : C.cy2, fs: 9, w: 800 });
+      s += T(x + 50, y + 16, Ws[i][1], { a: 'middle', c: on ? C.up : C.cy2, fs: 9, w: 600 });
       var pts = [[x + 12, y + 30], [x + 28, y + 58], [x + 46, y + 36], [x + 66, y + 60], [x + 86, y + 40 - i * 7]];
       s += poly(pts, { c: on ? C.up : '#7FB6D8', w: 1.8 });
       s += line(x + 12, y + 36, x + 86, y + 36, { c: on ? 'rgba(47,217,166,.7)' : 'rgba(245,185,66,.55)', w: 1, dash: '4 3' });
@@ -932,14 +932,14 @@ var EDUFIG = (function () {
     var cl = curve([[0, 96], [8, 92], [14, 98], [20, 94], [26, 99], [32, 96], [35, 98]], n, 1.4, 431);
     var K = candles(toCand(cl, 1.6, 441), X0 + 2, X1 - 2, y0, y1, { pad: 0.5 });
     s += K.svg;
-    s += T(X0 + 2, 40, '가격은 횡보', { c: C.mu, fs: 8.2, w: 700 });
+    s += T(X0 + 2, 40, '가격은 횡보', { c: C.mu, fs: 8.2, w: 600 });
     var obv = curve([[0, 40], [8, 54], [16, 62], [24, 78], [31, 92], [35, 100]], n, 2.2, 451);
     var Y2 = function (v) { return 186 - (v - 30) / 80 * 50; };
     var pts = [], i;
     for (i = 0; i < n; i++) pts.push([X0 + 2 + (X1 - X0 - 4) / n * (i + 0.5), Y2(obv[i])]);
     s += area(pts, 186, { f: 'rgba(167,139,250,.10)' });
     s += poly(pts, { c: C.vi, w: 1.8 });
-    s += T(X0 + 2, 122, 'OBV (누적 거래량)', { c: C.vi, fs: 8, w: 700 });
+    s += T(X0 + 2, 122, 'OBV (누적 거래량)', { c: C.vi, fs: 8, w: 600 });
     s += chip(X1 - 8, 132, '우상향 = 조용한 매집', { a: 'end', c: C.vi, bd: 'rgba(167,139,250,.45)' });
     s += line(X0, 128, X1, 128, { c: 'rgba(148,178,214,.16)', w: 1 });
     s += T(X0 + 2, 200, '가격이 안 움직여도 거래량은 먼저 움직인다', { c: C.mu, fs: 8.2 });
