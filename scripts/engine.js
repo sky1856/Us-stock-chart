@@ -2565,6 +2565,54 @@
     return res;
   }
 
+  /* ============================================================
+     20일 신고가 돌파 + 거래량 배수 — 스캐너 프리셋·배지 (표시 전용)
+     정의는 work/stock/v5_upgrade/bk_lib.js signalAt() 그대로 옮겼다.
+       · 20일 신고가 돌파( DC20 ): 종가 > 직전 20봉 최고가(오늘 제외)
+       · 거래량 배수            : 당일 거래량 ÷ 직전 20봉 평균 거래량 (오늘 제외)
+       · 최근 recent(3)거래일 내 발생 건만 '지금 신호'로 본다
+     99종목 5년 검증(REPORT_BREAKOUT): 거래량 1.5배 이상이면 거짓 돌파가 57%→41%로 줄고
+     PF·MDD가 개선된다. 다만 총수익은 줄어 '수익'이 아니라 '품질·낙폭 관리'용 지표다.
+     추세형·스윙형 진입·청산·백테스트에는 이 값을 넘기지 않는다.
+     ============================================================ */
+  var BK_P = { level: 20, volX: 1.5, recent: 3 };
+  function bkScan(series, prm) {
+    var p = {}, kk;
+    for (kk in BK_P) p[kk] = BK_P[kk];
+    if (prm) for (kk in prm) p[kk] = prm[kk];
+    var h = series.h, c = series.c, v = series.v, d = series.d, n = c.length;
+    var res = { hit: false, strong: false, recent: p.recent, level: p.level, volX: p.volX,
+      asOf: d ? d[n - 1] : null,
+      /* 대표값 = 최근 3거래일 안에서 가장 최근에 성립한 돌파 */
+      idx: null, date: null, age: null, close: null, lvl: null, over: null, volRatio: null,
+      /* 거래량 동반(강한) 돌파 — 상단 카드 배지·프리셋 조건 */
+      sIdx: null, sDate: null, sAge: null, sClose: null, sLvl: null, sOver: null, sVol: null,
+      count: 0, strongCount: 0 };
+    if (!(n > p.level + p.level + 1)) return res;
+    for (var i = n - 1; i >= n - p.recent && i >= p.level; i--) {
+      var mx = -Infinity, s = 0;
+      for (var k = i - p.level; k < i; k++) { if (h[k] > mx) mx = h[k]; s += v[k]; }
+      if (!(c[i] > mx)) continue;                       /* 직전 20봉 고가를 넘지 못하면 돌파 아님 */
+      var avg = s / p.level;
+      var vr = avg > 0 ? v[i] / avg : null;
+      res.count++;
+      if (!res.hit) {
+        res.hit = true;
+        res.idx = i; res.date = d ? d[i] : null; res.age = n - 1 - i;
+        res.close = c[i]; res.lvl = mx; res.over = c[i] / mx - 1; res.volRatio = vr;
+      }
+      if (vr != null && vr >= p.volX) {
+        res.strongCount++;
+        if (!res.strong) {
+          res.strong = true;
+          res.sIdx = i; res.sDate = d ? d[i] : null; res.sAge = n - 1 - i;
+          res.sClose = c[i]; res.sLvl = mx; res.sOver = c[i] / mx - 1; res.sVol = vr;
+        }
+      }
+    }
+    return res;
+  }
+
   var VCP_P = {
     baseMin: 12, baseMax: 60, contr: 0.60, tight: 0.08, tightDays: 10,
     depthMax: 0.40, extMax: 0.06, volx: 1.2, near: 0.05, lookback: 252
@@ -2714,6 +2762,7 @@
     rec.vcp = vcpScan(series);    /* 스캐너 VCP 필터 (표시 전용) */
     rec.tri = triDetect(series);  /* 스캐너·차트 삼각수렴 (표시 전용 — 전략 진입·청산 미적용) */
     rec.div = divScan(series);    /* 스캐너·차트 상승 다이버전스 배지 (표시 전용 — 전략 진입·청산 미적용) */
+    rec.bk = bkScan(series);      /* 스캐너 20일 신고가 돌파·거래량 배지 (표시 전용 — 전략 진입·청산 미적용) */
     rec.elliott = ewAnalyze(series, ind);
     /* 두 전략을 함께 산출 — 전환 탭은 다시 계산하지 않고 이 결과를 골라 쓴다 */
     rec.strategyMode = mode;
@@ -2748,6 +2797,7 @@
     trendTemplate: trendTemplate, vcpSetup: vcpSetup, vcpScan: vcpScan, VCP_P: VCP_P,
     triDetect: triDetect, TRI_P: TRI_P,
     divScan: divScan, DIV_P: DIV_P,
+    bkScan: bkScan, BK_P: BK_P,
     clamp: clamp, elliott: ewAnalyze
   };
 

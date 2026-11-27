@@ -11,6 +11,25 @@ var EDUFIG = (function () {
     up: '#2FD9A6', dn: '#FB7185', cy: '#38BDF8', cy2: '#8FE7FF', am: '#F5B942',
     vi: '#A78BFA', tx: '#D9E4F2', mu: '#93A1B5', dim: '#5C6B80', or: '#FB923C'
   };
+  /* 테마 — 다크(기본)와 화이트 패널. setTheme(true) 면 아래 LIGHT 값으로 바꾸고 다시 그린다. */
+  var DARK_P = {
+    C: { up: '#2FD9A6', dn: '#FB7185', cy: '#38BDF8', cy2: '#8FE7FF', am: '#F5B942',
+      vi: '#A78BFA', tx: '#D9E4F2', mu: '#93A1B5', dim: '#5C6B80', or: '#FB923C' },
+    bg: '#07101E', grad: '#12233c', grid: 'rgba(148,178,214,.085)', grid2: 'rgba(148,178,214,.055)',
+    frame: 'rgba(96,222,255,.22)'
+  };
+  var LIGHT_P = {
+    C: { up: '#0E8F68', dn: '#BE123C', cy: '#0369A1', cy2: '#0E7490', am: '#9A6A05',
+      vi: '#6D28D9', tx: '#1E293B', mu: '#475569', dim: '#64748B', or: '#C2410C' },
+    bg: '#F1F6FA', grad: '#D6E7F3', grid: 'rgba(15,23,42,.10)', grid2: 'rgba(15,23,42,.07)',
+    frame: 'rgba(14,116,144,.30)'
+  };
+  var P = DARK_P;
+  function setTheme(light) {
+    P = light ? LIGHT_P : DARK_P;
+    for (var k in P.C) C[k] = P.C[k];
+  }
+  function isLightEdu() { return P === LIGHT_P; }
 
   function R(v) { return Math.round(v * 10) / 10; }
   function esc(s) {
@@ -122,17 +141,17 @@ var EDUFIG = (function () {
 
   function frame(o) {
     o = o || {};
-    var s = '<rect x=".5" y=".5" width="379" height="209" rx="11" fill="#07101E" stroke="rgba(96,222,255,.22)" stroke-width="1"/>';
-    s += '<rect x=".5" y=".5" width="379" height="60" rx="11" fill="url(#edugrad)" opacity=".55"/>';
+    var s = '<rect x=".5" y=".5" width="379" height="209" rx="11" fill="' + P.bg + '" stroke="' + P.frame + '" stroke-width="1"/>';
+    s += '<rect x=".5" y=".5" width="379" height="60" rx="11" fill="url(#edugrad)" opacity="' + (isLightEdu() ? '.55' : '.55') + '"/>';
     var hy = o.hy || [38, 66, 94, 122, 150], i;
-    for (i = 0; i < hy.length; i++) s += line(X0, hy[i], X1, hy[i], { c: 'rgba(148,178,214,.085)', w: 1 });
+    for (i = 0; i < hy.length; i++) s += line(X0, hy[i], X1, hy[i], { c: P.grid, w: 1 });
     var vx = o.vx || [X0, 111, 196, 281, X1];
-    for (i = 0; i < vx.length; i++) s += line(vx[i], o.vy0 || 34, vx[i], o.vy1 || 202, { c: 'rgba(148,178,214,.055)', w: 1 });
+    for (i = 0; i < vx.length; i++) s += line(vx[i], o.vy0 || 34, vx[i], o.vy1 || 202, { c: P.grid2, w: 1 });
     return s;
   }
   function defs() {
     return '<defs><linearGradient id="edugrad" x1="0" y1="0" x2="0" y2="1">' +
-      '<stop offset="0" stop-color="#12233c" stop-opacity=".85"/><stop offset="1" stop-color="#07101E" stop-opacity="0"/>' +
+      '<stop offset="0" stop-color="' + P.grad + '" stop-opacity=".85"/><stop offset="1" stop-color="' + P.bg + '" stop-opacity="0"/>' +
       '</linearGradient></defs>';
   }
 
@@ -949,6 +968,8 @@ var EDUFIG = (function () {
 
   return {
     count: F.length,
-    get: function (i) { return (i >= 0 && i < F.length) ? F[i]() : null; }
+    get: function (i) { return (i >= 0 && i < F.length) ? F[i]() : null; },
+    setTheme: setTheme,
+    isLight: isLightEdu
   };
 })();

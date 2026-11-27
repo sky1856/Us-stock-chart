@@ -4,6 +4,97 @@
 (function () {
   'use strict';
   var M = window.MARKET, QE = window.QE;
+
+  /* ============================================================
+     테마 — 다크(기본) / 화이트
+     · 화면(HTML·CSS)은 html[data-theme="light"] 로 전환하고,
+     · 캔버스는 그리는 코드를 건드리지 않고 색만 바꿔 준다(themeCanvas 아래 getter/setter 패치).
+     ============================================================ */
+  var THEME_KEY = 'apex.theme.v1';
+  function isLightTheme() { return document.documentElement.getAttribute('data-theme') === 'light'; }
+  /* 인라인으로 찍는 강조색(배지·점수·사유)을 테마에 맞춰 바꿔 준다 */
+  var TONE = {
+    '#34d399': '#0B7A57', '#10b981': '#0E8F68', '#6ee7b7': '#047857',
+    '#fda4af': '#BE123C', '#fb7185': '#BE123C', '#f43f5e': '#B31340', '#ef4444': '#B91C1C',
+    '#f59e0b': '#B45309', '#fbbf24': '#8A5A06', '#fcd34d': '#8A5A06', '#f97316': '#C2410C',
+    '#38bdf8': '#0369A1', '#7dd3fc': '#075985', '#22c55e': '#15803D',
+    '#c4b5fd': '#6D28D9', '#a78bfa': '#6D28D9', '#5eead4': '#0B7261', '#2dd4bf': '#0E7490',
+    '#9ba6ba': '#64748B', '#6b7689': '#64748B', '#94a3b8': '#5A6779', '#84cc16': '#4D7C0F', '#3b82f6': '#1D4ED8', '#e2e8f0': '#0F172A', '#e6eaf2': '#0F172A'
+  };
+  function thColor(c) {
+    if (!isLightTheme() || typeof c !== 'string') return c;
+    return TONE[c.toLowerCase()] || c;
+  }
+  /* 다크에서 쓰던 캔버스 색 → 화이트에서 읽히는 색 */
+  var CV_MAP = {
+    '#0b0e14': '#FFFFFF', '#0d1119': '#F1F5F9', '#0e131c': '#F1F5F9', '#121722': '#FFFFFF',
+    '#0f131c': '#FFFFFF', '#161c29': '#FFFFFF', '#1a2232': '#E2E8F0', '#1e2836': '#CBD5E1',
+    '#6b7689': '#64748B', '#4a5468': '#8A97A8', '#5b6679': '#64748B', '#7a8698': '#64748B',
+    '#9ba6ba': '#475569', '#e2e8f0': '#0F172A', '#e6eaf2': '#0F172A',
+    /* 밝은 파스텔 글씨(라벨·수치) → 흰 배경에서 읽히는 짙은 색 */
+    '#fecdd3': '#9F1239', '#a7f3d0': '#065F46', '#fde68a': '#8A5A06',
+    '#bee9ff': '#0B4C6B', '#dcf6ff': '#0B4C6B', '#eaf9ff': '#0F172A', '#eaf6ff': '#0F172A',
+    '#ccfbf1': '#0F5F52', '#bae6fd': '#0B4C6B', '#f0fdfa': '#0F172A', '#f8fafc': '#0F172A',
+    '#ddd6fe': '#5B21B6', '#86efac': '#047857', '#c4b5fd': '#6D28D9', '#fcd34d': '#8A5A06',
+    '#5eead4': '#0B7261', '#7dd3fc': '#075985', '#6ee7b7': '#047857', '#fda4af': '#BE123C'
+  };
+  function cvColor(v) {
+    if (!isLightTheme() || typeof v !== 'string') return v;
+    var k = v.trim().toLowerCase();
+    if (CV_MAP[k]) return CV_MAP[k];
+    var m = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)$/.exec(k);
+    if (!m) return v;
+    var r = +m[1], g = +m[2], b = +m[3], a = m[4] == null ? 1 : +m[4];
+    if (r > 235 && g > 235 && b > 235)            /* 흰 계열 그리드·크로스헤어 → 먹색 */
+      return 'rgba(15,23,42,' + Math.min(1, a * 1.15).toFixed(3) + ')';
+    if (r < 80 && g < 80 && b < 90)               /* 어두운 테두리·라벨 바탕 → 흰색 */
+      return 'rgba(255,255,255,' + Math.min(1, a * 1.08).toFixed(3) + ')';
+    return v;
+  }
+  /* 모든 캔버스 컨텍스트에 한 번만 적용 — fillStyle/strokeStyle 문자열만 변환한다 */
+  (function themeCanvas() {
+    var P = window.CanvasRenderingContext2D && window.CanvasRenderingContext2D.prototype;
+    if (!P) return;
+    ['fillStyle', 'strokeStyle'].forEach(function (prop) {
+      var d = Object.getOwnPropertyDescriptor(P, prop);
+      if (!d || !d.get || !d.set) return;
+      Object.defineProperty(P, prop, {
+        configurable: true, enumerable: d.enumerable,
+        get: function () { return d.get.call(this); },
+        set: function (v) { d.set.call(this, cvColor(v)); }
+      });
+    });
+  })();
+  function themeLabel(light) {
+    var b = $('#themeBtn');
+    if (!b) return;
+    b.setAttribute('aria-pressed', light ? 'true' : 'false');
+    b.title = light ? '화이트 모드 사용 중 — 누르면 다크(검은색)로 전환' : '다크(검은색) 모드 사용 중 — 누르면 화이트로 전환';
+    var ic = b.querySelector('.th-ic'), tx = b.querySelector('.th-tx');
+    if (ic) ic.textContent = light ? '🌙' : '☀️';
+    if (tx) tx.textContent = light ? '다크' : '화이트';
+  }
+  function applyTheme(light, persist) {
+    var root = document.documentElement;
+    if (light) root.setAttribute('data-theme', 'light'); else root.removeAttribute('data-theme');
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', light ? '#EEF2F7' : '#0B0E14');
+    themeLabel(light);
+    if (persist) { try { localStorage.setItem(THEME_KEY, light ? 'light' : 'dark'); } catch (e) {} }
+    if (window.EDUFIG && EDUFIG.setTheme) EDUFIG.setTheme(light);
+    /* 캔버스·SVG 다시 그리기 */
+    if (typeof chart !== 'undefined' && chart && chart.draw) chart.draw();
+    if (typeof renderMacro === 'function') renderMacro();
+    eduRender();
+    if (typeof buildScoreExplain === 'function') buildScoreExplain();
+    if (fgLast) renderFearGreed(fgLast, fgLastLive);
+    var cur = A[state.cur];
+    if (cur) {
+      renderHero(cur); renderFund(cur); renderKpis(cur); renderEquity(cur);
+      renderScoreExplain(cur); renderElliott(cur); renderRecent(cur); renderTrades(cur);
+      renderBtPeriod(cur);
+    }
+  }
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
 
@@ -612,6 +703,55 @@
       '<span class="dv-sub">가격은 더 낮은데 RSI는 올라선 자리 · 10일 신저가 · ' + d.gap + '봉 간격 · ' + when +
       ' 발생 — 참고용 지표입니다 (매매 조건·수익률 계산에는 적용하지 않습니다)</span>';
   }
+  /* ---------------- 20일 신고가 돌파 + 거래량 — 참고 배지 · 프리셋 (표시 전용) ----------------
+     엔진 bkScan(series) 결과만 읽는다. 최근 3거래일 안에 성립한 건만 '지금 신호'로 본다.
+     · 프리셋 '거래량 돌파' = 20일 돌파 + 돌파일 거래량 ≥ 20일 평균 1.5배(강한 돌파)
+     · 행 배지 = 20일 돌파면 '돌파'(거래량 미달은 옅게), 1.5배 동반이면 '거래량돌파'
+     매매 전략(추세형·스윙형) 진입·청산·백테스트에는 어떤 값도 넘기지 않는다. */
+  var bkCache = null;
+  function bkCounts() {
+    if (bkCache) return bkCache;
+    var set = {}, list = [], soft = {}, softList = [], asOf = M.asOf;
+    M.tickers.forEach(function (x) {
+      var a = A[x.t];
+      if (!a || !a.bk || !a.bk.hit) return;
+      soft[x.t] = 1; softList.push(x.t);
+      if (a.bk.date) asOf = a.bk.date;
+      if (a.bk.strong) { set[x.t] = 1; list.push(x.t); }
+    });
+    bkCache = { set: set, list: list, n: list.length, soft: soft, softList: softList, softN: softList.length,
+      asOf: asOf, recent: (QE.BK_P && QE.BK_P.recent) || 3, level: (QE.BK_P && QE.BK_P.level) || 20, volX: (QE.BK_P && QE.BK_P.volX) || 1.5 };
+    return bkCache;
+  }
+  function bkLevelTxt(b) { return b.level + '일 신고가'; }
+  function bkTip(a) {
+    var b = a && a.bk;
+    if (!b || !b.hit) return '';
+    var v = b.volRatio == null ? '—' : b.volRatio.toFixed(2) + '배';
+    return bkLevelTxt(b) + ' 돌파 (최근 ' + (b.recent || 3) + '거래일) — ' + b.date + ' 종가 $' + pxs(b.close) +
+      ' > 직전 ' + b.level + '봉 최고가 $' + pxs(b.lvl) + ' (+' + (b.over * 100).toFixed(2) + '%)' +
+      ' · 거래량 ' + v + ' (20일 평균 대비)' +
+      (b.strong ? ' — 거래량 ' + b.volX + '배 동반' : ' — 거래량 ' + b.volX + '배 미달') +
+      ' · 참고용 배지(매매 조건 미적용) · 5년 검증: 거래량 1.5배 동반 시 거짓 돌파 57%→41%';
+  }
+  function bkBadge(a) {
+    var b = a && a.bk;
+    if (!b || !b.hit) return '';
+    return '<i class="bkb' + (b.strong ? ' strong' : '') + '" title="' + bkTip(a) + '">' +
+      (b.strong ? '거래량돌파' : '돌파') + '</i>';
+  }
+  /* 히어로(상단 카드) 배지 — 거래량까지 동반한 돌파만 띄운다 */
+  function bkStripHtml(a) {
+    var b = a && a.bk;
+    if (!b || !b.strong) return '';
+    var when = b.sAge === 0 ? '오늘' : b.sAge + '거래일 전';
+    return '<span class="bk-ico" aria-hidden="true">🚀</span>' +
+      '<b>' + b.level + '일 거래량 돌파</b><span class="bk-sep">·</span>' +
+      '<span class="bk-t">' + b.sDate + ' 종가 <b>$' + pxs(b.sClose) + '</b> — 직전 ' + b.level + '봉 최고가 $' + pxs(b.sLvl) +
+      ' 상향 (+' + (b.sOver * 100).toFixed(2) + '%) · 거래량 <b>' + b.sVol.toFixed(2) + '배</b></span>' +
+      '<span class="bk-sub">' + when + ' 발생 — 참고용 지표입니다 (매매 조건·5년 백테스트에는 적용하지 않습니다). ' +
+      '거래량 1.5배 동반 돌파는 5년 검증에서 거짓 돌파가 57%→41%로 줄었습니다.</span>';
+  }
   /* 전략 신호 — 스캐너의 매수/매도 탭과 행 칩은 고정 점수(58/44)가 아니라 전략의 단일 소스
      (trendStatus / swingStatus = 백테스트와 같은 진입 조건)를 기준으로 집계한다.
      · 매수: 전략 진입 조건 충족(진입) 또는 그 전략으로 현재 보유 중(보유)
@@ -686,7 +826,7 @@
     if (g.sell && g.kind === 'blocked') return { tx: '시장대기', cls: 'n', why: g.why };
     if (g.sell && g.kind === 'cool') return { tx: '손절대기', cls: 'n', why: g.why };
     if (g.sell) return { tx: '매도', cls: 's', why: g.why };
-    if (g.buy) return { tx: g.held ? '홀드' : '매수', cls: g.held ? 'b' : 'sb', why: g.why };
+    if (g.buy) return { tx: g.held ? '보유시홀드' : '매수', cls: g.held ? 'b' : 'sb', why: g.why };
     var st = swing ? a.swing : a.trendPlan;
     return { tx: '관망', cls: 'w', why: (st && st.reason) || '진입 조건 미충족 — 신규 진입 신호 없음' };
   }
@@ -711,11 +851,12 @@
   }
   /* ---------------- 필터 · 프리셋 (서로 독립 · AND 교집합) ----------------
      상단 탭 state.filter = all | buy | sell | fav
-     프리셋  state.preset = '' | top30 | quality | w | vcp | tri | div  (같은 버튼을 다시 누르면 해제)
+     프리셋  state.preset = '' | top30 | quality | w | vcp | tri | div | bk  (같은 버튼을 다시 누르면 해제)
      둘을 함께 켜면 교집합으로 좁히고, 전략을 바꿔도 이 조합은 유지된다. */
   var PRESET_META = {
     top30: { name: '시총 Top 30' }, quality: { name: '실적 우량주' },
-    w: { name: 'W 쌍바닥' }, vcp: { name: 'VCP' }, tri: { name: '삼각수렴' }, div: { name: '다이버전스' }
+    w: { name: 'W 쌍바닥' }, vcp: { name: 'VCP' }, tri: { name: '삼각수렴' }, div: { name: '다이버전스' },
+    bk: { name: '거래량 돌파' }
   };
   function presetActive() { return !!(state.preset && PRESET_META[state.preset]); }
   function presetMembers(a) {
@@ -726,6 +867,7 @@
     if (p === 'vcp') return !!vcpCounts().set[a.sym];
     if (p === 'tri') return !!triCounts().set[a.sym];
     if (p === 'div') return !!divCounts().set[a.sym];
+    if (p === 'bk') return !!bkCounts().set[a.sym];
     return true;
   }
   function filterMembers(a) {
@@ -742,6 +884,12 @@
       var dc = divCounts();
       return '<b>상승 다이버전스</b> · RSI14 · 최근 ' + dc.recent + '거래일 내 <b>' + dc.n + '</b>종목 · ' + dc.asOf + ' 종가 기준' +
         ' · 가격은 10일 신저가인데 RSI(14)는 5~60봉 전 저점보다 높은 자리 · 참고용(매매 조건 미적용)';
+    }
+    if (state.preset === 'bk') {
+      var bc = bkCounts();
+      return '<b>거래량 돌파</b> · ' + bc.level + '일 신고가 돌파 + 돌파일 거래량 ' + bc.volX + '배 이상 · 최근 ' + bc.recent +
+        '거래일 내 <b>' + bc.n + '</b>종목 · ' + bc.asOf + ' 종가 기준' +
+        ' · 같은 기간 거래량 없는 20일 돌파 ' + Math.max(0, bc.softN - bc.n) + '종목은 행 배지로만 표시 · 참고용(매매 조건 미적용)';
     }
     if (state.preset === 'tri') {
       var tc = triCounts();
@@ -775,8 +923,8 @@
     var bits = [];
     if (presetActive()) {
       bits.push(presetText());
-      bits.push('<b>' + stratName + ' 기준</b> · 이 프리셋 안 매수 조건 충족 <b>' + c.entry + '</b>건 · 홀드 중 <b>' + c.held +
-        '</b>건 → 매수/홀드 가능 <b>' + (c.entry + c.held) + '</b>건');
+      bits.push('<b>' + stratName + ' 기준</b> · 이 프리셋 안 매수 조건 충족 <b>' + c.entry + '</b>건 · 보유 중 <b>' + c.held +
+        '</b>건 → 매수/보유 가능 <b>' + (c.entry + c.held) + '</b>건');
       if (state.filter !== 'all') bits.push(filterName() + ' 교집합 <b>' + shown + '</b>종목');
       return bits.join(' · ');
     }
@@ -831,12 +979,12 @@
   function rankTierText(a, r) {
     if (state.strategy === 'swing') {
       if (r.tier === 3) return r.route === 'W돌파' ? 'W 넥라인 돌파 진입' : 'RSI(2) 과매도 진입';
-      if (r.tier === 2) return '스윙 홀드';
+      if (r.tier === 2) return '스윙 보유시홀드';
       if (r.tier === 1) return r.cool ? '손절 후 재진입 대기 (' + r.cool + '/' + (r.coolTotal || 10) + '일)' : '진입 제한 · QQQ 200일선 아래';
       return '스윙 신호 대기';
     }
     if (r.tier === 3) return '진입 조건 충족';
-    if (r.tier === 2) return '추세 홀드';
+    if (r.tier === 2) return '추세 보유시홀드';
     if (r.tier === 1) return '점수 충족 · 시장 단계 대기';
     return '진입 대기';
   }
@@ -901,6 +1049,7 @@
     var cV = $('#cVcp'); if (cV) cV.textContent = vcpCounts().cnt.total;
     var cT = $('#cTri'); if (cT) cT.textContent = triCounts().total;
     var cDv = $('#cDiv'); if (cDv) cDv.textContent = divCounts().n;
+    var cBk = $('#cBk'); if (cBk) cBk.textContent = bkCounts().n;
     var pn = $('#presetNote');
     if (pn) {
       pn.innerHTML = presetNoteHtml(rows.length);
@@ -924,7 +1073,7 @@
       return '<div class="srow' + (state.cur === x.t ? ' on' : '') + '" data-t="' + x.t + '"' +
         (recMode ? ' data-tier="' + rk.tier + '" data-fit="' + rk.fit + '"' : '') + '>' +
         '<div class="' + rkCls + '"' + rkTt + '>' + rkTx + '</div>' +
-        '<div class="tk"><b><i class="fstar' + (isWatch(x.t) ? ' on' : '') + '" data-f="' + x.t + '" role="button" title="' + (isWatch(x.t) ? '관심종목에서 제거' : '관심종목에 추가') + '">' + (isWatch(x.t) ? '★' : '☆') + '</i>' + x.t + ewb + divBadge(a) + vcpBadge(a) + earnChip(x.t) + '</b><span>' + x.nk + '</span></div>' +
+        '<div class="tk"><b><i class="fstar' + (isWatch(x.t) ? ' on' : '') + '" data-f="' + x.t + '" role="button" title="' + (isWatch(x.t) ? '관심종목에서 제거' : '관심종목에 추가') + '">' + (isWatch(x.t) ? '★' : '☆') + '</i>' + x.t + ewb + divBadge(a) + bkBadge(a) + vcpBadge(a) + earnChip(x.t) + '</b><span>' + x.nk + '</span></div>' +
         spark(a, rv.i) +
         '<div class="px"><b>' + (rv.price >= 1000 ? rv.price.toFixed(0) : rv.price.toFixed(2)) + '</b>' +
         '<span class="' + cls(rv.change) + '">' + pct(rv.change, 2) + '</span></div>' +
@@ -944,10 +1093,10 @@
     }
     $('#scanList').innerHTML = listHtml;
     /* 행 안 배지가 잘리면(좁은 사이드바·모바일) 우선순위대로 양보한다:
-       엘리어트 차수 → VCP → 다이버전스 → 실적 배지 축약('실적 D-3' → 'D-3'). 전략 배지(시장대기·진입·보유·청산)는 끝까지 남긴다. */
+       엘리어트 차수 → VCP → 다이버전스 → 돌파 → 실적 배지 축약('실적 D-3' → 'D-3'). 전략 배지(시장대기·진입·보유·청산)는 끝까지 남긴다. */
     $$('#scanList .srow .tk b').forEach(function (b) {
       if (b.scrollWidth <= b.clientWidth) return;
-      ['.ewb', '.vcpb', '.divb'].forEach(function (sel) {
+      ['.ewb', '.vcpb', '.divb', '.bkb'].forEach(function (sel) {
         if (b.scrollWidth <= b.clientWidth) return;
         var e = b.querySelector(sel);
         if (e) e.parentNode.removeChild(e);
@@ -1135,6 +1284,11 @@
       dvs.innerHTML = divStripHtml(a);
       dvs.classList.toggle('on', !!(a.div && a.div.hit));
     }
+    var bks = $('#bkStrip');
+    if (bks) {
+      bks.innerHTML = bkStripHtml(a);
+      bks.classList.toggle('on', !!(a.bk && a.bk.strong));
+    }
     $('#heroRank').textContent = a.meta.r ? '#' + a.meta.r : '관심';
     $('#heroTicker').textContent = a.sym;
     $('#heroName').textContent = a.meta.nk;
@@ -1244,7 +1398,7 @@
 
       /* 보유 중 관리 */
       if (live) {
-        pbState($('#phState'), 'live', '홀드 중');
+        pbState($('#phState'), 'live', '보유시홀드');
         $('#phStop').className = 'neg';
         $('#phStop').textContent = usd(live.stop);
         $('#phStopSub').textContent = '진입 ' + usd(live.entry) + ' (' + live.entryDate + ') · ' + sp.stopAtr + ' ATR / -' +
@@ -1303,7 +1457,7 @@
 
       /* 보유 중 관리 */
       if (live) {
-        pbState($('#phState'), 'live', '홀드 중');
+        pbState($('#phState'), 'live', '보유시홀드');
         $('#phStop').className = 'neg';
         $('#phStop').textContent = usd(live.stop);
         $('#phStopSub').textContent = '진입 ' + usd(live.entry) + ' (' + live.entryDate + ') · ' + tp.stopAtr + ' ATR 손절';
@@ -1622,8 +1776,8 @@
     /* 5구간 링 — 현재 구간만 컬러 테두리 + 글로우, 나머지는 다크 슬레이트 */
     FG_BANDS.forEach(function (x, i) {
       var on = i === bi;
-      out.push('<path d="' + fgArc(fgAng(x.min), fgAng(x.max)) + '" fill="' + (on ? x.fill : '#151f32') +
-        '" stroke="' + (on ? x.color : '#233046') + '" stroke-width="' + (on ? 2 : 1.2) + '"' +
+      out.push('<path d="' + fgArc(fgAng(x.min), fgAng(x.max)) + '" fill="' + (on ? x.fill : (isLightTheme() ? '#E6EDF5' : '#151f32')) +
+        '" stroke="' + (on ? x.color : (isLightTheme() ? '#C3CFDD' : '#233046')) + '" stroke-width="' + (on ? 2 : 1.2) + '"' +
         (on ? ' filter="url(#fgG' + i + ')"' : '') + '/>');
     });
     /* 구간 이름 */
@@ -1701,8 +1855,10 @@
     var tx = $('#fgLiveTx'); if (tx) tx.textContent = on ? '실시간' : '일일 갱신';
     el.title = on ? 'CNN 실시간 API 응답으로 갱신됨' : 'CNN API 연결 전 — data.js 일일 갱신값 표시';
   }
+  var fgLast = null, fgLastLive = false;
   function renderFearGreed(fg, live) {
     var card = $('#fgCard'); if (!card || !fg) return;
+    fgLast = fg; fgLastLive = !!live;
     var score = Number(fg.score);
     if (!isFinite(score)) return;
     var b = FG_BANDS[fgBandIdx(score)], dial = $('#fgDial');
@@ -1713,8 +1869,8 @@
     var badge = $('#fgBadge');
     if (badge) {
       badge.textContent = b.ko + ' · ' + Math.round(score);
-      badge.style.color = b.color;
-      badge.style.borderColor = b.color + '88';
+      badge.style.color = thColor(b.color);
+      badge.style.borderColor = thColor(b.color) + '88';
       badge.style.background = b.fill;
       badge.title = 'CNN Fear & Greed ' + (fg.rating ? '(' + fg.rating + ') ' : '') + (fgNum(score) || '') + '점';
     }
@@ -1726,10 +1882,10 @@
         var v = fgNum(r[1]), has = v !== null, sb = has ? FG_BANDS[fgBandIdx(v)] : null;
         return '<div class="fg-row"><div class="fg-rw">' +
           '<span class="w">' + r[0] + '</span>' +
-          '<span class="s" style="color:' + (sb ? sb.color : 'var(--txt3)') + '">' + (sb ? sb.ko : '—') + '</span></div>' +
+          '<span class="s" style="color:' + (sb ? thColor(sb.color) : 'var(--txt3)') + '">' + (sb ? sb.ko : '—') + '</span></div>' +
           '<i class="fg-dots"></i>' +
-          '<b class="fg-b"' + (has ? ' title="' + v + '점 · ' + sb.ko + '"' : '') + ' style="color:' +
-          (sb ? sb.color : 'var(--txt3)') + ';border-color:' + (sb ? sb.color + '99' : 'var(--line)') +
+          '<b class="fg-b"' + (has ? ' title="' + v + '점 · ' + sb.ko + '"' : '') + ' style="color:' + thColor(
+          (sb ? sb.color : 'var(--txt3)')) + ';border-color:' + (sb ? thColor(sb.color) + '99' : 'var(--line)') +
           ';background:' + (sb ? sb.fill : 'transparent') + '">' + (has ? fgShow(v) : '—') + '</b></div>';
       }).join('');
     }
@@ -1737,7 +1893,7 @@
     if (guide) {
       var trend = fgTrendText(score, fg);
       guide.style.borderLeftColor = b.color;
-      guide.innerHTML = '<div class="fg-gh" style="color:' + b.color + '">현재 심리 해석 · ' + b.ko +
+      guide.innerHTML = '<div class="fg-gh" style="color:' + thColor(b.color) + '">현재 심리 해석 · ' + b.ko +
         ' (' + b.min + '~' + b.max + ')</div><p>' + b.guide + (trend ? ' ' + trend : '') + '</p>';
     }
     var src = $('#fgSrc');
@@ -1981,7 +2137,7 @@
       var tone = r0 >= 0 ? 'p' : 'n';
       var style = r0 >= 0 ? 'left:50%;width:' + half.toFixed(1) + '%' : 'left:' + (50 - half).toFixed(1) + '%;width:' + half.toFixed(1) + '%';
       return '<div class="b"><span>' + it[0] + '</span><div class="t"><div class="f ' + tone + '" style="' + style + '"></div></div>' +
-        '<span class="v" style="color:' + (r0 > 0.05 ? '#34D399' : r0 < -0.05 ? '#FDA4AF' : '#6B7689') + '">' + (v > 0 ? '+' : '') + v.toFixed(0) + '</span></div>';
+        '<span class="v" style="color:' + thColor(r0 > 0.05 ? '#34D399' : r0 < -0.05 ? '#FDA4AF' : '#6B7689') + '">' + (v > 0 ? '+' : '') + v.toFixed(0) + '</span></div>';
     }).join('');
   }
 
@@ -2000,11 +2156,11 @@
     { t: '차트 약세', r: '35~44', c: '#FB7185' },
     { t: '차트 극약세', r: '<35', c: '#F43F5E' }
   ];
-  function toneColor(t) { return t === 'bull' ? '#10B981' : (t === 'bear' ? '#F43F5E' : '#6B7689'); }
+  function toneColor(t) { return thColor(t === 'bull' ? '#10B981' : (t === 'bear' ? '#F43F5E' : '#6B7689')); }
   function buildScoreExplain() {
     var sc = $('#seScale');
     if (sc) sc.innerHTML = SCALE.map(function (s) {
-      return '<span class="se-pill" style="color:' + s.c + ';border-color:' + s.c + '55;background:' + s.c + '14">' +
+      return '<span class="se-pill" style="color:' + thColor(s.c) + ';border-color:' + thColor(s.c) + '55;background:' + s.c + '14">' +
         s.t + ' <b style="font-family:var(--mono)">' + s.r + '</b></span>';
     }).join('');
     var wr = $('#seWeightRows');
@@ -2024,7 +2180,7 @@
     var bull = 0, bear = 0;
     ex.forEach(function (x) { if (x.tone === 'bull') bull++; else if (x.tone === 'bear') bear++; });
     $('#seTicker').textContent = a.sym + ' · ' + a.meta.nk;
-    $('#seSummary').innerHTML = '종합 <b style="color:' + a.label.color + ';font-family:var(--mono)">' + a.score.toFixed(1) + '점 · ' + a.label.ko + '</b>' +
+    $('#seSummary').innerHTML = '종합 <b style="color:' + thColor(a.label.color) + ';font-family:var(--mono)">' + a.score.toFixed(1) + '점 · ' + a.label.ko + '</b>' +
       ' · 5개 팩터 중 강세 ' + bull + ' / 중립 ' + (5 - bull - bear) + ' / 약세 ' + bear;
     $('#seRows').innerHTML = ex.map(function (x) {
       var tc = toneColor(x.tone);
@@ -2083,7 +2239,7 @@
     /* 신뢰도 */
     $('#ewConf').innerHTML = '<span class="lbl">신뢰도</span><div class="bar"><i style="width:' + e.conf + '%;' +
       (e.valid ? '' : 'background:linear-gradient(90deg,rgba(244,63,94,.45),#FB7185)') + '"></i></div>' +
-      '<b style="color:' + (e.valid ? '#C4B5FD' : '#FDA4AF') + '">' + e.conf + '</b>';
+      '<b style="color:' + thColor(e.valid ? '#C4B5FD' : '#FDA4AF') + '">' + e.conf + '</b>';
 
     /* 기본 / 대안 시나리오 전환 */
     var sw2 = $('#ewSwitch');
@@ -2418,7 +2574,7 @@
     $('#recentList').innerHTML = t.length ? t.map(function (x) {
       var open = x.reason === '보유중';
       return '<div class="it"><span class="d">' + x.exitDate.slice(2) + '</span>' +
-        '<div class="m"><b style="color:' + (open ? '#38BDF8' : (x.reason === '손절' ? '#FB7185' : (x.reason === '이익보전' || x.reason === '트레일') ? '#34D399' : '#9BA6BA')) + '">' +
+        '<div class="m"><b style="color:' + thColor(open ? '#38BDF8' : (x.reason === '손절' ? '#FB7185' : (x.reason === '이익보전' || x.reason === '트레일') ? '#34D399' : '#9BA6BA')) + '">' +
         (open ? '보유 중' : x.reason) + '</b>' +
         '<span>' + usd(x.entry) + (x.kind === 'W돌파' ? '<i class="wtag" title="W 쌍바닥 보조 루트">W</i>' : '') + ' → ' + usd(x.exit) + ' · ' + Math.round(x.hold || 0) + '일</span></div>' +
         '<span class="r ' + cls(x.ret) + '">' + pct(x.ret, 1) + '</span></div>';
@@ -2544,7 +2700,9 @@
     if (!p) return;
     this.yZoomF = QE.clamp(this.yZoomF || 1, 0.35, 4);
     var lim = 1.5 * this.yZoomF * p.h;
-    this.yOffPx = QE.clamp(this.yOffPx || 0, -lim, lim);
+    /* 위로는 자유롭게(최대 ±150%) 밀 수 있지만 아래쪽(음수 오프셋)은 막는다 —
+       위로 끌어 올리면 차트 아래에 빈 공간이 열려 캔들이 밑으로 빠져 보이던 문제(사용자 요청). */
+    this.yOffPx = QE.clamp(this.yOffPx || 0, 0, lim);
   };
   Chart.prototype.resize = function () {
     var rect = this.cv.getBoundingClientRect();
@@ -3215,7 +3373,7 @@
       '<div class="h-i"><em>거래량</em><b>' + vol(s.v[i] * 1000) + '</b></div>' +
       '<div class="h-i"><em>RSI</em><b>' + (ind.rsi[i] ? ind.rsi[i].toFixed(1) : '—') + '</b></div>' +
       '<div class="h-i"><em>MACD</em><b>' + (ind.macd.hist[i] != null ? ind.macd.hist[i].toFixed(2) : '—') + '</b></div>' +
-      '<div class="h-s" style="color:' + l2.color + '">' + l2.ko + ' ' + Math.round(sc) + '</div>';
+      '<div class="h-s" style="color:' + thColor(l2.color) + '">' + l2.ko + ' ' + Math.round(sc) + '</div>';
     h.classList.add('on');
   };
   Chart.prototype.hudPos = function () {};
@@ -3430,6 +3588,7 @@
     var pTop = L.price.y + 1, pBot = L.price.y + L.price.h - 1;
     var xr = L.padL + L.plotW;
     var put = function (txt, px0, py0, col, bg, laneFirst) {
+      if (isLightTheme()) bg = '#FFFFFF';   /* 화이트 모드 — 칩을 흰 바탕으로 (흰색 rgba 는 자동 변환 대상이라 헥스로) */
       ctx.font = '600 9.5px ui-monospace,SFMono-Regular,monospace';
       var tw = Math.round(ctx.measureText(txt).width) + 10, th = 15;
       var cands = [
@@ -4352,6 +4511,10 @@
   var chart;
   function wire() {
     chart = new Chart($('#chart'), $('#hud'));
+    /* 테마 전환 버튼 — 저장된 설정은 첫 페인트 전 인라인 스크립트가 이미 적용했다 */
+    var thb = $('#themeBtn');
+    if (thb) thb.onclick = function () { applyTheme(!isLightTheme(), true); };
+    themeLabel(isLightTheme());
     /* 진단용 — 검증 스크립트가 라벨 겹침·Y축 스케일을 그대로 읽어 갈 수 있게 (읽기 전용) */
     window.APEX_DIAG = {
       overlaps: function () { return chart.tagOverlaps(); },
@@ -5033,6 +5196,11 @@
     wSyncToggle(); xtogSync(); cleanSync();
     drawCount();
     renderFavs(); renderScanner(); renderStrategy(); ptRender();
+    /* 저장된 라이트 테마면 교육 도해(SVG) 색도 라이트 팔레트로 맞춘다 */
+    if (isLightTheme()) {
+      if (window.EDUFIG && EDUFIG.setTheme) EDUFIG.setTheme(true);
+      eduRender();
+    }
     var fc = $('#favCount'); if (fc) fc.textContent = '관심 ' + state.watch.length + '종목';
     var cf = $('#cFav'); if (cf) cf.textContent = state.watch.length;
     select(state.cur, true);
