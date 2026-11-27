@@ -312,40 +312,6 @@
       <p class="nx-foot">본 화면의 백테스트·모의매매 결과는 과거 데이터 기반 참고용 시뮬레이션이며, 특정 종목의 매수·매도 권유가 아닙니다.</p>
     </section>
 
-    <section class="card edu-card" id="eduCard" aria-label="오늘의 주식 공부 & 검색기 팁">
-      <div class="edu-head">
-        <span class="edu-ico" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6.2h6.1c1.3 0 2.4 1 2.4 2.4v11.2c0-1.4-1.1-2.4-2.4-2.4H3.5z"/><path d="M20.5 6.2h-6.1c-1.3 0-2.4 1-2.4 2.4v11.2c0-1.4 1.1-2.4 2.4-2.4h6.1z"/></svg>
-        </span>
-        <h3 class="edu-title">오늘의 주식 공부<em>&amp; 검색기 팁</em></h3>
-        <span class="edu-day" id="eduDay">Day 1</span>
-        <span class="edu-cat" id="eduCat">차트·기법</span>
-        <div class="edu-nav">
-          <button id="eduPrev" type="button" title="이전 팁 보기" aria-label="이전 팁">‹</button>
-          <button id="eduToday" type="button" title="오늘의 팁으로 돌아가기">오늘</button>
-          <button id="eduNext" type="button" title="다음 팁 보기" aria-label="다음 팁">›</button>
-        </div>
-        <button class="edu-toggle" id="eduToggle" type="button" aria-expanded="true" aria-controls="eduBody">
-          <span class="edu-tx">접기</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-        </button>
-      </div>
-      <div class="edu-body" id="eduBody">
-        <div class="edu-inner">
-          <div class="edu-lead"><b id="eduTopic">—</b><span id="eduMeta">—</span></div>
-          <div class="edu-main">
-            <figure class="edu-fig" id="eduFig" data-fig="1">
-              <div class="edu-fig-hd"><span class="edu-fig-t">도해</span><span class="edu-fig-kind">개념도 · 설명용 그림</span></div>
-              <div class="edu-fig-svg" id="eduFigSvg"></div>
-              <figcaption class="edu-fig-cap" id="eduFigCap"></figcaption>
-            </figure>
-            <div class="edu-txt" id="eduTxt"></div>
-          </div>
-          <div class="edu-foot"><span class="edu-tip" id="eduTip"></span><span class="edu-prog" id="eduProg">—</span></div>
-        </div>
-      </div>
-    </section>
-
     <section class="strat-bar" id="stratBar" aria-label="전략 모드 전환">
       <div class="strat-seg" id="stratSeg" role="tablist" aria-label="전략 모드">
         <button data-m="trend" class="on" role="tab" aria-selected="true"><b>추세형</b><span>(중기)</span></button>
@@ -453,6 +419,40 @@
         <div class="ew-r">
           <div class="ew-fib" id="ewFib"></div>
           <p class="ew-comment" id="ewComment"></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card edu-card" id="eduCard" aria-label="오늘의 주식 공부 & 검색기 팁">
+      <div class="edu-head">
+        <span class="edu-ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6.2h6.1c1.3 0 2.4 1 2.4 2.4v11.2c0-1.4-1.1-2.4-2.4-2.4H3.5z"/><path d="M20.5 6.2h-6.1c-1.3 0-2.4 1-2.4 2.4v11.2c0-1.4 1.1-2.4 2.4-2.4h6.1z"/></svg>
+        </span>
+        <h3 class="edu-title">오늘의 주식 공부<em>&amp; 검색기 팁</em></h3>
+        <span class="edu-day" id="eduDay">Day 1</span>
+        <span class="edu-cat" id="eduCat">차트·기법</span>
+        <div class="edu-nav">
+          <button id="eduPrev" type="button" title="이전 팁 보기" aria-label="이전 팁">‹</button>
+          <button id="eduToday" type="button" title="오늘의 팁으로 돌아가기">오늘</button>
+          <button id="eduNext" type="button" title="다음 팁 보기" aria-label="다음 팁">›</button>
+        </div>
+        <button class="edu-toggle" id="eduToggle" type="button" aria-expanded="true" aria-controls="eduBody">
+          <span class="edu-tx">접기</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+      </div>
+      <div class="edu-body" id="eduBody">
+        <div class="edu-inner">
+          <div class="edu-lead"><b id="eduTopic">—</b><span id="eduMeta">—</span></div>
+          <div class="edu-main">
+            <figure class="edu-fig" id="eduFig" data-fig="1">
+              <div class="edu-fig-hd"><span class="edu-fig-t">도해</span><span class="edu-fig-kind">개념도 · 설명용 그림</span></div>
+              <div class="edu-fig-svg" id="eduFigSvg"></div>
+              <figcaption class="edu-fig-cap" id="eduFigCap"></figcaption>
+            </figure>
+            <div class="edu-txt" id="eduTxt"></div>
+          </div>
+          <div class="edu-foot"><span class="edu-tip" id="eduTip"></span><span class="edu-prog" id="eduProg">—</span></div>
         </div>
       </div>
     </section>
