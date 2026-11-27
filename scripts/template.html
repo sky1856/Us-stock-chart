@@ -175,7 +175,8 @@
           </svg>
           <div class="val" id="gaugeVal">—</div>
         </div>
-        <div class="sig-meta"><b id="sigName">—</b><span id="sigSub">종합 기술 점수</span></div>
+        <div class="sig-meta"><b id="sigName">—</b><span id="sigSub">차트 참고 점수</span>
+          <i class="sig-note" id="sigNote">개별 차트 참고 점수 · 실제 진입은 아래 전략 신호 기준</i></div>
       </div>
       <div class="div-strip" id="divStrip"></div>
       <div class="plan-grid" id="planGrid">
@@ -186,7 +187,7 @@
             <span class="pb-state wait" id="peState">대기</span>
           </div>
           <div class="pb-dual">
-            <div class="pb-cell"><span class="pb-k">기술평가</span><b id="peTech">—</b></div>
+            <div class="pb-cell"><span class="pb-k">차트 참고 점수</span><b id="peTech">—</b></div>
             <div class="pb-cell"><span class="pb-k" id="peSigK">추세형 진입</span><b id="peSig">—</b></div>
           </div>
           <ul class="pb-why" id="peWhy"></ul>
@@ -383,14 +384,15 @@
 
     <section class="card se-card" id="seCard">
       <div class="panel-h">
-        <div><h3>종합 기술점수 산출 근거 · 해설</h3><p>5개 팩터를 가중 합산해 0~100점으로 환산 · 50점 = 중립</p></div>
+        <div><h3>종합 기술점수 산출 근거 · 해설</h3><p>5개 팩터를 가중 합산해 0~100점으로 환산 · 50점 = 차트 중립</p>
+          <p class="se-ref">개별 차트 참고 점수 · 실제 진입은 위 ‘신규 진입’ 카드의 전략 신호 기준</p></div>
         <div class="se-scale" id="seScale"></div>
       </div>
       <div class="se-grid">
         <div class="se-w">
           <div class="se-h">팩터별 배점 <em>총 100점</em></div>
           <div id="seWeightRows"></div>
-          <p class="se-note">점수 = 50 + (가중 합계 ÷ 2) → 1~99점. 시그널 칩(강력매수~강력매도)은 이 점수 구간으로 정해집니다.</p>
+          <p class="se-note">점수 = 50 + (가중 합계 ÷ 2) → 1~99점. 점수 라벨(차트 강세~차트 극약세)은 이 점수 구간으로 정해지며, 매매 지시가 아닙니다.</p>
         </div>
         <div class="se-live">
           <div class="se-h"><b id="seTicker">—</b><span id="seSummary">—</span></div>

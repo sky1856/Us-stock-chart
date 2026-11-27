@@ -275,6 +275,7 @@ input,select{font-family:inherit;color:inherit}
 .sig-meta{display:flex;flex-direction:column;gap:3px}
 .sig-meta b{font-size:16px;letter-spacing:-.01em}
 .sig-meta span{font-size:12px;color:var(--txt3)}
+.sig-meta .sig-note{font-style:normal;font-size:11.5px;color:#7E92A9;line-height:1.45;max-width:238px;word-break:keep-all}
 
 /* ---------- 상단 매매 카드: 신규 진입 / 보유 중 관리 / 손익비 ---------- */
 .plan-grid{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:1px;
@@ -503,6 +504,8 @@ input,select{font-family:inherit;color:inherit}
 .se-wrow .wv{font-size:12px;color:var(--txt2);font-family:var(--mono);text-align:right}
 .se-wrow .ds{grid-column:2/4;font-size:11.5px;color:var(--txt4);line-height:1.4;margin-top:1px}
 .se-note{margin:10px 0 0;font-size:11.5px;color:var(--txt4);line-height:1.6}
+.se-card .panel-h p.se-ref{display:inline-block;margin-top:5px;font-size:11px;font-weight:500;color:#9CC9E8;
+  border:1px solid rgba(96,205,255,.26);background:rgba(56,189,248,.07);padding:1px 6px;border-radius:5px;letter-spacing:-.005em;line-height:1.5}
 .se-row{display:grid;grid-template-columns:76px 62px minmax(0,1fr);gap:4px 9px;align-items:baseline;padding:7px 0;border-top:1px solid var(--line2)}
 .se-row:first-child{border-top:0;padding-top:2px}
 .se-row .fn{font-size:12.5px;font-weight:500;display:flex;align-items:center;gap:6px}

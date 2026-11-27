@@ -307,13 +307,15 @@
     return { score: S, groups: G };
   }
 
-  /* ---------- labels ---------- */
+  /* ---------- labels ----------
+     종합 기술점수(0~100)의 구간 이름 — 매매 지시가 아니라 '차트가 어느 쪽으로
+     기울어 있는지'만 말한다. 실제 진입/청산은 strategy 의 신호(추세형·스윙형)가 정한다. */
   var LABELS = {
-    4: { key: 'strongbuy', ko: '강력매수', en: 'STRONG BUY', color: '#10B981' },
-    3: { key: 'buy', ko: '매수', en: 'BUY', color: '#34D399' },
-    2: { key: 'watch', ko: '관망', en: 'NEUTRAL', color: '#F59E0B' },
-    1: { key: 'sell', ko: '매도', en: 'SELL', color: '#FB7185' },
-    0: { key: 'strongsell', ko: '강력매도', en: 'STRONG SELL', color: '#F43F5E' }
+    4: { key: 'strongbuy', ko: '차트 강세', en: 'CHART STRONG', color: '#10B981' },
+    3: { key: 'buy', ko: '차트 양호', en: 'CHART FIRM', color: '#34D399' },
+    2: { key: 'watch', ko: '차트 중립', en: 'CHART NEUTRAL', color: '#F59E0B' },
+    1: { key: 'sell', ko: '차트 약세', en: 'CHART WEAK', color: '#FB7185' },
+    0: { key: 'strongsell', ko: '차트 극약세', en: 'CHART VERY WEAK', color: '#F43F5E' }
   };
   function labelOf(score) {
     if (score >= 75) return LABELS[4];

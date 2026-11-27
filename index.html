@@ -285,6 +285,7 @@ input,select{font-family:inherit;color:inherit}
 .sig-meta{display:flex;flex-direction:column;gap:3px}
 .sig-meta b{font-size:16px;letter-spacing:-.01em}
 .sig-meta span{font-size:12px;color:var(--txt3)}
+.sig-meta .sig-note{font-style:normal;font-size:11.5px;color:#7E92A9;line-height:1.45;max-width:238px;word-break:keep-all}
 
 /* ---------- 상단 매매 카드: 신규 진입 / 보유 중 관리 / 손익비 ---------- */
 .plan-grid{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:1px;
@@ -513,6 +514,8 @@ input,select{font-family:inherit;color:inherit}
 .se-wrow .wv{font-size:12px;color:var(--txt2);font-family:var(--mono);text-align:right}
 .se-wrow .ds{grid-column:2/4;font-size:11.5px;color:var(--txt4);line-height:1.4;margin-top:1px}
 .se-note{margin:10px 0 0;font-size:11.5px;color:var(--txt4);line-height:1.6}
+.se-card .panel-h p.se-ref{display:inline-block;margin-top:5px;font-size:11px;font-weight:500;color:#9CC9E8;
+  border:1px solid rgba(96,205,255,.26);background:rgba(56,189,248,.07);padding:1px 6px;border-radius:5px;letter-spacing:-.005em;line-height:1.5}
 .se-row{display:grid;grid-template-columns:76px 62px minmax(0,1fr);gap:4px 9px;align-items:baseline;padding:7px 0;border-top:1px solid var(--line2)}
 .se-row:first-child{border-top:0;padding-top:2px}
 .se-row .fn{font-size:12.5px;font-weight:500;display:flex;align-items:center;gap:6px}
@@ -2180,7 +2183,8 @@ body{font-variant-numeric:tabular-nums}
           </svg>
           <div class="val" id="gaugeVal">—</div>
         </div>
-        <div class="sig-meta"><b id="sigName">—</b><span id="sigSub">종합 기술 점수</span></div>
+        <div class="sig-meta"><b id="sigName">—</b><span id="sigSub">차트 참고 점수</span>
+          <i class="sig-note" id="sigNote">개별 차트 참고 점수 · 실제 진입은 아래 전략 신호 기준</i></div>
       </div>
       <div class="div-strip" id="divStrip"></div>
       <div class="plan-grid" id="planGrid">
@@ -2191,7 +2195,7 @@ body{font-variant-numeric:tabular-nums}
             <span class="pb-state wait" id="peState">대기</span>
           </div>
           <div class="pb-dual">
-            <div class="pb-cell"><span class="pb-k">기술평가</span><b id="peTech">—</b></div>
+            <div class="pb-cell"><span class="pb-k">차트 참고 점수</span><b id="peTech">—</b></div>
             <div class="pb-cell"><span class="pb-k" id="peSigK">추세형 진입</span><b id="peSig">—</b></div>
           </div>
           <ul class="pb-why" id="peWhy"></ul>
@@ -2388,14 +2392,15 @@ body{font-variant-numeric:tabular-nums}
 
     <section class="card se-card" id="seCard">
       <div class="panel-h">
-        <div><h3>종합 기술점수 산출 근거 · 해설</h3><p>5개 팩터를 가중 합산해 0~100점으로 환산 · 50점 = 중립</p></div>
+        <div><h3>종합 기술점수 산출 근거 · 해설</h3><p>5개 팩터를 가중 합산해 0~100점으로 환산 · 50점 = 차트 중립</p>
+          <p class="se-ref">개별 차트 참고 점수 · 실제 진입은 위 ‘신규 진입’ 카드의 전략 신호 기준</p></div>
         <div class="se-scale" id="seScale"></div>
       </div>
       <div class="se-grid">
         <div class="se-w">
           <div class="se-h">팩터별 배점 <em>총 100점</em></div>
           <div id="seWeightRows"></div>
-          <p class="se-note">점수 = 50 + (가중 합계 ÷ 2) → 1~99점. 시그널 칩(강력매수~강력매도)은 이 점수 구간으로 정해집니다.</p>
+          <p class="se-note">점수 = 50 + (가중 합계 ÷ 2) → 1~99점. 점수 라벨(차트 강세~차트 극약세)은 이 점수 구간으로 정해지며, 매매 지시가 아닙니다.</p>
         </div>
         <div class="se-live">
           <div class="se-h"><b id="seTicker">—</b><span id="seSummary">—</span></div>
@@ -2900,13 +2905,15 @@ body{font-variant-numeric:tabular-nums}
     return { score: S, groups: G };
   }
 
-  /* ---------- labels ---------- */
+  /* ---------- labels ----------
+     종합 기술점수(0~100)의 구간 이름 — 매매 지시가 아니라 '차트가 어느 쪽으로
+     기울어 있는지'만 말한다. 실제 진입/청산은 strategy 의 신호(추세형·스윙형)가 정한다. */
   var LABELS = {
-    4: { key: 'strongbuy', ko: '강력매수', en: 'STRONG BUY', color: '#10B981' },
-    3: { key: 'buy', ko: '매수', en: 'BUY', color: '#34D399' },
-    2: { key: 'watch', ko: '관망', en: 'NEUTRAL', color: '#F59E0B' },
-    1: { key: 'sell', ko: '매도', en: 'SELL', color: '#FB7185' },
-    0: { key: 'strongsell', ko: '강력매도', en: 'STRONG SELL', color: '#F43F5E' }
+    4: { key: 'strongbuy', ko: '차트 강세', en: 'CHART STRONG', color: '#10B981' },
+    3: { key: 'buy', ko: '차트 양호', en: 'CHART FIRM', color: '#34D399' },
+    2: { key: 'watch', ko: '차트 중립', en: 'CHART NEUTRAL', color: '#F59E0B' },
+    1: { key: 'sell', ko: '차트 약세', en: 'CHART WEAK', color: '#FB7185' },
+    0: { key: 'strongsell', ko: '차트 극약세', en: 'CHART VERY WEAK', color: '#F43F5E' }
   };
   function labelOf(score) {
     if (score >= 75) return LABELS[4];
@@ -6197,7 +6204,7 @@ var EDUFIG = (function () {
     var s = frame();
     var fac = [['추세', 18], ['모멘텀', 12], ['가격구조', 8], ['거래량', -5], ['반전', -7]], i;
     var zero = 196, sc = 4.6;
-    s += T(30, 44, '5개 팩터 가중 합 · 50 = 중립', { c: C.mu, fs: 8 });
+    s += T(30, 44, '5개 팩터 가중 합 · 50 = 차트 중립', { c: C.mu, fs: 8 });
     for (i = 0; i < fac.length; i++) {
       var y = 66 + i * 25, v = fac[i][1], w = Math.abs(v) * sc;
       s += T(30, y + 4, fac[i][0], { c: C.tx, fs: 8.4, w: 600 });
@@ -6208,7 +6215,7 @@ var EDUFIG = (function () {
     }
     s += line(zero, 58, zero, 192, { c: 'rgba(220,235,250,.45)', w: 1, dash: '4 3' });
     s += T(zero, 202, '기준 50', { a: 'middle', c: C.mu, fs: 7.6 });
-    s += chip(X1 - 6, 202, '종합 76 · 매수 우위', { a: 'end', c: C.up, bd: 'rgba(47,217,166,.5)' });
+    s += chip(X1 - 6, 202, '종합 76 · 차트 강세', { a: 'end', c: C.up, bd: 'rgba(47,217,166,.5)' });
     return { svg: wrap(s, { label: '종합 기술점수 팩터 도해' }),
       cap: '점수보다 <b>어느 팩터가 만들었는지</b>. 점수가 높아도 거래량이 마이너스면 힘없이 오른 것일 수 있습니다' };
   };
@@ -6981,8 +6988,8 @@ var EDUFIG = (function () {
   }
   /* 행의 전략 상태 칩 — 선택한 전략(또는 key 로 지정한 전략)의 실제 상태만 쓴다.
      상단 카드의 peState/peSig·매수/매도 탭과 같은 단일 소스라 서로 어긋나지 않는다.
-     기술점수 라벨(매수/관망/매도)은 행의 신호 칩으로 쓰지 않는다 — '스윙은 대기인데 종목은 매수'로
-     보이던 불일치를 없애고, 기술점수는 숫자로 남겨 툴팁에서 '기술평가'임을 밝힌다. */
+     기술점수 라벨(차트 강세/차트 약세)은 행의 신호 칩으로 쓰지 않는다 — '스윙은 대기인데 종목은 차트 강세'로
+     보이던 불일치를 없애고, 기술점수는 숫자로 남겨 툴팁에서 '개별 차트 참고 점수'임을 밝힌다. */
   function sigChip(a, key) {
     var swing = (key || state.strategy) === 'swing';
     var g = sigOf(a, key);
@@ -7223,7 +7230,7 @@ var EDUFIG = (function () {
       var rkTt = recMode ? ' title="' + rankTip(a, rk, ri + 1) + '"' : '';
       var scTx = recSwing ? rk.fit : Math.round(rv.score);
       var scTt = recSwing ? ' title="' + rankTip(a, rk, ri + 1) + '"'
-        : ' title="종합 기술점수(0~100) — 기술평가 참고값이며 매매 신호가 아닙니다"';
+        : ' title="종합 기술점수(0~100) — 개별 차트 참고 점수이며 매매 신호가 아닙니다"';
       return '<div class="srow' + (state.cur === x.t ? ' on' : '') + '" data-t="' + x.t + '"' +
         (recMode ? ' data-tier="' + rk.tier + '" data-fit="' + rk.fit + '"' : '') + '>' +
         '<div class="' + rkCls + '"' + rkTt + '>' + rkTx + '</div>' +
@@ -7449,7 +7456,8 @@ var EDUFIG = (function () {
     c.textContent = (a.change > 0 ? '▲ ' : a.change < 0 ? '▼ ' : '') + Math.abs(a.changeAbs).toFixed(2) + ' (' + pct(a.change) + ')';
     $('#sigName').textContent = a.label.ko;
     $('#sigName').style.color = a.label.color;
-    $('#sigSub').textContent = '종합 기술 점수 ' + a.score.toFixed(1) + ' / 100 · 58점↑ 매수 / 50~57 관망';
+    $('#sigSub').textContent = '차트 참고 점수 ' + a.score.toFixed(1) + ' / 100';
+    $('#sigSub').title = '점수 구간 — 75점↑ 차트 강세 · 58~74 차트 양호 · 45~57 차트 중립 · 35~44 차트 약세 · 35점 미만 차트 극약세 (매매 지시 아님)';
     var circ = 2 * Math.PI * 27;
     var arc = $('#gaugeArc');
     arc.style.strokeDasharray = circ;
@@ -8296,11 +8304,11 @@ var EDUFIG = (function () {
     { k: 'structure', name: '가격구조', w: 15, d: '20일·50일 고저 범위 내 위치, 신고가·신저가' }
   ];
   var SCALE = [
-    { t: '강력매수', r: '75+', c: '#10B981' },
-    { t: '매수', r: '58~74', c: '#34D399' },
-    { t: '관망', r: '45~57', c: '#F59E0B' },
-    { t: '매도', r: '35~44', c: '#FB7185' },
-    { t: '강력매도', r: '<35', c: '#F43F5E' }
+    { t: '차트 강세', r: '75+', c: '#10B981' },
+    { t: '차트 양호', r: '58~74', c: '#34D399' },
+    { t: '차트 중립', r: '45~57', c: '#F59E0B' },
+    { t: '차트 약세', r: '35~44', c: '#FB7185' },
+    { t: '차트 극약세', r: '<35', c: '#F43F5E' }
   ];
   function toneColor(t) { return t === 'bull' ? '#10B981' : (t === 'bear' ? '#F43F5E' : '#6B7689'); }
   function buildScoreExplain() {
@@ -11057,8 +11065,9 @@ var EDUFIG = (function () {
          '<p>목표는 수익을 내는 것이 아니라 <b>규칙을 지키는 연습</b>입니다. 손절선을 지켰는지, 추격 매수를 했는지 기록해 보세요.</p>' +
          '<p>실제 주문이 아니므로 부담 없이 반복할 수 있습니다. 계좌 초기화로 언제든 처음부터 다시 시작합니다.</p>',
       tip: '모의매매에서 20번 이상 같은 규칙을 반복하면 실제 계좌에서 덜 흔들립니다.' },
-    { c: '검색기 활용법', t: '종합 기술점수, 근거까지 읽기', s: '50점이 중립, 5개 팩터의 합',
-      b: '<p>점수는 추세·모멘텀·반전·거래량·가격구조 <b>5개 팩터</b>를 가중 합산해 50을 기준으로 만든 값입니다. 50이 중립, 70 이상이면 강한 매수 우위입니다.</p>' +
+    { c: '검색기 활용법', t: '종합 기술점수, 근거까지 읽기', s: '50점이 차트 중립, 5개 팩터의 합',
+      b: '<p>점수는 추세·모멘텀·반전·거래량·가격구조 <b>5개 팩터</b>를 가중 합산해 50을 기준으로 만든 값입니다. 50이 차트 중립, 75점 이상이면 차트 강세입니다.</p>' +
+         '<p>이 점수는 <b>개별 종목 차트만 본 참고값</b>입니다. 실제 진입·청산은 위 ‘신규 진입’ 카드의 전략 신호(추세형·스윙형)가 정하므로, 점수가 차트 강세여도 시장대기·손절대기라면 진입하지 않습니다.</p>' +
          '<p>중요한 것은 점수 자체보다 <b>어느 팩터가 점수를 만들었는지</b>입니다. 점수는 높은데 거래량 팩터가 마이너스라면, 힘없이 오른 것일 수 있습니다.</p>' +
          '<p>“종합 기술점수 산출 근거·해설” 카드에서 팩터별 배점과 현재 값을 함께 보세요.</p>',
       tip: '점수 하나로 사지 말고, 반대 팩터가 무엇인지 확인하는 습관을 들이세요.' },

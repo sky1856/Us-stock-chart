@@ -849,7 +849,7 @@ var EDUFIG = (function () {
     var s = frame();
     var fac = [['추세', 18], ['모멘텀', 12], ['가격구조', 8], ['거래량', -5], ['반전', -7]], i;
     var zero = 196, sc = 4.6;
-    s += T(30, 44, '5개 팩터 가중 합 · 50 = 중립', { c: C.mu, fs: 8 });
+    s += T(30, 44, '5개 팩터 가중 합 · 50 = 차트 중립', { c: C.mu, fs: 8 });
     for (i = 0; i < fac.length; i++) {
       var y = 66 + i * 25, v = fac[i][1], w = Math.abs(v) * sc;
       s += T(30, y + 4, fac[i][0], { c: C.tx, fs: 8.4, w: 600 });
@@ -860,7 +860,7 @@ var EDUFIG = (function () {
     }
     s += line(zero, 58, zero, 192, { c: 'rgba(220,235,250,.45)', w: 1, dash: '4 3' });
     s += T(zero, 202, '기준 50', { a: 'middle', c: C.mu, fs: 7.6 });
-    s += chip(X1 - 6, 202, '종합 76 · 매수 우위', { a: 'end', c: C.up, bd: 'rgba(47,217,166,.5)' });
+    s += chip(X1 - 6, 202, '종합 76 · 차트 강세', { a: 'end', c: C.up, bd: 'rgba(47,217,166,.5)' });
     return { svg: wrap(s, { label: '종합 기술점수 팩터 도해' }),
       cap: '점수보다 <b>어느 팩터가 만들었는지</b>. 점수가 높아도 거래량이 마이너스면 힘없이 오른 것일 수 있습니다' };
   };
