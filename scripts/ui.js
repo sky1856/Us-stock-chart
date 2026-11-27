@@ -88,7 +88,7 @@
     eduRender();
     if (typeof buildScoreExplain === 'function') buildScoreExplain();
     if (fgLast) renderFearGreed(fgLast, fgLastLive);
-    var cur = A[state.cur];
+    var cur = A[state.cur] ? stratView(viewOf(state.cur)) : null;   /* select() 와 같은 전략 뷰 — 테마를 바꿔도 선택한 전략(추세형/스윙형) 카드가 그대로 유지된다 */
     if (cur) {
       renderHero(cur); renderFund(cur); renderKpis(cur); renderEquity(cur);
       renderScoreExplain(cur); renderElliott(cur); renderRecent(cur); renderTrades(cur);
