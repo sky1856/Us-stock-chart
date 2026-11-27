@@ -141,7 +141,7 @@
 
   /* 엔벨로프 — N일 단순이동평균 ±pct% 상단/하단 밴드 */
   function envelope(c, p, pct) {
-    p = p || 20; pct = (pct == null) ? 20 : pct;
+    p = p || 20; pct = (pct == null) ? 8 : pct;
     var mid = sma(c, p), k = pct / 100, up = new Array(c.length), lo = new Array(c.length);
     for (var i = 0; i < c.length; i++) {
       up[i] = (mid[i] == null) ? null : mid[i] * (1 + k);
@@ -221,9 +221,9 @@
       ind.spanB[q] = (s >= 0 && spanBraw[s] != null) ? spanBraw[s] : null;
     }
     ind.bb = bollinger(c, 20, 2);
-    /* 보조 지표 — 파라볼릭 SAR(0.02·0.20), 엔벨로프(20일선 ±20%) : 차트 토글에서 켜고 끈다(기본 OFF) */
+    /* 보조 지표 — 파라볼릭 SAR(0.02·0.20), 엔벨로프(20일선 ±8%) : 차트 토글에서 켜고 끈다(기본 OFF) */
     ind.sar = parabolicSAR(h, l, c, 0.02, 0.20);
-    ind.env = envelope(c, 20, 20);
+    ind.env = envelope(c, 20, 8);
     ind.rsi = rsi(c, 14);
     ind.macd = macd(c, 12, 26, 9);
     ind.atr = atr(h, l, c, 14);

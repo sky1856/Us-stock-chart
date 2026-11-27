@@ -2574,17 +2574,28 @@
     cv.addEventListener('pointercancel', up);
     cv.addEventListener('pointerleave', up);
   };
+  /* 오른쪽(미래) 여백 상한 — 지금 보이는 봉 수의 40%(80봉 이상 볼 땐 최소 30봉, 최대 140봉).
+     i1 은 마지막 봉(n-1)을 넘어 이만큼까지 미래 빈 칸으로 열린다.
+     창 크기(size) 기준이라 드래그 중에는 값이 고정돼 경계에서 떨리지 않는다. */
+  Chart.prototype.futureMax = function (size) {
+    var S = Math.max(1, size || (this.i1 - this.i0 + 1));
+    var m = Math.round(S * 0.40);
+    if (S >= 80) m = Math.max(m, 30);
+    return Math.round(QE.clamp(m, 6, 140));
+  };
   Chart.prototype.slide = function (n0, n1) {
     var total = this.a.dates.length;
-    var size = QE.clamp(n1 - n0 + 1, 24, total);
-    n1 = Math.min(n1, total - 1); n0 = n1 - size + 1;
-    if (n0 < 0) { n0 = 0; n1 = Math.min(total - 1, size - 1); }
+    var size = QE.clamp(Math.round(n1) - Math.round(n0) + 1, 24, total + this.futureMax(total));
+    var maxI1 = total - 1 + this.futureMax(size);   /* 미래 여백을 포함한 오른쪽 끝 */
+    n1 = Math.min(Math.round(n1), maxI1);
+    n0 = n1 - size + 1;
+    if (n0 < 0) { n0 = 0; n1 = Math.min(maxI1, size - 1); }
     this.i0 = n0; this.i1 = n1;
     this.draw();
   };
   Chart.prototype.zoom = function (f, anchor) {
     var total = this.a.dates.length;
-    var size = QE.clamp(Math.round((this.i1 - this.i0 + 1) * f), 24, total);
+    var size = QE.clamp(Math.round((this.i1 - this.i0 + 1) * f), 24, total + this.futureMax(total));
     var ratio = (anchor - this.i0) / Math.max(this.i1 - this.i0, 1);
     var n0 = Math.round(anchor - ratio * size);
     this.slide(n0, n0 + size - 1);
@@ -2600,6 +2611,7 @@
     var s = a.series || seriesOf(a.sym) || a;
     var oo = s.o, hh = s.h, ll = s.l, vv = s.v;
     var i0 = this.i0, i1 = this.i1, nBars = i1 - i0 + 1;
+    var n = a.dates.length, i1d = Math.min(i1, n - 1);   /* 실제 데이터가 있는 마지막 봉 */
     var bw = L.plotW / nBars;
     ctx.clearRect(0, 0, W, H);
 
@@ -2609,10 +2621,12 @@
           캔들이 메인 패널 세로를 최대한 채우게 한다. */
     var p = L.price;
     var cLo = Infinity, cHi = -Infinity, i;
-    for (i = i0; i <= i1; i++) {
+    for (i = Math.max(i0, 0); i <= i1d; i++) {
       if (hh[i] > cHi) cHi = hh[i];
       if (ll[i] < cLo) cLo = ll[i];
     }
+    /* 화면이 통째로 미래 여백이면(데이터 0봉) 마지막 실제 봉 기준으로 축을 잡는다 */
+    if (!(cHi > cLo) && n) { cHi = hh[n - 1]; cLo = ll[n - 1]; }
     if (!(cHi > cLo)) return;
     var spanC = cHi - cLo;
     var zoomed = nBars <= 90;                              /* 3M(64봉)·그 이하 확대 구간 */
@@ -2624,7 +2638,7 @@
       if (v > hi) hi = v;
       if (v < lo) lo = v;
     };
-    for (i = i0; i <= i1; i++) {
+    for (i = i0; i <= i1d; i++) {
       if (state.show.ma) {
         MA.forEach(function (m) {
           if (!maVisible(m.p)) return;
@@ -2675,7 +2689,7 @@
     /* 일목균형표 구름대 (선행스팬 A·B) — 옅은 면(약 11%) + 미세한 테두리
        볼린저는 채움 없이 점선으로 그려 둘이 겹쳐도 한눈에 구분되게 한다 */
     if (vis('ichi')) {
-      for (i = Math.max(i0, 1); i <= i1; i++) {
+      for (i = Math.max(i0, 1); i <= i1d; i++) {
         var a0 = ind.spanA[i - 1], b0 = ind.spanB[i - 1], a1 = ind.spanA[i], b1 = ind.spanB[i];
         if (a0 == null || b0 == null || a1 == null || b1 == null) continue;
         ctx.beginPath();
@@ -2692,13 +2706,13 @@
       }
     }
 
-    /* 엔벨로프 — 20일 이동평균 ±20% 상단/하단 밴드 (점선 · 상단은 과열 참고로 강조) */
+    /* 엔벨로프 — 20일 이동평균 ±8% 상단/하단 밴드 (점선 · 상단은 과열 참고로 강조) */
     if (vis('env') && ind.env) {
       var envLine = function (arr, color, wd, dash) {
         ctx.save();
         if (dash) ctx.setLineDash(dash);
         ctx.beginPath(); var st2 = false;
-        for (var j = i0; j <= i1; j++) {
+        for (var j = i0; j <= i1d; j++) {
           if (arr[j] == null) continue;
           var ex = this.x(j), ey = Y(arr[j]);
           if (!st2) { ctx.moveTo(ex, ey); st2 = true; } else ctx.lineTo(ex, ey);
@@ -2717,10 +2731,10 @@
       ctx.setLineDash([5, 4]);
       ctx.strokeStyle = 'rgba(129,140,248,.72)'; ctx.lineWidth = 1.1;
       ctx.beginPath();
-      for (i = i0; i <= i1; i++) { if (ind.bb.up[i] == null) continue; i === i0 ? ctx.moveTo(this.x(i), Y(ind.bb.up[i])) : ctx.lineTo(this.x(i), Y(ind.bb.up[i])); }
+      for (i = i0; i <= i1d; i++) { if (ind.bb.up[i] == null) continue; i === i0 ? ctx.moveTo(this.x(i), Y(ind.bb.up[i])) : ctx.lineTo(this.x(i), Y(ind.bb.up[i])); }
       ctx.stroke();
       ctx.beginPath();
-      for (i = i0; i <= i1; i++) { if (ind.bb.lo[i] == null) continue; i === i0 ? ctx.moveTo(this.x(i), Y(ind.bb.lo[i])) : ctx.lineTo(this.x(i), Y(ind.bb.lo[i])); }
+      for (i = i0; i <= i1d; i++) { if (ind.bb.lo[i] == null) continue; i === i0 ? ctx.moveTo(this.x(i), Y(ind.bb.lo[i])) : ctx.lineTo(this.x(i), Y(ind.bb.lo[i])); }
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.restore();
@@ -2728,7 +2742,7 @@
 
     /* candles — 몸통을 조금 더 넓고 선명하게 */
     var cw = Math.max(1.2, Math.min(bw * 0.7, 14));
-    for (i = i0; i <= i1; i++) {
+    for (i = i0; i <= i1d; i++) {
       var up = c[i] >= oo[i];
       var col = up ? '#10B981' : '#F43F5E';
       var x = this.x(i);
@@ -2748,7 +2762,7 @@
         if (!arr) return;
         var path = function () {
           ctx.beginPath(); var st = false;
-          for (var j = i0; j <= i1; j++) {
+          for (var j = i0; j <= i1d; j++) {
             if (arr[j] == null) continue;          /* 240일선은 앞쪽 240봉이 모자라면 값이 없다 → 선을 끊지 않고 시작점부터 */
             var px2 = this.x(j), py2 = Y(arr[j]);
             if (!st) { ctx.moveTo(px2, py2); st = true; } else ctx.lineTo(px2, py2);
@@ -2778,7 +2792,7 @@
         ctx.save();
         if (dash) ctx.setLineDash(dash);
         ctx.beginPath(); var st = false;
-        for (var j = i0; j <= i1; j++) {
+        for (var j = i0; j <= i1d; j++) {
           if (arr[j] == null) continue;
           var px4 = this.x(j), py4 = Y(arr[j]);
           if (!st) { ctx.moveTo(px4, py4); st = true; } else ctx.lineTo(px4, py4);
@@ -2793,7 +2807,7 @@
     if (vis('sar') && ind.sar) {
       var sv = ind.sar.v, sd = ind.sar.dir;
       var dotR = bw > 4 ? 2.0 : (bw > 2.6 ? 1.6 : 1.2);
-      for (i = i0; i <= i1; i++) {
+      for (i = i0; i <= i1d; i++) {
         if (sv[i] == null) continue;
         var sx = this.x(i), sy = Y(sv[i]);
         if (sy < p.y - 2 || sy > p.y + p.h + 2) continue;
@@ -2804,17 +2818,26 @@
     }
 
     /* last price tag */
-    this.drawWBottom(ctx, a, L, Y, i0, i1, bw, 'line');
-    this.drawTri(ctx, a, L, Y, i0, i1, bw, 'line');
-    if (vis('ew')) this.drawWave(ctx, a, L, Y, i0, i1, bw);
-    this.drawUser(ctx, a, L, Y, i0, i1);
-    this.drawWBottom(ctx, a, L, Y, i0, i1, bw, 'label');   /* W 라벨은 맨 위 — 다른 라벨을 피해서 마지막에 */
-    this.drawTri(ctx, a, L, Y, i0, i1, bw, 'label');
+    this.drawWBottom(ctx, a, L, Y, i0, i1d, bw, 'line');
+    this.drawTri(ctx, a, L, Y, i0, i1d, bw, 'line');
+    if (vis('ew')) this.drawWave(ctx, a, L, Y, i0, i1, bw);   /* 투영선은 미래 여백까지 연장 */
+    this.drawUser(ctx, a, L, Y, i0, i1);                     /* 작도도 미래 여백에 그릴 수 있다 */
+    this.drawWBottom(ctx, a, L, Y, i0, i1d, bw, 'label');   /* W 라벨은 맨 위 — 다른 라벨을 피해서 마지막에 */
+    this.drawTri(ctx, a, L, Y, i0, i1d, bw, 'label');
     ctx.restore();
-    var lastC = c[i1], lastY = Y(lastC);
-    ctx.fillStyle = c[i1] >= oo[i1] ? '#10B981' : '#F43F5E';
+    var lastC = c[i1d], lastY = Y(lastC);
+    ctx.fillStyle = c[i1d] >= oo[i1d] ? '#10B981' : '#F43F5E';
     var tag = usd(lastC);
     ctx.font = '600 9.5px ui-monospace,monospace';
+    /* 미래 여백이 열려 있으면 마지막 종가 레벨을 오른쪽 끝까지 점선으로 이어 준다 */
+    if (i1 > i1d) {
+      ctx.save();
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = 'rgba(148,163,184,.30)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(this.x(i1d) + cw / 2, lastY); ctx.lineTo(L.padL + L.plotW, lastY); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
     var tw = ctx.measureText(tag).width + 10;
     ctx.beginPath();
     var tx = L.padL + L.plotW + 2, ty = lastY;
@@ -2852,21 +2875,21 @@
 
 
     /* 보이는 구간 고점·저점 수익% 라벨 — 캔들·신호 마커 위에 마지막으로 */
-    this.drawExtremes(ctx, a, L, Y, i0, i1, hh, ll);
+    this.drawExtremes(ctx, a, L, Y, i0, i1d, hh, ll);
 
     /* volume panel */
     var vp = L.vol;
     ctx.fillStyle = 'rgba(255,255,255,.03)';
     ctx.fillRect(L.padL, vp.y, L.plotW, vp.h);
     var vmax = 0;
-    for (i = i0; i <= i1; i++) if (vv[i] > vmax) vmax = vv[i];
-    for (i = i0; i <= i1; i++) {
+    for (i = i0; i <= i1d; i++) if (vv[i] > vmax) vmax = vv[i];
+    for (i = i0; i <= i1d; i++) {
       var vh = (vv[i] / (vmax || 1)) * (vp.h - 4);
       ctx.fillStyle = c[i] >= oo[i] ? 'rgba(16,185,129,.5)' : 'rgba(244,63,94,.5)';
       if (bw < 2.2) ctx.fillRect(this.x(i) - .5, vp.y + vp.h - vh, 1, vh);
       else ctx.fillRect(this.x(i) - cw / 2, vp.y + vp.h - vh, cw, vh);
     }
-    var vlab = '거래량 ' + vol(vv[i1] * 1000);
+    var vlab = '거래량 ' + vol(vv[i1d] * 1000);
     ctx.font = '9px ui-monospace,monospace'; ctx.textAlign = 'left';
     ctx.fillStyle = 'rgba(11,14,20,.72)';
     ctx.fillRect(L.padL + 2, vp.y + 1, ctx.measureText(vlab).width + 8, 13);
@@ -2886,7 +2909,7 @@
       ctx.fillStyle = 'rgba(244,63,94,.055)'; ctx.fillRect(L.padL, yR(100), L.plotW, yR(70) - yR(100));
       ctx.fillStyle = 'rgba(16,185,129,.055)'; ctx.fillRect(L.padL, yR(30), L.plotW, yR(0) - yR(30));
       ctx.beginPath(); var st2 = false;
-      for (i = i0; i <= i1; i++) {
+      for (i = i0; i <= i1d; i++) {
         if (ind.rsi[i] == null) continue;
         var rx = this.x(i), ry = yR(ind.rsi[i]);
         if (!st2) { ctx.moveTo(rx, ry); st2 = true; } else ctx.lineTo(rx, ry);
@@ -2897,7 +2920,7 @@
       ctx.fillStyle = '#6B7689'; ctx.font = '9px ui-monospace,monospace'; ctx.textAlign = 'left';
       ctx.fillText('RSI 14', L.padL + 5, rp.y + 10);
       ctx.textAlign = 'left'; ctx.fillStyle = '#7A8698';
-      ctx.fillText(ind.rsi[i1] != null ? ind.rsi[i1].toFixed(1) : '—', L.padL + L.plotW + 6, yR(ind.rsi[i1] || 50));
+      ctx.fillText(ind.rsi[i1d] != null ? ind.rsi[i1d].toFixed(1) : '—', L.padL + L.plotW + 6, yR(ind.rsi[i1d] || 50));
     }
 
     /* MACD */
@@ -2905,14 +2928,14 @@
       var mp = L.macd;
       ctx.fillStyle = 'rgba(255,255,255,.025)'; ctx.fillRect(L.padL, mp.y, L.plotW, mp.h);
       var mlo = 0, mhi = 0;
-      for (i = i0; i <= i1; i++) {
+      for (i = i0; i <= i1d; i++) {
         [ind.macd.line[i], ind.macd.signal[i], ind.macd.hist[i]].forEach(function (v) { if (v != null) { if (v > mhi) mhi = v; if (v < mlo) mlo = v; } });
       }
       var mpad = (mhi - mlo) * 0.12 || 1; mlo -= mpad; mhi += mpad;
       var yM = function (v) { return mp.y + (1 - (v - mlo) / (mhi - mlo)) * mp.h; };
       ctx.strokeStyle = 'rgba(255,255,255,.07)';
       ctx.beginPath(); ctx.moveTo(L.padL, yM(0)); ctx.lineTo(L.padL + L.plotW, yM(0)); ctx.stroke();
-      for (i = i0; i <= i1; i++) {
+      for (i = i0; i <= i1d; i++) {
         if (ind.macd.hist[i] == null) continue;
         var hv = ind.macd.hist[i];
         var y0 = yM(0), y1 = yM(hv);
@@ -2922,7 +2945,7 @@
       }
       var mline = function (arr, color, lw) {
         ctx.beginPath(); var st3 = false;
-        for (var j = i0; j <= i1; j++) {
+        for (var j = i0; j <= i1d; j++) {
           if (arr[j] == null) continue;
           var px3 = this.x(j), py3 = yM(arr[j]);
           if (!st3) { ctx.moveTo(px3, py3); st3 = true; } else ctx.lineTo(px3, py3);
@@ -2941,7 +2964,7 @@
     ctx.fillStyle = '#4A5468'; ctx.font = '9px ui-monospace,monospace'; ctx.textBaseline = 'alphabetic';
     var step = Math.max(1, Math.round(nBars / 6));
     ctx.textAlign = 'center';
-    for (i = i0; i <= i1; i += step) {
+    for (i = i0; i <= i1d; i += step) {
       var dt = a.dates[i];
       var lab = nBars > 300 ? dt.slice(2, 7).replace('-', '/') : dt.slice(5).replace('-', '/');
       var lx0 = this.x(i);
@@ -2949,13 +2972,14 @@
       ctx.fillText(lab, lx0, H - 6);
     }
 
-    /* crosshair */
+    /* crosshair — 미래 여백 위에서는 세로선만 그린다(데이터·날짜 없음) */
     if (this.hover != null && this.hover >= i0 && this.hover <= i1) {
-      var hi2 = this.hover, cx = this.x(hi2);
+      var hi2 = this.hover, cx = this.x(hi2), hovData = hi2 <= i1d;
       ctx.save();
-      ctx.strokeStyle = 'rgba(255,255,255,.22)'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+      ctx.strokeStyle = hovData ? 'rgba(255,255,255,.22)' : 'rgba(255,255,255,.13)'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
       ctx.beginPath(); ctx.moveTo(cx, L.price.y); ctx.lineTo(cx, H - L.padB); ctx.stroke();
       ctx.setLineDash([]);
+      if (hovData) {
       /* highlight candle */
       ctx.strokeStyle = 'rgba(255,255,255,.35)';
       ctx.strokeRect(cx - Math.max(cw, 3) / 2 - 1, Y(hh[hi2]) - 1, Math.max(cw, 3) + 2, Math.max(Y(ll[hi2]) - Y(hh[hi2]), 1) + 2);
@@ -2966,6 +2990,7 @@
       ctx.fill(); ctx.stroke();
       ctx.fillStyle = '#9BA6BA'; ctx.textAlign = 'center';
       ctx.fillText(dl, cx, H - L.padB + 12);
+      }
       ctx.restore();
     }
     ctx.restore();
@@ -2986,11 +3011,12 @@
       }, this);
     }
 
-    /* 이동평균 범례 — 크로스헤어 위치(없으면 최근 봉)의 실제 값을 표시 */
-    updateMaLegend(a, this.hover != null ? this.hover : i1);
+    /* 이동평균 범례 — 크로스헤어 위치(없으면 최근 봉)의 실제 값을 표시 (미래 여백은 마지막 봉 기준) */
+    updateMaLegend(a, this.hover != null ? Math.min(this.hover, i1d) : i1d);
 
-    /* HUD */
-    if (this.hover != null) this.updateHud(a, s, this.hover);
+    /* HUD — 미래 여백 위에서는 숨긴다(없는 봉의 시·고·저·종을 보여주지 않게) */
+    if (this.hover != null && this.hover <= i1d) this.updateHud(a, s, this.hover);
+    else if (this.hover != null) this.hud.classList.remove('on');
   };
 
   Chart.prototype.updateHud = function (a, s, i) {
@@ -4115,18 +4141,29 @@
         var L = chart._L || {};
         return {
           i0: chart.i0, i1: chart.i1, bars: chart.i1 - chart.i0 + 1,
+          dataBars: Math.min(chart.i1, (chart.a ? chart.a.dates.length : 1) - 1) - chart.i0 + 1,
+          future: Math.max(0, chart.i1 - ((chart.a ? chart.a.dates.length : 1) - 1)),
+          futureMax: chart.futureMax ? chart.futureMax() : null,
           lo: chart._lo, hi: chart._hi, cLo: chart._cLo, cHi: chart._cHi,
           zoomed: !!chart._zoomed, priceH: L.price ? L.price.h : null,
           avgBodyPx: (function () {
             var a = chart.a; if (!a || chart._hi == null) return null;
-            var c = a.close, oo = (a.series || {}).o, n = chart.i1 - chart.i0 + 1, sum = 0;
-            for (var i = chart.i0; i <= chart.i1; i++) sum += Math.abs(c[i] - (oo && oo[i] != null ? oo[i] : c[i]));
+            var c = a.close, oo = (a.series || {}).o, iEnd = Math.min(chart.i1, a.dates.length - 1), n = iEnd - chart.i0 + 1, sum = 0;
+            for (var i = chart.i0; i <= iEnd; i++) sum += Math.abs(c[i] - (oo && oo[i] != null ? oo[i] : c[i]));
             return sum / Math.max(n, 1) / (chart._hi - chart._lo) * (L.price ? L.price.h : 0);
           })(),
           volH: L.vol ? L.vol.h : null, rsiH: L.rsi ? L.rsi.h : null, macdH: L.macd ? L.macd.h : null
         };
       },
-      state: function () { return { clean: !!state.clean, show: JSON.parse(JSON.stringify(state.show)), cur: state.cur, range: state.range }; }
+      state: function () { return { clean: !!state.clean, show: JSON.parse(JSON.stringify(state.show)), cur: state.cur, range: state.range }; },
+      /* 엔벨로프 검증용 — 마지막 봉의 20일선·상/하한과 배율(±8% 인지) */
+      env: function () {
+        var a = chart.a; if (!a || !a.ind || !a.ind.env) return null;
+        var n = a.close.length - 1, e = a.ind.env;
+        if (e.mid[n] == null) return null;
+        return { pct: e.pct, i: n, date: a.dates[n], mid: e.mid[n], up: e.up[n], lo: e.lo[n], close: a.close[n],
+          upRatio: e.up[n] / e.mid[n], loRatio: e.lo[n] / e.mid[n] };
+      }
     };
     buildMaLegend();
     buildScoreExplain();
@@ -4473,8 +4510,8 @@
          '<p>장점은 <b>손절선을 자동으로 그려 준다</b>는 것입니다. 상승 추세에서 점이 아래에서 따라 올라오므로, 점 아래로 종가가 내려가면 청산 기준으로 쓸 수 있습니다.</p>' +
          '<p>단점은 횡보장에서 점이 위아래로 자주 뒤집혀 신호가 남발된다는 것입니다. 이동평균과 함께 써서 추세가 뚜렷한 종목에만 적용하세요.</p>',
       tip: '지표 토글의 SAR을 켜면 점이 나타납니다. 기본은 꺼 둔 상태입니다.' },
-    { c: '차트·기법', t: '엔벨로프 상단 = 단기 과열', s: '20일선 ±20% 밴드의 의미',
-      b: '<p>엔벨로프는 20일 이동평균에서 <b>±20%</b> 떨어진 상·하단 밴드입니다. 통계적인 볼린저 밴드(±2 표준편차)와 달리 폭이 고정되어 있어, <b>얼마나 오래·많이 이격됐는지</b>를 보는 데 적합합니다.</p>' +
+    { c: '차트·기법', t: '엔벨로프 상단 = 단기 과열', s: '20일선 ±8% 밴드의 의미',
+      b: '<p>엔벨로프는 20일 이동평균에서 <b>±8%</b> 떨어진 상·하단 밴드입니다. 통계적인 볼린저 밴드(±2 표준편차)와 달리 폭이 고정되어 있어, <b>얼마나 오래·많이 이격됐는지</b>를 보는 데 적합합니다.</p>' +
          '<p>가격이 상단에 닿으면 단기 과열로 봅니다. 다만 강한 상승 초입에서는 상단에 붙어 오래 올라가는 경우가 많아, 상단 도달 자체를 매도 신호로 쓰면 안 됩니다.</p>' +
          '<p>실전에서는 <b>상단 이탈 후 20일선으로 복귀하는지</b>를 확인하는 편이 안전합니다. 하단은 낙폭과대 판단에 참고합니다.</p>',
       tip: '엔벨로프 상단은 “팔 자리”보다 “추격 매수를 멈출 자리”로 쓰세요.' },
