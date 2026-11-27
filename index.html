@@ -2805,6 +2805,65 @@ html[data-theme="light"] .pg-row.sell b{color:#0E7490}
   .bs-cell{padding:8px 11px}
   .bg-s{display:none}
 }
+
+/* ============================================================
+   사이드바 하단 '전략 가이드' 바 — 시인성 강화 (2026-11-27)
+   아이콘 + 밝은 제목 + 버튼형 테두리/하이라이트 + 펼치기·접기 배지.
+   다크·화이트 두 테마 모두 대비가 서도록 색을 --si-* 로 따로 둔다.
+   ============================================================ */
+.side-info{
+  --si-ac:#38BDF8; --si-ac2:#7DD3FC; --si-tx:#EAF6FF; --si-tx2:#A7C2D8;
+  --si-bd:rgba(56,189,248,.46); --si-bg1:rgba(56,189,248,.17); --si-bg2:rgba(56,189,248,.055);
+  --si-bdg-bd:rgba(56,189,248,.5); --si-bdg-bg:rgba(56,189,248,.16); --si-bdg-tx:#BEE9FF;
+  flex:0 0 auto;padding:6px 8px 4px;border-top:1px solid var(--line2);
+  background:linear-gradient(180deg,rgba(56,189,248,.055),rgba(56,189,248,0))
+}
+html[data-theme="light"] .side-info{
+  --si-ac:#0284C7; --si-ac2:#0E7490; --si-tx:#0B2237; --si-tx2:#40566E;
+  --si-bd:rgba(2,132,199,.42); --si-bg1:#E3F2FE; --si-bg2:#F6FBFF;
+  --si-bdg-bd:rgba(2,132,199,.45); --si-bdg-bg:#DCEFFD; --si-bdg-tx:#075E8C;
+  background:linear-gradient(180deg,#F1F8FE,#FFFFFF);
+  border-top-color:rgba(15,23,42,.1)
+}
+.side-info .si-head{display:flex;align-items:center;gap:8px;width:100%;padding:7px 9px;
+  border:1px solid var(--si-bd);border-radius:10px;text-align:left;
+  background:linear-gradient(180deg,var(--si-bg1),var(--si-bg2));
+  box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 10px 24px -22px var(--si-ac);
+  transition:border-color .15s,background .15s,box-shadow .15s}
+.side-info .si-head:hover{border-color:var(--si-ac);
+  box-shadow:0 1px 0 rgba(255,255,255,.09) inset,0 12px 26px -20px var(--si-ac)}
+.side-info.open .si-head{border-color:var(--si-ac);
+  box-shadow:0 1px 0 rgba(255,255,255,.09) inset,0 0 0 2px rgba(56,189,248,.12)}
+html[data-theme="light"] .side-info .si-head:hover{box-shadow:0 1px 0 #fff inset,0 10px 20px -16px rgba(2,132,199,.75)}
+html[data-theme="light"] .side-info.open .si-head{box-shadow:0 1px 0 #fff inset,0 0 0 2px rgba(2,132,199,.14)}
+.si-ico{width:25px;height:25px;flex:0 0 auto;border-radius:8px;display:grid;place-items:center;
+  color:var(--si-ac2);background:rgba(56,189,248,.2);border:1px solid var(--si-bd)}
+html[data-theme="light"] .si-ico{background:#D6ECFC}
+.si-ico svg{width:15px;height:15px;display:block}
+.si-txt{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:1px}
+.side-info .si-title{display:block;font-size:13px;font-weight:700;color:var(--si-tx);
+  letter-spacing:-.015em;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.si-title em{font-style:normal;font-weight:600;font-size:12px;color:var(--si-ac2);margin-left:5px}
+.side-info .si-sum{margin:0;font-size:11px;font-weight:500;color:var(--si-tx2);
+  letter-spacing:-.005em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
+.side-info.open .si-sum{color:var(--si-tx2)}
+.si-badge{display:inline-flex;align-items:center;gap:3px;flex:0 0 auto;
+  font-size:11px;font-weight:700;letter-spacing:-.01em;color:var(--si-bdg-tx);
+  padding:3px 7px 3px 8px;border-radius:999px;border:1px solid var(--si-bdg-bd);
+  background:var(--si-bdg-bg);white-space:nowrap}
+.si-badge .si-b-close{display:none}
+.side-info.open .si-badge .si-b-open{display:none}
+.side-info.open .si-badge .si-b-close{display:inline}
+.si-badge .si-chev{width:10px;height:10px;transition:transform .2s cubic-bezier(.2,.7,.3,1)}
+.side-info.open .si-badge .si-chev{transform:rotate(180deg)}
+.side-info .si-body{margin-top:6px;padding:0 2px 6px}
+/* 아주 좁은 화면(모바일 드로어 360px) — 제목·부제가 한 줄에 들어가도록 살짝 줄인다 */
+@media (max-width:420px){
+  .side-info .si-title{font-size:12.5px}
+  .si-title em{font-size:11.5px}
+  .si-ico{width:23px;height:23px}
+  .si-badge{font-size:10.5px;padding:3px 6px 3px 7px}
+}
 </style>
 </head>
 <body>
@@ -2892,9 +2951,17 @@ html[data-theme="light"] .pg-row.sell b{color:#0E7490}
     <div class="scan-list" id="scanList"></div>
     <div class="side-info" id="sideInfo">
       <button class="si-head" id="siToggle" type="button" aria-expanded="false" aria-controls="siBody" title="지금 전략의 매수·손절·익절 기준과 프리셋 설명 펼치기/접기">
-        <svg class="si-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-        <b>전략 가이드</b>
-        <span class="si-sum" id="siSum">—</span>
+        <span class="si-ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"/><path d="M15.4 8.6l-2 4.8-4.8 2 2-4.8z"/></svg>
+        </span>
+        <span class="si-txt">
+          <span class="si-title">전략 가이드<em>· 매수/손절/익절 기준</em></span>
+          <span class="si-sum" id="siSum">—</span>
+        </span>
+        <span class="si-badge">
+          <span class="si-b-open">펼치기</span><span class="si-b-close">접기</span>
+          <svg class="si-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9.5l6 6 6-6"/></svg>
+        </span>
       </button>
       <div class="si-body" id="siBody">
         <div class="pguide" id="presetGuide" aria-live="polite"></div>
@@ -7432,7 +7499,7 @@ var EDUFIG = (function () {
 
   var cache = new Map();
   var state = {
-    cur: 'NVDA', range: 128, btRange: 128, filter: 'all', preset: '', sort: 'mc', q: '', listQ: '',
+    cur: 'NVDA', range: 128, btRange: 128, filter: 'all', preset: '', sort: 'rec', q: '', listQ: '',
     show: { ma: true, ichi: true, bb: true, sig: true, rsi: true, macd: true, ew: true, w: true, sar: false, env: false, tri: false, div: true },
     maOn: { 5: true, 20: true, 60: true, 120: true, 240: true },
     simIdx: 0, tool: 'cursor', ewMode: 0, clean: false,
@@ -12256,7 +12323,16 @@ var EDUFIG = (function () {
       var siStart = false;
       try { siStart = localStorage.getItem('apex.side.info.v1') === '1'; } catch (e) {}
       siApply(siStart, false);
-      siT.onclick = function () { siApply(!siBox.classList.contains('open'), true); };
+      siT.onclick = function () {
+        var open = !siBox.classList.contains('open');
+        siApply(open, true);
+        if (!open) return;
+        /* 펼쳤을 때 내용이 사이드바 밑으로 잘리지 않게 — 본문은 맨 위부터, 바는 화면 안으로 */
+        var siB = $('#siBody');
+        if (siB) siB.scrollTop = 0;
+        try { siT.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
+        catch (e) { try { siT.scrollIntoView(); } catch (e2) {} }
+      };
     }
     $('#sortSel').onchange = function () { state.sort = this.value; renderScanner(); };
     $('#listSearch').oninput = function () { state.listQ = this.value; renderScanner(); };

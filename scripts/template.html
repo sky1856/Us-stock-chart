@@ -99,9 +99,17 @@
     <div class="scan-list" id="scanList"></div>
     <div class="side-info" id="sideInfo">
       <button class="si-head" id="siToggle" type="button" aria-expanded="false" aria-controls="siBody" title="지금 전략의 매수·손절·익절 기준과 프리셋 설명 펼치기/접기">
-        <svg class="si-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-        <b>전략 가이드</b>
-        <span class="si-sum" id="siSum">—</span>
+        <span class="si-ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"/><path d="M15.4 8.6l-2 4.8-4.8 2 2-4.8z"/></svg>
+        </span>
+        <span class="si-txt">
+          <span class="si-title">전략 가이드<em>· 매수/손절/익절 기준</em></span>
+          <span class="si-sum" id="siSum">—</span>
+        </span>
+        <span class="si-badge">
+          <span class="si-b-open">펼치기</span><span class="si-b-close">접기</span>
+          <svg class="si-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9.5l6 6 6-6"/></svg>
+        </span>
       </button>
       <div class="si-body" id="siBody">
         <div class="pguide" id="presetGuide" aria-live="polite"></div>

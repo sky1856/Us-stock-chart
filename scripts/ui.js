@@ -172,7 +172,7 @@
 
   var cache = new Map();
   var state = {
-    cur: 'NVDA', range: 128, btRange: 128, filter: 'all', preset: '', sort: 'mc', q: '', listQ: '',
+    cur: 'NVDA', range: 128, btRange: 128, filter: 'all', preset: '', sort: 'rec', q: '', listQ: '',
     show: { ma: true, ichi: true, bb: true, sig: true, rsi: true, macd: true, ew: true, w: true, sar: false, env: false, tri: false, div: true },
     maOn: { 5: true, 20: true, 60: true, 120: true, 240: true },
     simIdx: 0, tool: 'cursor', ewMode: 0, clean: false,
@@ -4996,7 +4996,16 @@
       var siStart = false;
       try { siStart = localStorage.getItem('apex.side.info.v1') === '1'; } catch (e) {}
       siApply(siStart, false);
-      siT.onclick = function () { siApply(!siBox.classList.contains('open'), true); };
+      siT.onclick = function () {
+        var open = !siBox.classList.contains('open');
+        siApply(open, true);
+        if (!open) return;
+        /* 펼쳤을 때 내용이 사이드바 밑으로 잘리지 않게 — 본문은 맨 위부터, 바는 화면 안으로 */
+        var siB = $('#siBody');
+        if (siB) siB.scrollTop = 0;
+        try { siT.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
+        catch (e) { try { siT.scrollIntoView(); } catch (e2) {} }
+      };
     }
     $('#sortSel').onchange = function () { state.sort = this.value; renderScanner(); };
     $('#listSearch').oninput = function () { state.listQ = this.value; renderScanner(); };
