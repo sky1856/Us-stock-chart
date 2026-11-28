@@ -6,8 +6,13 @@ update_data.py 의 parse_chart / build_series 를 그대로 써서 data.js 와 *
 
     python3 scripts/wf_extract.py
 
+    python3 scripts/wf_extract.py [--raw-dir /tmp/wf_raw11]
+
 출력: scripts/wf_src.js (window.WFRAW = {dates, series:{T:{off,o,h,l,c}}})
       — 저장소에 커밋하지 않는다(.gitignore). wf_build.js 의 입력일 뿐이다.
+
+--raw-dir 을 주면 그 디렉터리의 raw 로 만든다(기본 scripts/raw). 2015년부터 받은 raw 를
+넘기면 2017년 창도 250봉 웜업을 확보한다(10년 raw 는 2016-11-28 시작 → 2017 웜업 24봉).
 """
 import glob
 import json
@@ -21,7 +26,13 @@ import update_data as U  # noqa: E402
 
 
 def main():
-    files = sorted(glob.glob(os.path.join(HERE, 'raw', '*.json')))
+    raw_dir = None
+    for i, a in enumerate(sys.argv):
+        if a == '--raw-dir' and i + 1 < len(sys.argv):
+            raw_dir = os.path.abspath(sys.argv[i + 1])
+    if raw_dir:                        # 다른 raw 디렉터리(예: 2015년부터 받은 11년 raw)
+        U.RAW_DIR = raw_dir
+    files = sorted(glob.glob(os.path.join(raw_dir or U.RAW_DIR, '*.json')))
     rows_by_t = {}
     dates = set()
     for f in files:

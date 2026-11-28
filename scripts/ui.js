@@ -2152,7 +2152,7 @@
         '<span><b>손절 1회 충격</b> <b class="neg">−' + (stopImpact(cur) * 100).toFixed(1) + '%</b></span>' +
         '<span><b>MDD(최대 낙폭)</b> <b class="neg">' + mdd + '</b></span>';
       al.title = '지금 고른 투자방식(' + sl.label + ')의 계좌 규칙 한 줄 요약\n' +
-        '· 1종목 비중 ' + sl.weight + ' — 동일가중(리밸린싱 없음)\n' +
+        '· 1종목 비중 ' + sl.weight + ' — 동일가중(리밸런싱 없음)\n' +
         '· ' + slotSecCapText(cur) + ' — 시총순 우선으로 채웁니다\n' +
         '· 손절 1회 충격 −' + (stopImpact(cur) * 100).toFixed(1) + '% = 종목 손실률 ' + (stopLossPct() * 100).toFixed(1) + '% ÷ ' + sl.n + '슬롯\n' +
         '   ' + stopLossWhy() + '\n' +
@@ -2181,11 +2181,20 @@
      · 데이터 `window.WF` = `scripts/wf_build.py` 가 **엔진·계좌 엔진을 그대로 돌려** 만든 정적 결과
        (2017~2026 연도 + 2017~2021 표본외 + 2022 폭락장 + 2022~2026 최근 5년, QQQ·SPY 벤치 병기)
      · 2017~2021은 전략을 만든 기간이 아닌 **표본외**다 — 같은 규칙을 그대로 굴렸을 때의 성적.
-     · 지금 화면의 **상향·전략**을 따르고, 슬롯은 패널 안에서 따로 고를 수 있다(기본 = 화면 슬롯).
+     · 성향·전략·슬롯은 **카드 전용 상태**다 — 상단 검색기·차트·백테스트를 건드리지 않고
+       이 카드만 추세↔스윙 · 안정↔공격 · 집중1/분산3/분산10 으로 바꿔 10년 성적을 비교한다
+       (초기값만 화면의 현재 선택으로 시작 · ↺ 화면 기준 버튼으로 동기화).
      ============================================================ */
   var wfSlotSel = null;
+  /* 카드 안 전환(2026-11-28) — **성적표 전용 상태**다. 상단 검색기·차트·백테스트(성향·전략·투자방식)와
+     무관하게 이 카드만 추세↔스윙 · 안정↔공격 · 집중1/분산3/분산10 으로 바꿔 10년 성적을 비교한다
+     (초기값만 화면의 현재 선택으로 시작하고, 그 뒤 상단이 바뀌어도 카드는 따라가지 않는다 —
+      회장 확정 "이건 독립적인게 좋겠다"). ↺ 버튼은 지금 화면 기준으로 맞추는 명시적 동작이다. */
+  var wfStratSel = null, wfRiskSel = null, wfInited = false;
+  function wfStratKey() { return wfStratSel || stratKey(); }
+  function wfRiskProfile() { return wfRiskSel || riskProfile(); }
+  function wfKeyOf() { return wfRiskProfile() + '|' + wfStratKey(); }
   function wfData() { return (window.WF && window.WF.years && window.WF.years.length) ? window.WF : null; }
-  function wfKeyOf() { return riskProfile() + '|' + stratKey(); }
   function wfOf(win, sk) { var r = win && win.r ? win.r[wfKeyOf() + '|' + sk] : null; return r || null; }
   function wfSlotOn() { return wfSlotSel || slotMode(); }
   function wfPct(v, d) { return (v == null || !isFinite(v)) ? '—' : pct(v, d === undefined ? 1 : d); }
@@ -2193,27 +2202,49 @@
     var host = $('#wfCard');
     if (!host) return;
     var W = wfData();
-    var sub = $('#wfSub'), blocks = $('#wfBlocks'), tb = $('#wfTable'), foot = $('#wfFoot'), slotBox = $('#wfSlot');
+    var sub = $('#wfSub'), blocks = $('#wfBlocks'), tb = $('#wfTable'), foot = $('#wfFoot'), slotBox = $('#wfSlot'), modeBox = $('#wfMode');
     if (!W) {
       if (sub) sub.textContent = '표본외 데이터가 없습니다 — scripts/wf_build.py 로 생성합니다';
       if (blocks) blocks.innerHTML = '';
       if (tb) tb.innerHTML = '';
       return;
     }
-    var sk = wfSlotOn(), mo = stratKey();
+    /* 초기값만 화면의 현재 선택 — 이후로는 카드 전용 상태(독립) */
+    if (!wfInited) {
+      wfStratSel = stratKey(); wfRiskSel = riskProfile(); wfSlotSel = slotMode(); wfInited = true;
+    }
+    var sk = wfSlotOn(), mo = wfStratKey(), pf = wfRiskProfile();
     if (slotBox) {
       slotBox.innerHTML = SLOT_KEYS.map(function (k) {
         var on = k === sk;
         return '<button type="button" data-wfslot="' + k + '" class="' + (on ? 'on' : '') + '" aria-pressed="' + (on ? 'true' : 'false') +
-          ' title="' + ACCT_SLOTS[k].label + ' 기준 표본외·연도별 성과">' + ACCT_SLOTS[k].short + '</button>';
+          ' title="' + ACCT_SLOTS[k].label + ' 기준 표본외·연도별 성과 — 이 카드만 바뀝니다">' + ACCT_SLOTS[k].short + '</button>';
       }).join('');
     }
+    /* 추세형 ↔ 스윙형 · 안정 ↔ 공격 · 집중1/분산3/분산10 — 카드 전용 상태로 바로 바꿔 본다 */
+    if (modeBox) {
+      modeBox.innerHTML =
+        '<span class="wf-mg" role="group" aria-label="성적표 전략 — 추세형 · 스윙형">' +
+        [['trend', '📈 추세형'], ['swing', '⚡ 스윙형']].map(function (p) {
+          var on = p[0] === mo;
+          return '<button type="button" data-wfstrat="' + p[0] + '" class="' + (on ? 'on' : '') + '" aria-pressed="' + (on ? 'true' : 'false') +
+            '" title="성적표를 ' + p[1].slice(2) + ' 규칙의 10년 성과로 바꿉니다 — 위쪽 차트·백테스트는 그대로, 이 카드만 바뀝니다">' + p[1] + '</button>';
+        }).join('') + '</span>' +
+        '<span class="wf-mg" role="group" aria-label="성적표 성향 — 안정 · 공격">' +
+        [['safe', '🛡️ 안정'], ['aggr', '🔥 공격']].map(function (p) {
+          var on = p[0] === pf;
+          return '<button type="button" data-wfrisk="' + p[0] + '" class="' + (on ? 'on' : '') + '" aria-pressed="' + (on ? 'true' : 'false') +
+            '" title="성적표를 ' + p[1].slice(2) + '형 규칙으로 바꿉니다 — 위쪽 차트·백테스트는 그대로, 이 카드만 바뀝니다">' + p[1] + '</button>';
+        }).join('') + '</span>' +
+        '<button type="button" class="wf-mg-r" data-wfsync="1" title="이 성적표를 지금 화면 상단의 성향·전략·투자방식에 맞춥니다">↺ 화면 기준</button>';
+    }
     if (sub) {
-      sub.textContent = (riskAggr() ? '🔥 공격형' : '🛡️ 안정형') + ' · ' + (mo === 'swing' ? '⚡ 스윙형' : '📈 추세형') +
+      sub.textContent = (pf === 'aggr' ? '🔥 공격형' : '🛡️ 안정형') + ' · ' + (mo === 'swing' ? '⚡ 스윙형' : '📈 추세형') +
         ' · ' + ACCT_SLOTS[sk].label + ' · ' + W.meta.from + ' ~ ' + W.meta.to + ' · 웜스타트 ' + W.meta.warm + '봉';
       sub.title = '표본외: 2017~2021은 이 전략을 만든 기간이 아니므로 같은 규칙을 그대로 돌린 검증입니다.\n' +
         '각 해는 그 해 첫 거래일부터 앞 250봉으로 계좌를 미리 굴린 뒤 그 해만 측정합니다(웜스타트).\n' +
-        '벤치 QQQ·SPY는 계좌와 같은 진입 시점(창 첫날 시가)에서 출발합니다 — 배당 미포함 단순 보유.';
+        '벤치 QQQ·SPY는 계좌와 같은 진입 시점(창 첫날 시가)에서 출발합니다 — 배당 미포함 단순 보유.\n' +
+        '성향·전략·투자방식은 이 카드 전용입니다 — 위쪽 차트·백테스트를 바꾸지 않고 따로 비교할 수 있습니다(↺ 화면 기준으로 맞춤).';
     }
     /* 3블록 요약 */
     if (blocks) {
@@ -2237,8 +2268,12 @@
         var r = wfOf(y, sk), q = y.bench && y.bench.qqq, s = y.bench && y.bench.spy;
         var d = (r && q) ? (r.ret - q.ret) : null;
         var crash = y.y === '2022';
+        /* 웜스타트 봉 수를 행마다 정직하게 — 250봉에 못 미치는 해는 그 사실을 표기한다 */
+        var warm = (y.warm == null ? W.meta.warm : y.warm);
+        var thin = warm < W.meta.warm;
+        var wtag = thin ? '<i class="wf-warm" title="이 해는 앞에 쓸 거래일이 ' + warm + '봉뿐이라 워밍업이 채워지지 않았습니다 —짧은 구간만 운용된 값입니다">웜 ' + warm + '봉</i>' : '';
         return '<tr' + (crash ? ' class="crash"' : '') + '>' +
-          '<td class="wf-y">' + y.y + (crash ? '<i>폭락장</i>' : '') + '</td>' +
+          '<td class="wf-y">' + y.y + (crash ? '<i>폭락장</i>' : '') + wtag + '</td>' +
           '<td><b class="' + cls(r ? r.ret : 0) + '">' + (r ? wfPct(r.ret) : '—') + '</b></td>' +
           '<td class="neg">' + (r ? wfPct(r.mdd) : '—') + '</td>' +
           '<td>' + (q ? wfPct(q.ret) : '—') + '</td>' +
@@ -2247,6 +2282,13 @@
           '</tr>';
       }).join('');
       tb.innerHTML = head + '<tbody>' + rows + '</tbody>';
+      /* 폰에서 오른쪽 열(QQQ·SPY·QQQ 대비)이 화면 밖 — 넘치면 밀어 보라는 힌트를 붙인다 */
+      var hint = $('#wfHint'), wrap = tb.parentNode;
+      if (hint && wrap) {
+        var over = wrap.scrollWidth > wrap.clientWidth + 2;
+        hint.hidden = !over;
+        wrap.classList.toggle('over', over);
+      }
     }
     if (foot) {
       var wins = 0, n = 0, worst = null;
@@ -2272,13 +2314,20 @@
     var el = $('#acBench'); if (!el) return;
     var stress = acctStressOn();
     var b = qqqBench(btBars());
-    var tg = $('#acStress');
+    var tg = $('#acStress'), th = $('#acStressHint');
     if (tg) {
       tg.classList.toggle('on', stress);
       tg.setAttribute('aria-pressed', stress ? 'true' : 'false');
       tg.title = stress
         ? '스트레스 모드 ON — 편도 슬리피지 0.15%(왕복 0.3%) + 최대 노출일에 보유 전종목 −10% 갭(손절 미작동)을 넣었습니다. 다시 누르면 기본으로 돌아갑니다.'
         : '🛡️ 스트레스 테스트 켜기 — 보수적 슬리피지(왕복 0.3%) + 보유 전종목 −10% 갭(손절 미작동) 1회를 넣은 최악의 하루를 계산합니다';
+    }
+    /* 버튼 옆 1줄 설명 — 켜짐/꺼짐 상태가 글자로도 보이게 */
+    if (th) {
+      th.classList.toggle('on', stress);
+      th.textContent = stress
+        ? '켜짐 — 왕복 0.3% + −10% 갭하락 반영한 성과입니다'
+        : '악조건 버팀 시험 · 왕복 0.3% + −10% 갭하락';
     }
     if (!b) {
       el.innerHTML = '<span class="ab-k">QQQ 동일기간</span><span class="ab-v">데이터 없음</span>';
@@ -6375,7 +6424,8 @@
               best: opt && opt.best ? { rule: opt.best.rule, ret: opt.best.ret, period: opt.best.period, fair: opt.best.fair,
                 sharpe: opt.best.sharpe, mdd: opt.best.mdd, trades: opt.best.trades } : null,
               all: opt ? opt.all.map(function (r) { return { rule: r.rule, ko: r.ko, ret: r.ret, period: r.period, bars: r.bars,
-                fair: r.fair, sharpe: r.sharpe, mdd: r.mdd, trades: r.trades }; }) : null,
+                fair: r.fair, med: r.med, votes: r.votes, sharpe: r.sharpe, mdd: r.mdd, trades: r.trades,
+                wins: (r.wins || []).map(function (w) { return { bars: w.bars, tag: w.tag, ret: w.ret, closed: w.closed, fair: w.fair }; }) }; }) : null,
               reco: mhRecoOf(it), row: row ? row.innerText.replace(/\s+/g, ' ') : '' };
           }),
           sumBasis: (($('#mhSum') || {}).innerText || '').replace(/\s+/g, ' '),
@@ -6430,11 +6480,20 @@
     /* ---- 🛡️ 스트레스 테스트 토글 (슬리피지 + −10% 갭) ---- */
     var asg = $('#acStress');
     if (asg) asg.onclick = function () { acctToggleStress(); };
-    /* ---- 🔬 표본외 성적표 — 슬롯 선택·표 접기 ---- */
+    /* ---- 🔬 표본외 성적표 — 슬롯 선택·전략/성향 카드 전환·표 접기 (모두 카드 전용) ---- */
     var wfs = $('#wfSlot');
     if (wfs) wfs.onclick = function (e) {
       var b = e.target.closest('[data-wfslot]'); if (!b) return;
       wfSlotSel = b.getAttribute('data-wfslot'); renderWF();
+    };
+    var wfm = $('#wfMode');
+    if (wfm) wfm.onclick = function (e) {
+      var bs = e.target.closest('[data-wfstrat]'), br = e.target.closest('[data-wfrisk]'), by = e.target.closest('[data-wfsync]');
+      if (bs) wfStratSel = bs.getAttribute('data-wfstrat');
+      else if (br) wfRiskSel = br.getAttribute('data-wfrisk');
+      else if (by) { wfStratSel = stratKey(); wfRiskSel = riskProfile(); wfSlotSel = slotMode(); }
+      else return;
+      renderWF();                       /* 위쪽 차트·백테스트·스캐너는 건드리지 않는다 */
     };
     var wfo = $('#wfOpen');
     if (wfo) wfo.onclick = function () {
@@ -7315,23 +7374,24 @@
     var a = A[t];
     return (a && a.dates && a.close && a.close.length) ? a.dates[a.close.length - 1] : '';
   }
+  /* 한 창(bars)의 백테스트 — 성향·창마다 따로 돌린다.
+     ⚠️ 2026-11-28 P0 수정: 예전엔 `btBars() === bars` 이면 analyze() 의 `a.strategy` 를 그대로 썼는데,
+     `a.strategy` 는 **언제나 5년(1,255봉) 전 구간 결과**라 화면 기간이 6M(126봉)이면
+     "6M +412.5%"처럼 5Y 숫자가 6M 라벨로 표시됐다(40종목 중 12종목 1등이 뒤집힘).
+     이제 재사용은 **창 길이가 5년과 같고 성향도 안정형(analyze 기본값)일 때만** 하고,
+     나머지는 QE.strategyOf 로 그 창·성향을 실제로 돌린다. 캐시 키에도 창·성향을 넣는다. */
   function mhBacktestOf(t, rule, bars0) {
     var spec = MH_RULES[rule], a = A[t];
     if (!spec || spec.auto || !a || !a.series || !a.ind || !a.scoreSeries) return null;
     var bars = bars0 || MH_BARS[spec.strat] || 252;
-    var key = t + '|' + mhAsOf(t) + '|' + rule + '|' + bars;
+    var FULL = (QE.BT_BARS || 1255);                  /* analyze() 의 기본 창 = 5년 */
+    var key = t + '|' + mhAsOf(t) + '|' + rule + '|' + spec.profile + '|' + bars;
     if (key in mhBtCache) return mhBtCache[key];
     var out = null;
     try {
       var r = null, cur = a.strategy && a.strategy[spec.strat];
-      /* 화면 성향·같은 기간으로 analyze() 가 이미 돌린 결과가 있으면 그대로 쓴다 */
-      if (cur && cur.stats && cur.stats.totalReturn != null && spec.profile === riskProfile() && btBars() === bars) r = cur;
-      else {
-        var o = QE.riskOpts(spec.profile) || {};
-        o.bars = bars;                                   /* 추세 1Y · 스윙 1M/3M/6M — 전략 고유 기간 */
-        if (spec.strat === 'swing') r = QE.swingBacktest(a.series, a.ind, o, a.wsig);
-        else r = QE.backtest(a.series, a.ind, a.scoreSeries, o);
-      }
+      if (cur && cur.stats && cur.stats.totalReturn != null && bars === FULL && spec.profile === 'safe') r = cur;
+      else r = QE.strategyOf(a, spec.strat, bars, spec.profile);   /* 창·성향을 그대로 넘긴 실제 백테스트 */
       if (r && r.stats) out = { ret: r.stats.totalReturn, cagr: r.stats.cagr, sharpe: r.stats.sharpe,
         mdd: r.stats.mdd, win: r.stats.winRate, trades: r.stats.trades, bars: bars, period: MH_WIN_TAG[bars] || MH_PERIOD[spec.strat],
         fair: (r.stats.cagr != null && isFinite(r.stats.cagr)) ? r.stats.cagr : mhCagr(r.stats.totalReturn, bars) };
@@ -7351,11 +7411,15 @@
     if (!wins.length) return null;
     var prim = wins[0], closed = 0;
     wins.forEach(function (w) { closed += w.closed; });
-    /* 1등 잣대 = 세 창 연환산의 **중앙값**(창을 가리지 않는다 — 표본이 없는 창도 한 표).
-       다만 청산 표본이 전혀 없는 조합은 1등 후보에서 뺀다. */
-    var med = mhMedian(wins.map(function (w) { return w.fair; }));
+    /* 1등 잣대 = 창들 연환산의 **중앙값**. 다만 **청산 표본이 0건인 창은 투표에서 뺀다**
+       (2026-11-28 P2) — 미실현 평가만 있는 창은 '이 기간 실제로 매매한 성과'가 아니라서
+       1M·3M 이 0건이면 6M 한 창이 1등을 혼자 정하게 된다. 모든 창이 0건이면(신규 상장 등)
+       종전처럼 전 창으로 중앙값을 내고 '표본 부족'으로만 표시한다. */
+    var votes = wins.filter(function (w) { return w.closed >= MH_SAMPLE_MIN; });
+    if (!votes.length) votes = wins;
+    var med = mhMedian(votes.map(function (w) { return w.fair; }));
     return { rule: rule, ko: spec.tag, strat: spec.strat,
-      wins: wins, med: med, closed: closed, samples: wins.filter(function (w) { return w.closed >= MH_SAMPLE_MIN; }).length,
+      wins: wins, med: med, votes: votes.length, closed: closed, samples: votes.length,
       ret: prim.ret, period: prim.tag, bars: prim.bars, fair: prim.fair,
       sharpe: prim.sharpe, mdd: prim.mdd, win: prim.win, trades: prim.closed,
       noSample: closed < MH_SAMPLE_MIN };
@@ -7670,7 +7734,7 @@
       opt.all.forEach(function (x) { if (x.rule === rule) row = x; });
       if (!row) return null;
       var short = row.closed < MH_SAMPLE_MIN;
-      return '<i class="mh-samp' + (short ? ' short' : '') + '" title="1등 판정에 쓰인 청산 거래 수 — 21·63·126일 창의 합계(청산 0건 조합은 1등 후보에서 제외)">' +
+      return '<i class="mh-samp' + (short ? ' short' : '') + '" title="1등 판정에 쓰인 청산 거래 수 — 21·63·126일 창의 합계(청산 0건 창은 중앙값 투표에서 제외 · 청산 0건 조합은 1등 후보에서 제외)">' +
         (short ? '표본 부족' : ('표본 ' + row.closed + '건(청산)')) + '</i>';
     }
     if (r.pend) { cls2 = 'pend'; txt = '⏳ 4조합 계산 중…'; tip = '4조합(안정·공격 × 추세·스윙)을 돌리는 중입니다 — 추세 1Y · 스윙 1M/3M/6M 중앙값'; }
@@ -7681,7 +7745,7 @@
       txt = '⚡ 자동 → ' + b.ko + ' (' + (b.period || '1Y') + ' ' + pct(b.ret, 1) + ' · 중앙 연 ' + mhFairPct(b.med == null ? b.fair : b.med, 0) + ')';
       tip = '4조합을 연환산(CAGR)으로 공정 비교한 1등 — ' + b.ko + ' · ' + (b.period || '1Y') + ' ' + pct(b.ret, 2) +
         ' · 중앙 연 ' + mhFairPct(b.med == null ? b.fair : b.med, 1) +
-        ' (스윙은 1M·3M·6M 세 창의 중앙값 · 청산 표본 ' + (b.closed == null ? '—' : b.closed) + '건)' +
+        ' (스윙은 1M·3M·6M 세 창의 중앙값 — 청산 0건 창은 투표 제외 · 청산 표본 ' + (b.closed == null ? '—' : b.closed) + '건)',
         (b.short ? ' · ⚠️ 청산 표본이 0건이라 1등 판정이 미실현 평가에만 근거합니다(표본 부족)' : '') +
         ' · 비교 근거: ' + mhFairTable(it.t);
       samp = sampOf(b.best && b.best.best ? b.best.best.rule : cur);

@@ -72,10 +72,14 @@ window.__wfCompute = function () {
         var rows = [];
         UNIV[md].forEach(function (x) {
           var s0 = S[x.t]; if (!s0) return;
-          var co = s0.o.slice(0, i1 + 1), ch = s0.h.slice(0, i1 + 1),
-              cl = s0.l.slice(0, i1 + 1), cc = s0.c.slice(0, i1 + 1);
+          /* ⚠️ 시리즈는 off(상장 전 결측)에서 시작한다 — 창 끝을 **off 기준 인덱스**로 잘라야
+             창 밖 미래 봉이 들어오지 않는다(2026-11-28 수정: i1+1 그대로 쓰면 off>0 종목에서
+             거래 인덱스가 off 만큼 밀려 계좌 체결이 어긋났다 — 2015년 달력을 쓰면서 드러남). */
+          var end = i1 + 1 - (s0.off || 0);
+          var co = s0.o.slice(0, end), ch = s0.h.slice(0, end),
+              cl = s0.l.slice(0, end), cc = s0.c.slice(0, end);
           var cv = new Array(cc.length); for (var z = 0; z < cv.length; z++) cv[z] = 0;
-          var ser = { d: D.slice(0, i1 + 1), o: co, h: ch, l: cl, c: cc, v: cv };
+          var ser = { d: D.slice(s0.off || 0, i1 + 1), o: co, h: ch, l: cl, c: cc, v: cv };
           var ind, sc, ws;
           try { ind = QE.computeIndicators(ser); sc = QE.scoreSeries(ser, ind); ws = QE.wBottom(ser); }
           catch (e) { window.__wfErr.push('IND ' + x.t + ':' + e.message); return; }
@@ -109,7 +113,7 @@ window.__wfCompute = function () {
     });
     var bq = window.QE_ACCT.bench(Q.c, Q.o, i0, i1 + 1);
     var bs = window.QE_ACCT.bench(Y.c, Y.o, i0, i1 + 1);
-    return { i0: i0, i1: i1, bars: bars, from: D[i0], to: D[i1],
+    return { i0: i0, i1: i1, bars: bars, warm: warm, from: D[i0], to: D[i1],
       bench: { qqq: bq ? { ret: bq.ret, mdd: bq.mdd } : null,
                spy: bs ? { ret: bs.ret, mdd: bs.mdd } : null },
       r: rot };

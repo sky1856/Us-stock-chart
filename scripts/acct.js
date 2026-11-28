@@ -61,7 +61,13 @@
       }
     }
     var cash = 1, pos = [], curve = [], log = [], fills = [];
+    /* 거래·승률·평균보유는 **측정 창(g >= start) 안에서 청산된 건만** 센다 (2026-11-28 수정).
+       웜스타트 250봉은 창 시작 시점에 이미 굴러가는 계좌를 만들기 위한 준비 구간이라,
+       그 구간 청산까지 세면 카드의 '웜스타트 250봉 후 이 기간만 측정' 문구와 숫자가 어긋났다
+       (6M 거래 77건 = 창 내부 33건 + 웜 44건). 수익·MDD 는 처음부터 창 기준이었으므로
+       이제 카드의 모든 숫자가 같은 구간을 가리킨다. */
     var wins = 0, closed = 0, entries = 0, holdSum = 0, dayHold = 0, secHold = {};
+    var warmClosed = 0;               /* 웜 구간 청산 건수 — 참고값(화면 표시에는 쓰지 않는다) */
     var baseEq = null, shockIdx = -1, shockExp = 0;
     function pxAt(r2, g) { var ix = g - (r2.off || 0); return (ix >= 0 && ix < r2.c.length) ? r2.c[ix] : null; }
     function equityAt(g) {
@@ -72,7 +78,7 @@
       }
       return v;
     }
-    for (var g = simStart; g < G; g++) {
+    for (var g = simStart; g < G; g++) {   /* simStart = 창 앞 웜스타트부터, 측정은 g >= start */
       /* 1) 시가 청산 먼저 */
       var xs = evX[g];
       if (xs) for (k = 0; k < xs.length; k++) {
@@ -86,8 +92,10 @@
         cash += out;
         log.push({ t: pp.row.t, eG: pp.eG, xG: g, ret: out / pp.cost - 1, w: pp.shares * pp.entry * (1 + FEE) });
         fills.push({ side: '매도', g: g, t: pp.row.t, px: trade ? trade.xP : pp.entry, ret: out / pp.cost - 1, w: pp.posW });
-        closed++; holdSum += (trade ? trade.hold : 0);
-        if (out - pp.cost > 0) wins++;
+        if (g >= start) {                       /* 창 안에서 청산된 건만 거래·승률로 */
+          closed++; holdSum += (trade ? trade.hold : 0);
+          if (out - pp.cost > 0) wins++;
+        } else warmClosed++;                    /* 웜스타트 구간 청산 — 측정 제외 */
         secHold[pp.sec] = Math.max(0, (secHold[pp.sec] || 0) - 1);
       }
       /* 2) 시가 신규 매수 — 빈 슬롯 · 섹터 캡 · 패닉 바스켓 */
@@ -111,7 +119,7 @@
           fills.push({ side: '매수', g: g, t: er.row.t, px: er.t.eP, w: tw });
           secHold[er.row.sec] = (secHold[er.row.sec] || 0) + 1;
           left -= notional;
-          entries++;
+          if (g >= start) entries++;              /* 창 안 신규 진입만 */
         }
       }
       /* 3) 종가 평가 → 현금 이자 */
@@ -166,6 +174,7 @@
       open: open, openPnl: openRet, endSec: endSec, log: log,
       holds: holds, cashW: cashW, fills: fills.slice(-16),
       stress: stress, warm: warm, base: base, start: start, G: G,
+      warmClosed: warmClosed,
       shockExp: shockExp, shockIdx: shockIdx,
       rowN: rows.length,
       curve: curve

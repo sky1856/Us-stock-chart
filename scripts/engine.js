@@ -2768,6 +2768,17 @@
      지표·점수·W 신호는 전체 이력으로 이미 계산된 것을 그대로 쓰고,
      거래 시작 인덱스(first)만 기간에 맞춰 자른다 — 미래참조 없음.
      ============================================================ */
+  /* 창 하나의 전략 결과 — 성향(프로필)·창 길이(bars)를 그대로 받아 백테스트한다.
+     analyze() 가 만든 a.strategy 는 **언제나 화면 기본 창(5년 1,255봉) 결과**이므로,
+     다른 창(6M 126봉 등)을 그 값으로 대신하면 라벨과 숫자가 갈라진다(2026-11-28 P0).
+     ui.js 의 실전보유 4조합·표본외 생성기가 모두 이 함수를 쓴다. */
+  function strategyOf(a, strat, bars, profile) {
+    var o = riskOpts(profile) || {};
+    o.bars = bars;
+    if (strat === 'swing') return swingBacktest(a.series, a.ind, o, a.wsig);
+    return backtestRun(a.series, a.ind, a.scoreSeries, o);
+  }
+
   function strategyWindow(series, ind, sc, wsig, bars, opts) {
     var o = opts || {};
     function withBars(src) { var r = {}, k; for (k in src) r[k] = src[k]; r.bars = bars; return r; }
@@ -2910,7 +2921,7 @@
     backtest: backtestRun, analyze: analyze, labelOf: labelOf, LABELS: LABELS, explain: explain,
     swingBacktest: swingBacktest, swingStatus: swingStatus, swingParams: SWING_P,
     wBottom: wSignals, wAliveAt: wAliveAt, wScan: wScan, wParams: W_P,
-    strategyWindow: strategyWindow, BT_PERIODS: BT_PERIODS, BT_BARS: BT_BARS,
+    strategyWindow: strategyWindow, strategyOf: strategyOf, BT_PERIODS: BT_PERIODS, BT_BARS: BT_BARS,
     trendStatus: trendStatus, trendEntryAt: trendEntryAt, trendParams: TREND_P,
     swingEntryAt: swingEntryAt, marketRegimeMap: marketRegimeMap, marketStageText: marketStageText,
     trendTemplate: trendTemplate, vcpSetup: vcpSetup, vcpScan: vcpScan, VCP_P: VCP_P,

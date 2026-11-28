@@ -33,6 +33,74 @@ def const_num(src, key, default=None):
     return float(m.group(1)) if m else default
 
 
+JS_MH = r"""
+globalThis.window = globalThis;
+var M = window.MARKET, out = { mh: [], acct: null };
+['NVDA', 'LLY', 'GOOGL'].forEach(function (t) {
+  var si = M.series[t]; if (!si) return;
+  var ser = { d: M.dates.slice(si.off), o: si.o, h: si.h, l: si.l, c: si.c, v: si.v };
+  var ind = QE.computeIndicators(ser), sc = QE.scoreSeries(ser, ind), ws = QE.wBottom(ser);
+  var a = { series: ser, ind: ind, scoreSeries: sc, wsig: ws };
+  var o1 = QE.riskOpts('safe'); o1.bars = 126;
+  var o2 = QE.riskOpts('safe'); o2.bars = 126;
+  var s6 = QE.strategyOf(a, 'swing', 126, 'safe'), s5 = QE.strategyOf(a, 'swing', 1255, 'safe');
+  var t6 = QE.strategyOf(a, 'trend', 126, 'safe'), t5 = QE.strategyOf(a, 'trend', 1255, 'safe');
+  out.mh.push({ t: t, s6: s6.stats.totalReturn, s5: s5.stats.totalReturn,
+    d6: QE.swingBacktest(ser, ind, o1, ws).stats.totalReturn,
+    t6: t6.stats.totalReturn, t5: t5.stats.totalReturn,
+    dt6: QE.backtest(ser, ind, sc, o2).stats.totalReturn });
+});
+var c = []; for (var i = 0; i < 100; i++) c.push(100 + i * 0.1);
+var rows = [{ t: 'X', rank: 1, sec: 'a', off: 0, c: c, trades: [
+  { eG: 25, xG: 35, eP: 100, xP: 101, hold: 10, w: 1 },
+  { eG: 70, xG: 80, eP: 100, xP: 101, hold: 10, w: 1 }] }];
+var ar = QE_ACCT.run(rows, { n: 1, cap: 0 }, { bars: 40, G: 100, warm: 40, dates: null, panic: null });
+out.acct = { closed: ar.closed, warmClosed: ar.warmClosed, entries: ar.entries, win: ar.win };
+JSON.stringify(out);
+"""
+
+
+def js_invariants(eng, acct, data):
+    """수치 불변규칙 — 엔진·계좌 엔진을 실제로 돌려 확인한다(quickjs).
+
+    · 실전보유 6M 창이 5Y 와 다르고, **직접 돌린 126봉 백테스트와 정확히 같다**
+    · 계좌 거래·승률은 웜스타트 구간 청산을 세지 않는다
+    quickjs 가 없으면(다른 환경) 이 항목은 건너뛴다 — 구조 검사는 위에서 따로 한다.
+    """
+    try:
+        import quickjs
+    except Exception:
+        print('  skip  수치 불변규칙 (quickjs 없음 — JS 엔진 실행 불가)')
+        return []
+    import json
+    if not data:
+        return [('수치 불변규칙 — data.js 필요', False, 'scripts/data.js 가 없습니다')]
+    try:
+        ctx = quickjs.Context()
+        ctx.eval('globalThis.window = globalThis;')
+        ctx.eval(eng)
+        ctx.eval(acct)
+        ctx.eval(data)
+        res = json.loads(ctx.eval(JS_MH))
+    except Exception as e:  # 엔진이 깨졌거나 문법 오류
+        return [('수치 불변규칙 실행', False, str(e)[:200])]
+    out = []
+    mh = res.get('mh') or []
+    need = max(2, (len(mh) + 1) // 2)
+    diff = [x for x in mh if abs(x['s6'] - x['s5']) > 0.02 and abs(x['t6'] - x['t5']) > 0.02]
+    same6 = all(abs(x['s6'] - x['d6']) < 1e-9 and abs(x['t6'] - x['dt6']) < 1e-9 for x in mh)
+    out.append(('실전보유 6M 창 ≠ 5Y', len(diff) >= need,
+                '%d/%d 종목에서 다름 (예 NVDA 스윙 6M %.3f vs 5Y %.3f)' %
+                (len(diff), len(mh), mh[0]['s6'], mh[0]['s5']) if mh else '데이터 없음'))
+    out.append(('실전보유 6M = 실제 126봉 백테스트', same6 and bool(mh),
+                'strategyOf(126) 가 swingBacktest/backtest(bars=126) 와 소수점까지 같아야 한다'))
+    a = res.get('acct') or {}
+    out.append(('계좌 거래·승률 = 창 내부만', a.get('closed') == 1 and a.get('warmClosed') == 1 and a.get('entries') == 1,
+                '웜 1건 + 창 1건을 넣었을 때 closed=%s warmClosed=%s entries=%s (기대 1/1/1)' %
+                (a.get('closed'), a.get('warmClosed'), a.get('entries'))))
+    return out
+
+
 def main():
     quiet = '--quiet' in sys.argv
     arch = read(os.path.join(ROOT, 'ARCHITECTURE.md'))
@@ -117,6 +185,35 @@ def main():
             check('표본외 블록 %s' % k, k in wf)
         check('표본외 벤치 QQQ·SPY', '"qqq"' in wf and '"spy"' in wf)
         check('표본외 슬롯 3종', wf.count('"conc1"') == 0 and 'safe|trend|conc1' in wf)
+
+    # ---------- 7. 실전보유 창 정합(P0 · 2026-11-28) ----------
+    check('MH 창 재사용은 5Y(1,255봉) 한정',
+          "bars === FULL && spec.profile === 'safe'" in ui and 'FULL = (QE.BT_BARS || 1255)' in ui,
+          'a.strategy 는 언제나 5Y 전 구간 결과 — 6M(126) 라벨에 5Y 숫자가 다시 붙으면 안 된다')
+    check('MH 캐시 키에 창·성향 포함',
+          re.search(r"var key = t \+ '\|' \+ mhAsOf\(t\) \+ '\|' \+ rule \+ '\|' \+ spec\.profile \+ '\|' \+ bars", ui) is not None)
+    check('엔진 단일 창함수 strategyOf', 'function strategyOf(a, strat, bars, profile)' in eng and 'strategyOf: strategyOf' in eng,
+          'ui.js·wf 생성기가 같은 함수로 창을 돌린다')
+    check('계좌 거래·승률은 창 내부만', 'if (g >= start) {' in acct and 'warmClosed' in acct,
+          '웜스타트 250봉 청산이 거래·승률·평균보유에 섬이면 안 된다')
+    check('중앙값 투표에서 청산 0건 창 제외', 'var votes = wins.filter(function (w) { return w.closed >= MH_SAMPLE_MIN; });' in ui)
+    numeric = js_invariants(eng, acct, data)
+    for nm, ok, det in numeric:
+        check(nm, ok, det)
+
+    # ---------- 8. 표본외 웜업 · 카드 전환 (2026-11-28) ----------
+    if wf:
+        wms = re.findall(r'"warm":(\d+)', wf)
+        check('표본외 모든 창 웜업 250봉', bool(wms) and all(int(x) >= 250 for x in wms), str(sorted(set(wms))))
+        check('표본외 데이터 시작 ≤ 2015', bool(re.search(r'"from":"20(1[0-5])-', wf)),
+              '2017년 창이 250봉 워밍업을 채우려면 2015년부터 필요하다')
+    check('성적표 카드 전환 칩(추세·스윙·성향)',
+          'id="wfMode"' in tpl and 'data-wfstrat' in ui and 'data-wfrisk' in ui and 'data-wfsync' in ui,
+          '#wfCard 안에서 추세↔스윙 · 안정↔공격을 바꿔 10년 성적을 비교')
+    check('성적표는 카드 전용 상태(독립)', 'wfInited' in ui and 'wfStratSel = stratKey(); wfRiskSel = riskProfile();' in ui,
+          '상단 성향·전략을 바꾸면 위 화면만 바뀌고 이 카드는 그대로여야 한다')
+    check('모바일 성적표 가로 스크롤 힌트', 'id="wfHint"' in tpl and 'wfHint' in ui and "classList.toggle('over', over)" in ui)
+    check('스트레스 버튼 옆 1줄 설명', 'id="acStressHint"' in tpl and 'acStressHint' in ui and '악조건 버팀 시험' in tpl)
 
     if not quiet:
         for n, d in PASS:
