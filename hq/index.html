@@ -82,7 +82,7 @@ body{
 .beta-top b{font-size:21px; letter-spacing:-.02em; font-variant-numeric:tabular-nums;
   background:linear-gradient(180deg,#FFE7B4,#E7A83E); -webkit-background-clip:text; background-clip:text; color:transparent}
 .meter{height:6px; border-radius:999px; background:rgba(255,255,255,.08); overflow:hidden}
-.meter i{display:block; height:100%; width:81%; border-radius:999px; background:linear-gradient(90deg,#E2A23F,#F9D68B); box-shadow:0 0 12px rgba(246,205,122,.55)}
+.meter i{display:block; height:100%; width:95%; border-radius:999px; background:linear-gradient(90deg,#E2A23F,#F9D68B); box-shadow:0 0 12px rgba(246,205,122,.55)}
 
 .org{border-radius:18px; background:var(--glass); border:1px solid var(--line); padding:10px; display:flex; flex-direction:column; gap:3px; box-shadow:var(--shadow)}
 .org-head{display:flex; justify-content:space-between; align-items:center; font-size:10.5px; letter-spacing:.10em; color:var(--muted); padding:2px 5px 5px}
@@ -249,6 +249,15 @@ body{
   border:1px solid rgba(146,190,255,.2)}
 .crew-h,.office-h{display:flex; align-items:center; gap:6px; font-size:9.5px; font-weight:800; color:#CBE7FF; margin-bottom:6px}
 .crew-h em,.office-h em{font-style:normal; font-size:8.5px; font-weight:600; color:#8FA6C0; margin-left:auto}
+.crew-guide,.furn-guide{display:flex; flex-wrap:wrap; gap:4px 6px; margin:0 0 7px; padding:6px 7px; border-radius:9px;
+  background:rgba(99,200,255,.05); border:1px solid rgba(99,200,255,.16)}
+.furn-guide{background:rgba(246,205,122,.05); border-color:rgba(246,205,122,.2)}
+.crew-guide b,.furn-guide b{font-size:8.5px; font-weight:800; color:#9FD8FF; margin-right:2px}
+.furn-guide b{color:#FFD9A6}
+.crew-guide span,.furn-guide span{font-size:8.5px; font-weight:700; color:#BCD3E8; background:rgba(255,255,255,.05);
+  border:1px solid rgba(146,190,255,.18); border-radius:99px; padding:2px 6px; white-space:nowrap}
+.crew-guide span.on{color:#03121F; background:linear-gradient(180deg,#A8E8FF,#4FB4EC); border-color:transparent}
+.furn-guide span b{color:inherit; font-size:8.5px}
 .crew-c{display:flex; align-items:center; gap:6px; padding:4px 0; border-bottom:1px solid rgba(255,255,255,.05)}
 .crew-c:last-of-type{border-bottom:0}
 .crew-em{flex:0 0 auto; width:26px; height:26px; border-radius:50%; overflow:hidden; display:grid; place-items:center;
@@ -579,7 +588,7 @@ body.office-alt .furn-toggle{display:inline-flex}
 .lg-name{font-size:15px; font-weight:800; color:#EAF4FF; letter-spacing:-.01em}
 .lg-tip{font-size:10px; color:#7F94AC; text-align:center; line-height:1.55; max-width:216px}
 .lg-form{min-width:0}
-.lg-fields{display:flex; gap:8px; margin-bottom:4px}
+.lg-fields{display:flex; gap:8px; margin-bottom:4px; flex-wrap:wrap}
 .lg-fields input{flex:1; min-width:0; font:inherit; font-size:13px; color:var(--ink); background:rgba(255,255,255,.05);
   border:1px solid var(--line); border-radius:11px; padding:10px 11px; outline:none}
 .lg-fields input:focus{border-color:rgba(99,200,255,.6); box-shadow:0 0 0 3px rgba(99,200,255,.12)}
@@ -749,6 +758,18 @@ body.office-alt .furn-toggle{display:inline-flex}
   color:#CFE4FF; background:rgba(99,200,255,.10); border:1px solid rgba(99,200,255,.3); cursor:pointer; place-items:center}
 .sidembtn:hover{background:rgba(99,200,255,.2)}
 body.mode3d .sidembtn{display:grid}
+/* ── 참여자 패널 닫기 — 패널이 떠 있을 때(3D overlay / 모바일 drawer) 상단에 항상 보인다 ── */
+.side-head{display:none; align-items:center; justify-content:space-between; gap:8px; margin:0 0 2px}
+body.side-open .side-head{display:flex}
+.side-head-t{font-size:10px; font-weight:800; letter-spacing:.12em; color:#9FB6CC}
+.side-close{display:inline-flex; align-items:center; gap:5px; height:30px; padding:0 11px; border-radius:9px; cursor:pointer;
+  font:inherit; font-size:11.5px; font-weight:800; line-height:1; color:#FFE9B4;
+  background:linear-gradient(180deg, rgba(64,44,14,.72), rgba(28,18,6,.82)); border:1px solid rgba(246,205,122,.5);
+  box-shadow:0 8px 18px -14px #000, inset 0 1px 0 rgba(255,255,255,.1); transition:.15s}
+.side-close:hover{color:var(--gold-ink); background:linear-gradient(180deg,#F9D98F,#DFA23C); border-color:transparent}
+.side-close:focus-visible{outline:2px solid #63C8FF; outline-offset:2px}
+.side-scrim{display:none; position:fixed; inset:0; z-index:119; background:rgba(2,6,12,.58);
+  -webkit-backdrop-filter:blur(1.5px); backdrop-filter:blur(1.5px)}
 @media (min-width:901px){
   body.mode3d .app{grid-template-columns:minmax(0,1fr)}
   body.mode3d .sidebar{display:none}
@@ -758,7 +779,16 @@ body.mode3d .sidembtn{display:grid}
     box-shadow:0 40px 110px -40px #000, inset 0 1px 0 rgba(255,255,255,.06)}
   body.mode3d.side-open .brand, body.mode3d.side-open .hq, body.mode3d.side-open .org{background:rgba(255,255,255,.02)}
 }
-@media (max-width:900px){ body.mode3d .sidembtn{display:none} }
+@media (max-width:900px){
+  /* 모바일·태블릿 — ≡(참석자 독 왼쪽)로 열고 ✕ 닫기·바깥 탭으로 닫는 좌측 서랍 */
+  body.side-open .sidebar{display:flex; position:fixed; left:0; top:0; bottom:0; width:min(88vw,356px); z-index:120;
+    overflow-y:auto; padding:14px 12px calc(16px + env(safe-area-inset-bottom)); border-radius:0 18px 18px 0;
+    background:linear-gradient(180deg, rgba(11,23,40,.992), rgba(5,12,22,1)); border-right:1px solid rgba(146,190,255,.26);
+    box-shadow:0 40px 110px -40px #000, inset 0 1px 0 rgba(255,255,255,.06)}
+  body.side-open .side-scrim{display:block}
+  .side-close{height:34px; padding:0 13px; font-size:12.5px}
+  .side-head-t{font-size:10.5px}
+}
 .room-head{grid-area:head}
 .pinned{grid-area:pin}
 .filters{grid-area:filt}
@@ -896,7 +926,14 @@ body.mode3d .sidembtn{display:grid}
 .seat.guest .pod-bust .pnm{margin-top:-2px; font-size:8.5px; letter-spacing:.03em; padding:1px 7px}
 .seat.guest.flash .cfig{filter:drop-shadow(0 0 15px rgba(190,220,255,.55)) drop-shadow(0 9px 14px rgba(0,0,0,.6))}
 /* ── 회장 상석 — 가죽의자에 앉은 실루엣 / 착석 인물 (동그라미·링 없음) ── */
-.seat.boss .pod.pod-chair{transform:translate(-50%,-100%) translateY(7px) translateZ(34px)}
+/* 공통 `bob` 키프레임은 translate(-50%,-50%) 를 그대로 쓰기 때문에 상석 전용 규칙이 덮였다
+   → 머리가 의자 등받이 상단에 오도록 상석 전용 키프레임(bossBob)으로 따로 띄운다. */
+.seat.boss .pod.pod-chair{--boss-lift:22px; animation:bossBob 7.2s ease-in-out infinite;
+  transform:translate(-50%,-100%) translateY(var(--boss-lift)) translateZ(34px)}
+@keyframes bossBob{
+  0%,100%{transform:translate(-50%,-100%) translateY(var(--boss-lift)) translateZ(34px)}
+  50%{transform:translate(-50%,-100%) translateY(calc(var(--boss-lift) - 3px)) translateZ(34px)}
+}
 .pod-chair .cfig{position:relative; width:66px; height:66px;
   filter:drop-shadow(0 16px 20px rgba(0,0,0,.66));
   -webkit-mask-image:linear-gradient(180deg,#000 0%,#000 80%,rgba(0,0,0,.5) 92%,rgba(0,0,0,0) 100%);
@@ -1307,13 +1344,13 @@ body.mode3d .sidembtn{display:grid}
    말풍선에서 잘린 긴 답변도 한 글자도 자르지 않고 그대로 읽힌다. */
 @media (min-width:901px){
   /* 사진 바깥(스테이지 아래·입력창 위) 1~2줄 슬림 바 — 명패를 가리지 않는다 */
-  .room.is3d .stagewrap{margin-bottom:46px}
+  .room.is3d .stagewrap{margin-bottom:90px}
   .room.is3d .bstage{display:block; position:absolute; left:0; right:0; bottom:calc(var(--comp-h,126px) - 26px);
-    height:46px; max-height:46px; margin:0; padding:0 18px; z-index:6; pointer-events:none;
+    height:90px; max-height:90px; margin:0; padding:0 18px; z-index:6; pointer-events:none;
     background:none; min-width:0; box-sizing:border-box}
   .room.is3d .bstage .bs-prog, .room.is3d .bstage .bs-dock, .room.is3d .bstage .bs-live{display:none}
   .room.is3d .bstage .bs-now{display:flex; align-items:flex-start; gap:10px; min-width:0; pointer-events:auto;
-    padding:6px 12px 7px; border-radius:11px; max-height:44px; overflow-y:auto; overscroll-behavior:contain;
+    padding:6px 12px 7px; border-radius:11px; max-height:88px; overflow-y:auto; overscroll-behavior:contain;
     background:linear-gradient(180deg, rgba(9,20,34,.92), rgba(4,10,18,.95));
     border:1px solid rgba(146,190,255,.26);
     box-shadow:0 22px 46px -30px #000, inset 0 1px 0 rgba(255,255,255,.07);
@@ -1354,6 +1391,11 @@ body.mode3d .sidembtn{display:grid}
     color:#EAF4FF; background:rgba(3,8,16,.74); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .bs-dock button.on{border-color:rgba(246,205,122,.85); box-shadow:0 0 0 2px rgba(246,205,122,.3)}
   .bs-dock button.guest{border-color:rgba(169,139,255,.6)}
+  /* 참석자 패널(≡) — 독 맨 앞에서 좌측 서랍을 연다 */
+  .bs-dock button.bs-side{display:grid; place-items:center; font:inherit; font-size:17px; line-height:1; color:#D6EEFF;
+    background:linear-gradient(180deg, rgba(18,42,68,.96), rgba(7,18,31,.99)); border-color:rgba(99,200,255,.52);
+    box-shadow:0 8px 18px -14px #000, inset 0 1px 0 rgba(255,255,255,.08)}
+  .bs-dock button.bs-side:hover{border-color:rgba(99,200,255,.85)}
   /* 지금 발언 — 한 줄 말줄임 대신 이름줄 + 본문 2줄로 넉넉하게 */
   .bs-now{display:flex; align-items:flex-start; gap:8px; min-width:0; pointer-events:auto;
     padding:7px 9px 8px; border-radius:12px;
@@ -1369,7 +1411,7 @@ body.mode3d .sidembtn{display:grid}
   /* 말줄임 없이 전체 글 — 아주 길면 컴팩트 스크롤 */
   .bs-now .tx span{display:block; overflow:visible; white-space:normal; word-break:keep-all; overflow-wrap:anywhere;
     margin-top:2px; color:#EAF3FC; text-shadow:0 1px 2px rgba(0,0,0,.55)}
-  .bs-now{max-height:min(40vh,330px); overflow-y:auto; overscroll-behavior:contain}
+  .bs-now{max-height:86px; overflow-y:auto; overscroll-behavior:contain}   /* 지금 발언 — 최대 3줄(넘치면 안에서 스크롤) */
   .card .cmsg{font-size:11.2px; line-height:1.42; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden}
   .card .cwho{font-size:9.6px}
   /* 모바일 말풍선은 사진(16:9) 안에 2개가 함께 떠야 하므로 한 단계 콤팩트하게 */
@@ -1384,7 +1426,7 @@ body.mode3d .sidembtn{display:grid}
   .room.is3d .bstage{margin-top:0; flex:1 1 auto; min-height:0; display:flex; flex-direction:column;
     justify-content:space-between; gap:8px; padding:8px 12px calc(6px + env(safe-area-inset-bottom));
     background:linear-gradient(180deg, rgba(4,10,19,.55) 0%, rgba(5,13,23,.88) 16%, rgba(4,10,19,.98) 46%, rgba(3,7,13,1) 100%)}
-  .room.is3d .bs-now{max-height:min(30vh,220px)}
+  .room.is3d .bs-now{max-height:86px}
   .room.is3d .composer{flex:0 0 auto; align-self:stretch; padding-bottom:calc(7px + env(safe-area-inset-bottom))}
   /* 4:3 회의실 스테이지 — 사진 아래로 테이블 앞면이 자연스럽게 이어지는 어두운 띠 */
   .room.is3d .scene{background:linear-gradient(180deg,#050b16 0%,#04080f 60%,#03060c 100%)}
@@ -1466,7 +1508,8 @@ body.mode3d .sidembtn{display:grid}
 body.adm-on .adm-panel summary{color:#FFE9B4}
 /* ── 내 사무실(비-본사) 배경일 때 — '본사 사진 좌표'에 묶인 요소만 숨긴다.
    · 숨김: 본사 직원 9명 명패 · 본사 직원 실루엣/홀로그램 좌석 · 본사 벽 핫스팟(브리핑 스크린·안내 칩) · 테이블 글로우
-   · 유지: 회장님 대표 캐릭터(상석) · 게스트 좌석 · 실시간 말풍선(.holo-layer) · LIVE 벽 TV — '배경만 보이는' 현상 방지 */
+     + 본사 좌표에 맞춘 LIVE 벽 TV(wallLive) · 상석 실루엣(.seat.boss) · 상석 명패(.tplate.boss)
+   · 유지: 실시간 말풍선(.holo-layer) · 가구 배치 카드 · 🏛️ 본사 대회의실로 돌아가기 버튼 */
 body.office-alt .plates .tplate:not(.boss),
 body.office-alt .seat.staff,
 body.office-alt .seat.cyan,
@@ -1475,6 +1518,9 @@ body.office-alt .wall-tv,
 body.office-alt .wall-chip,
 body.office-alt .table-glow,
 body.office-alt .stage-hint{display:none !important}
+body.office-alt .wall-live,
+body.office-alt .seat.boss,
+body.office-alt .plates .tplate.boss{display:none !important}
 /* 🏛️ 본사 대회의실 복귀 — 개인 사무실 배경에서만 뜨는 원클릭 버튼 */
 .hq-return{position:absolute; z-index:9; right:14px; top:12px; display:none; align-items:center; gap:6px;
   font:inherit; font-size:11px; font-weight:800; letter-spacing:-.01em; color:#FFEBC2; cursor:pointer;
@@ -1491,7 +1537,7 @@ body.office-alt .hq-return{display:inline-flex}
 }
 
 /* ── 벽면 소형 순위 전광판 — 카페 디지털 메뉴판처럼 다크 글래스 · 원근 베젤 ── */
-.wall-live{position:absolute; left:61.0%; top:20.6%; width:7.6%; height:16.4%; z-index:2; padding:0;
+.wall-live{position:absolute; left:63.5%; top:20.6%; width:6.7%; height:16.4%; z-index:2; padding:0;
   border:0; background:none; cursor:pointer; border-radius:7px; transform-origin:left center;
   /* 3D rotateY 는 preserve-3d 평면에서 방 이미지 뒤로 가려져 안 보임 → 2D 원근 표현(skew)으로 대체 */
   transform:skewY(-1.4deg) scaleX(.985); filter:drop-shadow(0 9px 16px rgba(0,0,0,.72)) drop-shadow(0 0 18px rgba(110,190,255,.32));
@@ -1542,7 +1588,7 @@ body.office-alt .hq-return{display:inline-flex}
 .wall-live .wl-tick{height:1.5px; margin-top:4%; border-radius:2px; background:linear-gradient(90deg, rgba(99,200,255,0), #63C8FF, rgba(99,200,255,0)); opacity:.55}
 .wall-live .wl-empty{font-size:6.2px; color:#8FA6C0; line-height:1.3}
 @media (max-width:900px){
-  .wall-live{left:61.0%; top:20.6%; width:7.6%; height:16.4%; transform:skewY(-1.2deg) scaleX(.99)}
+  .wall-live{left:63.5%; top:20.6%; width:6.7%; height:16.4%; transform:skewY(-1.2deg) scaleX(.99)}
   .wall-live .wl-h{font-size:5.2px; gap:1.5px; margin-bottom:5%; padding-bottom:5%}
   .wall-live .wl-h i{width:2.5px; height:2.5px}
   .wall-live .wl-r{font-size:5.2px; gap:1.5px}
@@ -1863,6 +1909,15 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
   border-radius:8px !important; font-size:9.5px !important; font-weight:800; line-height:1.25}
 .crew-empty{font-size:10.5px; color:#8FA6C0; padding:8px 2px}
 .crew-capd{margin-left:auto; font-size:9.5px; font-weight:700; color:#9FD8FF}
+.crew-ph[data-crew-zoom]{cursor:zoom-in}
+/* AI 팀원 초상화 확대 라이트박스 */
+.cz-s{position:relative; width:min(420px,92vw); max-height:88dvh; overflow:auto; border-radius:18px; padding:14px 16px 16px;
+  background:linear-gradient(180deg, rgba(14,26,44,.998), rgba(6,12,22,.999)); border:1px solid rgba(146,190,255,.3);
+  box-shadow:0 44px 100px -46px #000, inset 0 1px 0 rgba(255,255,255,.07)}
+.cz-s img{display:block; width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:14px; border:1px solid rgba(146,190,255,.22)}
+.cz-s b{display:block; margin:11px 0 2px; font-size:16px; color:#EAF4FF}
+.cz-s em{display:block; font-style:normal; font-size:11px; color:#9FC6E6}
+.cz-s p{margin:8px 0 0; font-size:11.5px; line-height:1.55; color:#C9DDF0}
 .crew-price{font-style:normal; display:block; margin-top:2px; font-size:10px; font-weight:700; color:#FFE2AE}
 .crew-price b{color:#FFF6E2}
 .crew-lockf{flex:0 0 auto; font-size:9.5px; font-weight:800; color:#8FA6C0; padding:4px 6px; border-radius:7px;
@@ -1952,6 +2007,16 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
 .pin-btns button{flex:1 1 auto; font:inherit; font-size:12px; font-weight:800; padding:10px; border-radius:10px; cursor:pointer}
 .pin-c{color:#D9E4F0; background:rgba(255,255,255,.06); border:1px solid rgba(146,190,255,.24)}
 .pin-ok{color:#2A0D08; background:linear-gradient(180deg,#FFB59E,#F06A48); border:1px solid #F06A48}
+/* 🔑 PIN 변경 모달 — 골드 톤(위험한 초기화 모달과 색으로 구분) */
+.pin-s.gold{border-color:rgba(246,205,122,.42)}
+.pin-s.gold .pin-h{color:#FFE9B4}
+.pin-s.gold .pin-in{border-color:rgba(246,205,122,.36); color:#FFF3D8}
+.pin-s.gold .pin-in:focus{border-color:rgba(246,205,122,.72); box-shadow:0 0 0 3px rgba(246,205,122,.14)}
+.pin-s.gold .pin-ok{color:#2A1A02; background:linear-gradient(180deg,#F9D98F,#DFA23C); border-color:#DFA23C}
+.pin-f{display:block; margin:0 0 7px}
+.pin-f>span{display:block; font-size:10px; font-weight:800; letter-spacing:.06em; color:#A9BCCE; margin:0 0 4px}
+.pin-f .pin-in{font-size:16px; letter-spacing:.34em; padding:9px 8px}
+.pin-hint{margin:2px 0 0; font-size:9.5px; line-height:1.5; color:#8FA3B6}
 @media (max-width:900px){ .mrm, .pinm{align-items:flex-end; padding:12px} .mr-s, .pin-s{margin-bottom:6px} }
 </style>
 </head>
@@ -2034,6 +2099,10 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
 <div class="app">
   <!-- ── 좌측 사이드바 ─────────────────────────────────────────────── -->
   <aside class="sidebar">
+    <div class="side-head">
+      <span class="side-head-t">참여자 · 조직도</span>
+      <button class="side-close" id="sideClose" type="button" aria-label="참여자 패널 닫기"><span aria-hidden="true">✕</span> 닫기</button>
+    </div>
     <div class="brand">
       <div class="mark"><img data-asset="logo" alt="ChoKo QUANT 로고"></div>
       <div class="brand-txt">
@@ -2055,9 +2124,9 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
         <div class="hq-row"><span>참석</span><b data-crew="hq">10명 · 제1회 전체 회의</b></div>
         <div class="hq-row"><span>일시</span><b>11/28 (토)</b></div>
         <div class="beta">
-          <div class="beta-top"><span>상용 베타 판정</span><b>81<span style="font-size:12px"> / 100</span></b></div>
+          <div class="beta-top"><span>상용 판정</span><b>95<span style="font-size:12px"> / 100</span></b></div>
           <div class="meter"><i></i></div>
-          <div class="hq-row" style="font-size:10px"><span>수석 고문 판정</span><b>개인용 상용 베타 합격</b></div>
+          <div class="hq-row" style="font-size:10px"><span>수석 고문 판정</span><b>5차 최종 재채점 95점 · 상용 합격</b></div>
         </div>
       </div>
     </section>
@@ -2078,7 +2147,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
       <button class="member" data-author="advisor" aria-pressed="false">
         <div class="mav"><img data-av="advisor" alt=""><span class="dot"></span></div>
         <div><div class="nm">수석 고문</div><div class="rl">월가 퀀트 자문</div></div>
-        <div class="st">81/100 판정</div>
+        <div class="st">95/100 판정</div>
       </button>
       <button class="member" data-author="designer" aria-pressed="false">
         <div class="mav"><img data-av="designer" alt=""><span class="dot"></span></div>
@@ -2105,6 +2174,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
 
     <div class="side-foot">© 2026 ChoKo QUANT · Ji Hoon Park</div>
   </aside>
+  <div class="side-scrim" id="sideScrim" aria-hidden="true"></div>
 
   <!-- ── 모바일 상단 바 ─────────────────────────────────────────────── -->
   <div class="mbar">
@@ -2121,7 +2191,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
       <button class="gmbtn gmbtn-min gmbtn-reset" id="resetBtnM" type="button" title="회의록·채팅 기록 초기화" aria-label="회의록·채팅 기록 초기화"><svg class="ic"><use href="#ic-trash"/></svg></button>
       <button class="gmbtn adm-toggle" id="admBtnM" type="button" data-adm-mode="1" aria-pressed="false" aria-label="관리자 모드 켜기/끄기" title="👑 관리자 모드"><span aria-hidden="true">👑</span></button>
       <button class="gmbtn gmbtn-me" type="button" data-me-custom="1" aria-label="내 캐릭터 꾸미기"><svg class="ic"><use href="#ic-user-pen"/></svg></button>
-      <div class="mbar-beta">베타<b>81/100</b></div>
+      <div class="mbar-beta">상용<b>95/100</b></div>
       <div class="seg seg-m" id="segM" role="group" aria-label="화면 모드 전환">
         <button type="button" data-mode="3d" aria-pressed="true">3D</button>
         <span class="sep" aria-hidden="true"></span>
@@ -2149,7 +2219,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
         <span>대회의실 · <span data-crew="room">10명 참여 중</span> · 2026. 11. 28 (토)</span>
       </div>
       <div class="room-right">
-        <span class="badge badge-beta">상용 베타 81/100</span>
+        <span class="badge badge-beta">상용 95/100</span>
         <span class="badge badge-live" id="liveBadge" data-state="idle" title="실시간 서버에 연결하는 중입니다"><i></i><b>연결 중…</b></span>
         <a class="hq-back" href="../" aria-label="차트분석기 검색기로 돌아가기" title="차트분석기 검색기로 돌아가기"><svg class="ic"><use href="#ic-chart"/></svg><span>검색기</span></a>
         <button class="gbtn gbtn-min" id="screenBtn" type="button" aria-haspopup="dialog" aria-label="브리핑 스크린 열기"><svg class="ic"><use href="#ic-screen"/></svg><span>스크린</span></button>
@@ -2266,9 +2336,8 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
       <button class="gs-x" id="gclose" type="button" aria-label="닫기">✕</button>
     </div>
     <div class="lb-box"><div class="lb-h">🏆 실시간 자산 순위 <em>잔액 + 수익 + 보유 의상</em></div><ol class="lb-list" data-lb><li class="empty">순위를 불러오는 중…</li></ol></div>
-    <p class="gs-sub" id="gsub">이름과 직함을 적으면 대회의실 참석자로 바로 들어옵니다.</p>
+    <p class="gs-sub" id="gsub">이름을 적으면 대회의실 참석자로 바로 들어옵니다 · 직급은 수익금에 따라 자동으로 올라갑니다.</p>
     <label class="gs-f"><span>이름</span><input id="gname" maxlength="14" placeholder="예: 송정우" autocomplete="off"></label>
-    <label class="gs-f"><span>직함</span><input id="grole" maxlength="20" placeholder="예: 외부 손님" autocomplete="off"></label>
     <div class="gs-sec">캐릭터</div>
     <div class="gs-avrow">
       <div class="gs-preview" id="gpreview" aria-label="캐릭터 미리보기"></div>
@@ -2280,7 +2349,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     <div class="gs-sec">🛍️ 초코퀀트 상점 <em>· 의상 20종 · 지갑으로 구매</em></div>
     <div class="shop-top"><span class="shop-wallet">🪙 내 지갑 <b data-wallet>—</b></span>
 <span class="shop-tier" data-tier>내 직급 <b>—</b></span><button type="button" class="shop-adm-b" data-quiz="1">🎓 오늘의 퀴즈 +$300</button>
-<span class="shop-note">의상 20종 · 무료 3종</span><button type="button" class="adm-toggle shop-adm-toggle" data-adm-mode="1" aria-pressed="false"><span aria-hidden="true">👑</span><span data-adm-lbl>관리자 모드</span></button></div><span class="shop-bd" data-wbreak></span><div class="shop-grid" id="%s" role="group" aria-label="🛍️ 초코퀀트 상점 — 의상 20종"></div><div class="company-box" data-company-box></div><div class="office-wrap"><div class="office-h">🏛️ 전용 사무실 <em>내 회의실 배경</em></div><div class="office-grid" data-office-grid></div></div><div class="book-wrap" data-books></div><div class="furn-wrap"><div class="furn-h">🛋️ 사무실 인테리어 가구 <em>대표(창업)·관리자 모드만 · 보유 시 효과 적용</em><span class="furn-capd" data-furn-cap></span></div><div data-furn></div></div><div class="crew-wrap"><div class="crew-h">👥 AI 팀원 채용 <em>대표(창업)만 · 사무실 정원만큼 · 매일 정산</em><span class="crew-capd" data-crew-cap></span></div><div data-crew-list></div></div><div class="myoffice-wrap" data-myoffice hidden><div class="myoffice-h">🏢 내 사무실 · 회사 경영 <em>팀원 인사 · 보상 · 교본 장착</em><span class="om-co" data-co-name></span></div><div data-crew-mgmt></div></div><div class="battle-box" data-battle-box></div><details class="adm-panel" data-admin hidden><summary>🔐 관리자 패널 <em data-adm-note>OFF — 일반 사용자 규칙 적용</em></summary><div class="adm-body"><button type="button" class="shop-adm-b" data-wbonus="1000">+$1,000 보너스</button><input class="shop-adm-i" type="number" min="0" step="100" placeholder="잔액" data-wset-in aria-label="관리자 잔액 지정"><button type="button" class="shop-adm-b" data-wset>조정</button><button type="button" class="shop-adm-b danger" data-wreset>잔액 리셋</button><button type="button" class="shop-adm-b danger" data-srv-reset="1" title="회의록·채팅 서버 기록까지 삭제">🗑️ 서버 초기화</button></div></details>
+<span class="shop-note">의상 20종 · 무료 3종</span><button type="button" class="adm-toggle shop-adm-toggle" data-adm-mode="1" aria-pressed="false"><span aria-hidden="true">👑</span><span data-adm-lbl>관리자 모드</span></button></div><span class="shop-bd" data-wbreak></span><div class="shop-grid" id="%s" role="group" aria-label="🛍️ 초코퀀트 상점 — 의상 20종"></div><div class="company-box" data-company-box></div><div class="office-wrap"><div class="office-h">🏛️ 전용 사무실 <em>내 회의실 배경</em></div><div class="office-grid" data-office-grid></div></div><div class="book-wrap" data-books></div><div class="furn-wrap"><div class="furn-h">🛋️ 사무실 인테리어 가구 <em>대표(창업)·관리자 모드만 · 보유 시 효과 적용</em><span class="furn-capd" data-furn-cap></span></div><div class="furn-guide" aria-label="사무실 등급별 해금 가구와 효과"><b>🔓 해금 · 효과</b><span>단칸방 · 에스프레소 ☕ 충성+4% / 6모니터 🖥️ 수익+4%</span><span>스카이 · 황금황소 🐂 충성+10%·수익+3% / 소파 🛋️ 충성+12%</span><span>BIFC · 아쿠아리움 🐠 충성+18%·수익+5% / 샴페인바 🍾 충성+25%·수익+10%</span><span>높은 등급일수록 팀원 수익·충성도가 함께 오릅니다</span></div><div data-furn></div></div><div class="crew-wrap"><div class="crew-h">👥 AI 팀원 채용 <em>대표(창업)만 · 사무실 정원만큼 · 매일 정산</em><span class="crew-capd" data-crew-cap></span></div><div class="crew-guide" aria-label="사무실 등급별 최대 고용 정원"><b>🗺️ 사무실별 정원</b><span>🏚️ 단칸방 5명</span><span>🌇 스카이 타워 15명</span><span>📈 BIFC 30명</span><span>⚡ 엘시티 사이버 50명</span><span>🏛️ 광안리 펜트하우스 ∞</span></div><div data-crew-list></div></div><div class="myoffice-wrap" data-myoffice hidden><div class="myoffice-h">🏢 내 사무실 · 회사 경영 <em>팀원 인사 · 보상 · 교본 장착</em><span class="om-co" data-co-name></span></div><div data-crew-mgmt></div></div><div class="battle-box" data-battle-box></div><details class="adm-panel" data-admin hidden><summary>🔐 관리자 패널 <em data-adm-note>OFF — 일반 사용자 규칙 적용</em></summary><div class="adm-body"><button type="button" class="shop-adm-b" data-wbonus="1000">+$1,000 보너스</button><input class="shop-adm-i" type="number" min="0" step="100" placeholder="잔액" data-wset-in aria-label="관리자 잔액 지정"><button type="button" class="shop-adm-b" data-wset>조정</button><button type="button" class="shop-adm-b danger" data-wreset>잔액 리셋</button><button type="button" class="shop-adm-b" data-pin-change="1" title="관리자 PIN 4자리 변경">🔑 PIN 변경</button><button type="button" class="shop-adm-b danger" data-srv-reset="1" title="회의록·채팅 서버 기록까지 삭제">🗑️ 서버 초기화</button></div></details>
 <div class="shop-req"><div class="shop-req-h">✨ 상점 신상 의상·아이템 요청하기</div><div class="shop-req-row"><input id="greq" type="text" maxlength="120" autocomplete="off" placeholder="예: 민트색 트렌치코트 · 안경 없는 캐주얼 버전"><button type="button" class="shop-req-b" data-req="greq">등록</button></div></div>
     <!-- 이전 링크·스크립트 호환용 숨김 훅: 액세서리 선택은 스타일 프리셋으로 매핑된다 -->
     <div class="gs-chips" id="gacc" role="group" aria-label="액세서리" aria-hidden="true" style="display:none">
@@ -2295,6 +2364,14 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
       <button type="button" class="ch on" data-face="1" aria-pressed="true">스타일 1</button>
       <button type="button" class="ch" data-face="2" aria-pressed="false">스타일 2</button>
       <button type="button" class="ch" data-face="3" aria-pressed="false">스타일 3</button>
+      <button type="button" class="ch" data-face="4" aria-pressed="false">리서치 사원</button>
+      <button type="button" class="ch" data-face="5" aria-pressed="false">퀀트 사원</button>
+      <button type="button" class="ch" data-face="6" aria-pressed="false">파동 사원</button>
+      <button type="button" class="ch" data-face="7" aria-pressed="false">스윙 사원</button>
+      <button type="button" class="ch" data-face="8" aria-pressed="false">신입 사원</button>
+      <button type="button" class="ch" data-face="9" aria-pressed="false">데이터 사원</button>
+      <button type="button" class="ch" data-face="10" aria-pressed="false">리스크 사원</button>
+      <button type="button" class="ch" data-face="11" aria-pressed="false">거시 사원</button>
       <button type="button" class="ch ch-dice" data-random="1">🎲 랜덤</button>
     </div>
     <div class="gs-sec sec-quick">피클 친구 · 원터치 초대</div>
@@ -2329,10 +2406,24 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
       </div>
       <div class="lg-form">
         <div class="lb-box"><div class="lb-h">🏆 실시간 자산 순위 <em>잔액 + 수익 + 보유 의상</em></div><ol class="lb-list" data-lb><li class="empty">순위를 불러오는 중…</li></ol></div>
-        <div class="gs-sec">이름 · 직함</div>
+        <div class="gs-sec">이름</div>
         <div class="lg-fields">
           <input id="lname" maxlength="14" placeholder="이름 (예: 송정우)" autocomplete="off">
-          <input id="lrole" maxlength="20" placeholder="직함 (예: 외부 손님)" autocomplete="off">
+        </div>
+        <div class="gs-sec">🙂 얼굴 스타일</div>
+        <div class="gs-chips" id="lface" role="group" aria-label="얼굴 스타일">
+          <button type="button" class="ch on" data-face="1" aria-pressed="true">스타일 1</button>
+          <button type="button" class="ch" data-face="2" aria-pressed="false">스타일 2</button>
+          <button type="button" class="ch" data-face="3" aria-pressed="false">스타일 3</button>
+          <button type="button" class="ch" data-face="4" aria-pressed="false">리서치 사원</button>
+          <button type="button" class="ch" data-face="5" aria-pressed="false">퀀트 사원</button>
+          <button type="button" class="ch" data-face="6" aria-pressed="false">파동 사원</button>
+          <button type="button" class="ch" data-face="7" aria-pressed="false">스윙 사원</button>
+          <button type="button" class="ch" data-face="8" aria-pressed="false">신입 사원</button>
+          <button type="button" class="ch" data-face="9" aria-pressed="false">데이터 사원</button>
+          <button type="button" class="ch" data-face="10" aria-pressed="false">리스크 사원</button>
+          <button type="button" class="ch" data-face="11" aria-pressed="false">거시 사원</button>
+          <button type="button" class="ch ch-dice" data-random="1">🎲 랜덤</button>
         </div>
         <div class="gs-sec">👨 남 / 👩 여</div>
         <div class="gs-sex row" id="lsex" role="group" aria-label="캐릭터 성별">
@@ -2342,15 +2433,8 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
         <div class="gs-sec">🛍️ 초코퀀트 상점 <em>· 의상 20종 · 지갑으로 구매</em></div>
         <div class="shop-top"><span class="shop-wallet">🪙 내 지갑 <b data-wallet>—</b></span>
 <span class="shop-tier" data-tier>내 직급 <b>—</b></span><button type="button" class="shop-adm-b" data-quiz="1">🎓 오늘의 퀴즈 +$300</button>
-<span class="shop-note">의상 20종 · 무료 3종</span><button type="button" class="adm-toggle shop-adm-toggle" data-adm-mode="1" aria-pressed="false"><span aria-hidden="true">👑</span><span data-adm-lbl>관리자 모드</span></button></div><span class="shop-bd" data-wbreak></span><div class="shop-grid" id="%s" role="group" aria-label="🛍️ 초코퀀트 상점 — 의상 20종"></div><div class="company-box" data-company-box></div><div class="office-wrap"><div class="office-h">🏛️ 전용 사무실 <em>내 회의실 배경</em></div><div class="office-grid" data-office-grid></div></div><div class="book-wrap" data-books></div><div class="furn-wrap"><div class="furn-h">🛋️ 사무실 인테리어 가구 <em>대표(창업)·관리자 모드만 · 보유 시 효과 적용</em><span class="furn-capd" data-furn-cap></span></div><div data-furn></div></div><div class="crew-wrap"><div class="crew-h">👥 AI 팀원 채용 <em>대표(창업)만 · 사무실 정원만큼 · 매일 정산</em><span class="crew-capd" data-crew-cap></span></div><div data-crew-list></div></div><div class="myoffice-wrap" data-myoffice hidden><div class="myoffice-h">🏢 내 사무실 · 회사 경영 <em>팀원 인사 · 보상 · 교본 장착</em><span class="om-co" data-co-name></span></div><div data-crew-mgmt></div></div><div class="battle-box" data-battle-box></div><details class="adm-panel" data-admin hidden><summary>🔐 관리자 패널 <em data-adm-note>OFF — 일반 사용자 규칙 적용</em></summary><div class="adm-body"><button type="button" class="shop-adm-b" data-wbonus="1000">+$1,000 보너스</button><input class="shop-adm-i" type="number" min="0" step="100" placeholder="잔액" data-wset-in aria-label="관리자 잔액 지정"><button type="button" class="shop-adm-b" data-wset>조정</button><button type="button" class="shop-adm-b danger" data-wreset>잔액 리셋</button><button type="button" class="shop-adm-b danger" data-srv-reset="1" title="회의록·채팅 서버 기록까지 삭제">🗑️ 서버 초기화</button></div></details>
+<span class="shop-note">의상 20종 · 무료 3종</span><button type="button" class="adm-toggle shop-adm-toggle" data-adm-mode="1" aria-pressed="false"><span aria-hidden="true">👑</span><span data-adm-lbl>관리자 모드</span></button></div><span class="shop-bd" data-wbreak></span><div class="shop-grid" id="%s" role="group" aria-label="🛍️ 초코퀀트 상점 — 의상 20종"></div><div class="company-box" data-company-box></div><div class="office-wrap"><div class="office-h">🏛️ 전용 사무실 <em>내 회의실 배경</em></div><div class="office-grid" data-office-grid></div></div><div class="book-wrap" data-books></div><div class="furn-wrap"><div class="furn-h">🛋️ 사무실 인테리어 가구 <em>대표(창업)·관리자 모드만 · 보유 시 효과 적용</em><span class="furn-capd" data-furn-cap></span></div><div class="furn-guide" aria-label="사무실 등급별 해금 가구와 효과"><b>🔓 해금 · 효과</b><span>단칸방 · 에스프레소 ☕ 충성+4% / 6모니터 🖥️ 수익+4%</span><span>스카이 · 황금황소 🐂 충성+10%·수익+3% / 소파 🛋️ 충성+12%</span><span>BIFC · 아쿠아리움 🐠 충성+18%·수익+5% / 샴페인바 🍾 충성+25%·수익+10%</span><span>높은 등급일수록 팀원 수익·충성도가 함께 오릅니다</span></div><div data-furn></div></div><div class="crew-wrap"><div class="crew-h">👥 AI 팀원 채용 <em>대표(창업)만 · 사무실 정원만큼 · 매일 정산</em><span class="crew-capd" data-crew-cap></span></div><div class="crew-guide" aria-label="사무실 등급별 최대 고용 정원"><b>🗺️ 사무실별 정원</b><span>🏚️ 단칸방 5명</span><span>🌇 스카이 타워 15명</span><span>📈 BIFC 30명</span><span>⚡ 엘시티 사이버 50명</span><span>🏛️ 광안리 펜트하우스 ∞</span></div><div data-crew-list></div></div><div class="myoffice-wrap" data-myoffice hidden><div class="myoffice-h">🏢 내 사무실 · 회사 경영 <em>팀원 인사 · 보상 · 교본 장착</em><span class="om-co" data-co-name></span></div><div data-crew-mgmt></div></div><div class="battle-box" data-battle-box></div><details class="adm-panel" data-admin hidden><summary>🔐 관리자 패널 <em data-adm-note>OFF — 일반 사용자 규칙 적용</em></summary><div class="adm-body"><button type="button" class="shop-adm-b" data-wbonus="1000">+$1,000 보너스</button><input class="shop-adm-i" type="number" min="0" step="100" placeholder="잔액" data-wset-in aria-label="관리자 잔액 지정"><button type="button" class="shop-adm-b" data-wset>조정</button><button type="button" class="shop-adm-b danger" data-wreset>잔액 리셋</button><button type="button" class="shop-adm-b" data-pin-change="1" title="관리자 PIN 4자리 변경">🔑 PIN 변경</button><button type="button" class="shop-adm-b danger" data-srv-reset="1" title="회의록·채팅 서버 기록까지 삭제">🗑️ 서버 초기화</button></div></details>
 <div class="shop-req"><div class="shop-req-h">✨ 상점 신상 의상·아이템 요청하기</div><div class="shop-req-row"><input id="lreq" type="text" maxlength="120" autocomplete="off" placeholder="예: 민트색 트렌치코트 · 안경 없는 캐주얼 버전"><button type="button" class="shop-req-b" data-req="lreq">등록</button></div></div>
-        <div class="gs-sec">🙂 얼굴 스타일</div>
-        <div class="gs-chips" id="lface" role="group" aria-label="얼굴 스타일">
-          <button type="button" class="ch on" data-face="1" aria-pressed="true">스타일 1</button>
-          <button type="button" class="ch" data-face="2" aria-pressed="false">스타일 2</button>
-          <button type="button" class="ch" data-face="3" aria-pressed="false">스타일 3</button>
-          <button type="button" class="ch ch-dice" data-random="1">🎲 랜덤</button>
-        </div>
         <!-- 이전 링크·스크립트 호환용 숨김 훅: 액세서리 선택은 스타일 프리셋으로 매핑된다 -->
         <div class="gs-chips" id="lacc" role="group" aria-label="액세서리" aria-hidden="true" style="display:none">
           <button type="button" class="ch" data-acc="none">없음</button>
@@ -2364,7 +2448,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     <footer class="lg-foot">
       <button class="shop-del" type="button" data-del="1">🗑️ 캐릭터 삭제 (지갑·의상·수익 모두 초기화)</button>
       <button class="lg-go" id="lgo" type="button">🚀 대회의실 입장하기</button>
-      <span class="lg-note" id="lnote">이름·직함과 캐릭터만 사용합니다 · 개인 정보는 저장되지 않습니다.</span>
+      <span class="lg-note" id="lnote">이름과 캐릭터만 사용합니다 · 직급은 수익금에 따라 자동 · 개인 정보는 저장되지 않습니다.</span>
     </footer>
   </div>
 </div>
@@ -2609,7 +2693,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     { k:'dev', re:/(코드|db|서버|깃허브|github)/i, a:'코드 쪽은 hq/index.html 한 파일만 건드렸습니다. 루트 index.html·scripts는 손대지 않았고, 커밋 해시 바로 드리겠습니다.' },
     { k:'alba', re:/(불편|실사용|써\s?보|사용자|입장)/, a:'실제로 써보니 화면 전환이 한 번에 안 끝나는 느낌이었어요. 버튼 누르고 반응까지 조금 기다려야 했습니다.' },
     { k:'alba', re:/(알바|괜찮|어때)/, a:'저는 보기 편했습니다. 다만 글자가 작은 화면에서 조금 더 컸으면 좋겠어요.' },
-    { k:'choko', re:/(회의|안건|시작|진행)/, a:'네 회장님! ① 상용 베타 81/100 판정 ② 4번 기간바·P0 마감 ③ 2단계 고도화 4건 ④ 다음 안건 ‘실전 내 보유종목 관리’ 순서로 진행하겠습니다.' },
+    { k:'choko', re:/(회의|안건|시작|진행)/, a:'네 회장님! ① 상용 95/100 판정 ② 4번 기간바·P0 마감 ③ 2단계 고도화 4건 ④ 다음 안건 ‘실전 내 보유종목 관리’ 순서로 진행하겠습니다.' },
     { k:'any', re:/(안녕|반가|수고|잘\s?했)/, a:'감사합니다 회장님. 바로 이어서 볼 부분 정리해 두겠습니다.' },
     { k:'any', re:/(좋아\s?보|좋네|괜찮|오케이|ㅇㅋ|최고|굿)/, a:'감사합니다 회장님. 지적하실 만한 부분 더 없나 한 번 더 훑어보겠습니다.' }
   ];
@@ -2916,17 +3000,61 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     }).then(function (res) {
       if (!res.ok) throw new Error('hq-ai ' + res.status);
       return res.json();
-    }).then(function (arr) {
-      if (!Array.isArray(arr) || !arr.length) return null;
-      var out = [];
+    }).then(function (data) {
+      /* 응답은 배열(구버전) 또는 { replies, agenda, screen }(신버전) 둘 다 받는다 */
+      var arr = Array.isArray(data) ? data : (data && Array.isArray(data.replies) ? data.replies : []);
+      var out = [], agenda = [], screen = null;
       arr.slice(0, 2).forEach(function (r) {
         var name = String(r && r.sender || '').trim();
         var key = hqStaffKey(name);
-        var txt = String(r && r.text || '').replace(/\s+/g, ' ').trim();
+        var tg = aiTags(r && r.text);
+        var txt = tg.text.replace(/\s+/g, ' ').trim();
+        tg.agenda.forEach(function (a) { if (!a.owner) a.owner = name; agenda.push(a); });
+        if (tg.screen) screen = tg.screen;
         if (key && txt) out.push({ a: key, name: name, x: txt.slice(0, 400) });
       });
-      return out.length ? out : null;
+      if (data && !Array.isArray(data)) {
+        (Array.isArray(data.agenda) ? data.agenda : []).forEach(function (a) {
+          var t = String(a && a.title || '').replace(/\s+/g, ' ').trim();
+          if (t) agenda.push({ title: t.slice(0, 90), summary: String(a.summary || '').slice(0, 240), owner: String(a.owner || '').trim() });
+        });
+        if (data.screen && data.screen.open) {
+          screen = { open: true, slide: Number(data.screen.slide) || 0, note: String(data.screen.note || '').slice(0, 160) };
+        }
+      }
+      /* 같은 제목 안건은 한 번만 */
+      var seenAg = {}, uniq = [];
+      agenda.forEach(function (a) {
+        var k = String(a.title || '').replace(/\s+/g, '');
+        if (!k || seenAg[k]) return;
+        seenAg[k] = 1; uniq.push(a);
+      });
+      agenda = uniq.slice(0, 3);
+      if (!out.length && !agenda.length && !screen) return null;
+      out.agenda = agenda;
+      out.screen = screen;
+      return out;
     }).then(function (v) { done(); return v; }).catch(function () { done(); return null; });
+  }
+
+  /* AI 답변 본문에 섞인 [결재안건: 제목 | 요약] · [스크린: 0|1] 태그를 뽑아낸다.
+     구조화 JSON(agenda·screen)이 없어도 태그만으로 결재 안건·브리핑 스크린이 동작하게 하는 안전망. */
+  function aiTags(txt) {
+    var s = String(txt || ''), agenda = [], screen = null;
+    var re = /\[\s*결재\s*안건\s*[:：]?\s*([^\]|｜]+?)\s*(?:[|｜]\s*([^\]]+?))?\s*\]/g;
+    var m;
+    while ((m = re.exec(s))) {
+      var title = String(m[1] || '').trim(), sum = String(m[2] || '').trim();
+      if (title) agenda.push({ title: title, summary: sum });
+    }
+    if (agenda.length) s = s.replace(re, ' ');
+    var rs = /\[\s*스크린\s*(?:[:：]\s*([0-9]+))?\s*\]/g;
+    var ms = rs.exec(s);
+    if (ms) {
+      screen = { open: true, slide: ms[1] ? Number(ms[1]) : 0, note: '' };
+      s = s.replace(rs, ' ');
+    }
+    return { text: s.replace(/\s{2,}/g, ' ').trim(), agenda: agenda, screen: screen };
   }
 
   /* AI 답변이 늦거나 실패하면 쓰는 기존 로컬 답변(키워드 라우팅) */
@@ -2970,9 +3098,14 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
   }
   async function simulate(text, tag) {
     /* ① 실시간 Gemini(hq-ai)에게 묻는다 — 가장 알맞은 담당 1~2명이 각자 관점으로 답
-       ② 서버·네트워크가 안 되면 기존 키워드 라우팅 답변으로 폴백 */
-    var turns = await hqAskAI(text);
-    if (!turns) turns = hqLocalTurns(text);
+       ② 서버·네트워크가 안 되면 기존 키워드 라우팅 답변으로 폴백
+       ③ 답변과 함께 온 결재안건·브리핑 스크린 지시를 실제 화면에 반영한다 */
+    var raw = await hqAskAI(text);
+    var aiAgenda = (raw && raw.agenda) ? raw.agenda : [];
+    var aiScreen = (raw && raw.screen) ? raw.screen : null;
+    var turns = (raw && raw.length) ? raw : null;
+    if (!turns && !aiAgenda.length) turns = hqLocalTurns(text);
+    if (!turns) turns = [];
     for (var k = 0; k < turns.length; k++) {
       var person = turns[k].a, msg = turns[k].x;
       typing.push({ a: person });
@@ -2988,6 +3121,13 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
       liveInsertRow(msg, 'staff', turns[k].name || (PEOPLE[person] && PEOPLE[person].name));
       await sleep(160);
     }
+    /* ④ 회장님이 "안건 올려"라고 하셨으면 → 실제 결재 안건(hq_messages role='decision') 등록 */
+    if (aiAgenda.length) {
+      await sleep(260);
+      aiAgenda.slice(0, 3).forEach(function (a) { registerAgenda(a); });
+    }
+    /* ⑤ 직원이 브리핑을 설명하겠다고 하면 → 브리핑 스크린을 실제로 내린다 */
+    if (aiScreen && aiScreen.open) { await sleep(220); aiShowScreen(aiScreen); }
     if (guests.length && Math.random() < 0.7) {
       var g = guests[Math.floor(Math.random() * guests.length)];
       await sleep(420);
@@ -3000,6 +3140,50 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
       lastSpokeAt = Date.now();
       render();
     }
+  }
+
+  /* ── 📋 AI "안건 올려" → 실제 결재 안건 등록 ─────────────────══════
+     · 회의록 결재함에 agenda 플래그로 바로 뜨고 ✅ 승인 / ❌ 반려 버튼이 붙는다.
+     · hq_messages 에 role='decision' 으로 남겨 다른 접속자 화면에도 실시간 전파된다.
+     · 같은 제목·같은 본문 안건은 두 번 올리지 않는다. */
+  function registerAgenda(item) {
+    var title = String(item && item.title || '').replace(/\s+/g, ' ').trim().slice(0, 90);
+    if (!title) return false;
+    var sum = String(item && item.summary || '').replace(/\s+/g, ' ').trim().slice(0, 240);
+    var who = hqStaffKey(item && item.owner) || 'choko';
+    var nm = (PEOPLE[who] && PEOPLE[who].name) || '초코';
+    var line = '[결재안건] ' + title + (sum ? ' — ' + sum : '');
+    var dup = false;
+    MSGS.concat(extra).forEach(function (m) {
+      if (m && m.agenda && String(m.x || '').indexOf(title) >= 0) dup = true;
+    });
+    if (dup) return false;
+    extra.push({ a: who, t: nowLabel(), tag: 'general', kind: 'chat', x: line, agenda: true });
+    lastSpokeAt = Date.now();
+    render();
+    try { if (typeof updateCounts === 'function') updateCounts(); } catch (e) {}
+    liveInsertRow(line, 'decision', nm);
+    hqToast('📋 결재 안건 등록 — ' + oneLine(title, 34) + ' · 회의록 결재함에서 ✅ 승인 / ❌ 반려', 'ok');
+    return true;
+  }
+
+  /* ── 📺 직원·고문의 브리핑 지시 → 프론트 브리핑 스크린 자동 오픈 ─────────
+     slide 0 = 오늘의 시황, 1 = 실시간 리그 결산 · note = 화면 아래 설명 한 줄 */
+  function aiShowScreen(spec) {
+    if (typeof openScreen !== 'function') return;
+    var i = Number(spec && spec.slide);
+    if (!isFinite(i) || i < 0) i = 0;
+    try {
+      openScreen();
+      var list = screenSlides();
+      pmIdx = Math.max(0, Math.min(i, list.length - 1));
+      renderScreen();
+      var note = String(spec && spec.note || '').replace(/\s+/g, ' ').trim();
+      if (note) {
+        var meta = document.getElementById('pmMeta');
+        if (meta) meta.textContent = '대회의실 프레젠테이션 · ' + oneLine(note, 120);
+      }
+    } catch (e) {}
   }
 
   sendBtn.addEventListener('click', function () { send(input.value); });
@@ -3193,8 +3377,15 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     var set = GUEST_PHOTOS[(g && g.img === 'guestF') ? 'f' : 'm'];
     return set[(g && g.fit) || 'black'] || set.black;
   }
+  /* 얼굴 스타일 4~11 — fc8fedf 에서 추가된 실사 초상화 8컷(여 4 · 남 4) */
+  var FACE_PORTRAIT = { '4': 'CF_FRESH', '5': 'CF_QUANT', '6': 'CF_WAVE', '7': 'CF_SWING',
+                        '8': 'CM_FRESH', '9': 'CM_DATA', '10': 'CM_RISK', '11': 'CM_MACRO' };
   function gavHTML(g, cut) {
     var f = String(g.face || '1');
+    var fp = FACE_PORTRAIT[f];
+    if (fp && ASSETS[fp]) {
+      return '<span class="gav photo face-' + f + '"><img class="gav-ph" src="' + ASSETS[fp] + '" alt=""></span>';
+    }
     var key = photoKey(g);
     var ck = (cut && ASSETS[key + '-cut']) ? key + '-cut' : key;
     if (ck && ASSETS[ck]) {
@@ -3869,6 +4060,43 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
   }
   function crewHave_total() { return (SHOP.crew || []).length; }
   function crewRoom() { return Math.max(0, crewCap() - (SHOP.crew || []).length); }
+
+  /* ── 🖼️ AI 팀원 초상화 확대 라이트박스 — 상점 목록의 사진을 누르면 크게 ── */
+  function openCrewZoom(k) {
+    var c = null;
+    CREW.forEach(function (x) { if (x.k === k) c = x; });
+    var m = document.getElementById('crewZoom');
+    if (!c || !m) return;
+    var img = document.getElementById('czImg');
+    var src = (typeof crewFace === 'function') ? crewFace(c.k, 0) : '';
+    if (img && src) img.src = src;
+    var nm = document.getElementById('czName'); if (nm) nm.textContent = c.nm;
+    var cap = document.getElementById('czCap'); if (cap) cap.textContent = c.cap || '';
+    var info = document.getElementById('czInfo');
+    if (info) {
+      info.innerHTML = '고용 <b>' + hqUSD(c.price) + '</b> · 기본 일급 <b>' + hqUSD(c.pay) + '/일</b>'
+        + ((typeof crewHave === 'function' && crewHave(c.k)) ? ' · 현재 <b>' + crewHave(c.k) + '명</b>' : '')
+        + ((typeof crewRoom === 'function') ? ' · 정원 ' + crewRoom() + '명' : '')
+        + (c.skill ? '<br>🎯 ' + c.skill : '');
+    }
+    m.classList.add('open');
+    m.setAttribute('aria-hidden', 'false');
+  }
+  function closeCrewZoom() {
+    var m = document.getElementById('crewZoom');
+    if (!m) return;
+    m.classList.remove('open');
+    m.setAttribute('aria-hidden', 'true');
+  }
+  document.addEventListener('click', function (e) {
+    var z = e.target.closest('[data-crew-zoom]');
+    if (z) { e.preventDefault(); e.stopPropagation(); openCrewZoom(z.getAttribute('data-crew-zoom')); return; }
+    if (e.target.closest('#czX') || e.target.id === 'crewZoom') { e.preventDefault(); closeCrewZoom(); }
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeCrewZoom();
+  });
+
   function crewCapText() {
     var cap = crewCap(), n = (SHOP.crew || []).length;
     return '현재 ' + n + ' / 정원 ' + (cap === Infinity ? '∞' : cap + '명')
@@ -3900,7 +4128,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
       var b10 = q10 > 0 && (free || c.price * q10 <= bal + 1e-9);
       var cTag = free ? '무료' : hqUSD(c.price);
       return '<div class="crew-c' + (owner ? '' : ' locked') + '"><span class="crew-em" title="' + c.nm + '">'
-        + (crewFace(c.k, 0) ? '<img class="crew-ph" alt="" src="' + crewFace(c.k, 0) + '">' : c.em) + '</span>'
+        + (crewFace(c.k, 0) ? '<img class="crew-ph" alt="' + c.nm + ' 초상화 확대" title="눌러서 크게 보기" data-crew-zoom="' + c.k + '" src="' + crewFace(c.k, 0) + '">' : c.em) + '</span>'
         + '<span class="crew-nm">' + c.nm
         + (owner ? '' : ' <span class="lock-badge">🔒 회사 설립 후 해금</span>')
         + (have ? ' <b class="crew-lv">Lv.' + crewLevel(c.k) + '</b>' : '')
@@ -3964,7 +4192,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
       var books = BOOKS.filter(function (b) { return bookHave(b.k) || adminMode(); });
       return '<div class="om-row">'
         + '<span class="crew-em">'
-        + (crewFace(c.k, 0) ? '<img class="crew-ph" alt="" src="' + crewFace(c.k, 0) + '">' : c.em) + '</span>'
+        + (crewFace(c.k, 0) ? '<img class="crew-ph" alt="' + c.nm + ' 초상화 확대" title="눌러서 크게 보기" data-crew-zoom="' + c.k + '" src="' + crewFace(c.k, 0) + '">' : c.em) + '</span>'
         + '<span class="om-nm">' + c.nm + ' <b>' + crewHave(c.k) + '명</b>'
         + '<i>Lv.' + crewLevel(c.k) + ' · 연봉 ' + hqUSD(crewSalary(c.k)) + '/일 · ' + crewLoyal(c.k) + '% '
         + (crewLoyal(c.k) < 40 ? '📄 이적 희망' : loyalWord(crewLoyal(c.k))) + '</i>'
@@ -5150,19 +5378,19 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
   /* x,y = 테이블 위 자리 · hx,hy = 머리 위(말풍선 기준점) — 광각 대회의실 1672×941 좌표(%).
      hx,hy 는 새 배경(choko-quant-hq-wide)에서 8명 머리 꼭대기 픽셀을 직접 재서 넣은 값이다. */
   var SEATS = [
-    { k:'me',       x:53.4, y:52.2, hx:53.7, hy:47.6, tone:'gold', name:'박지훈 회장', short:'박지훈 회장', mono:'박', boss:true },
+    { k:'me',       x:53.4, y:52.2, hx:53.7, hy:47.16, tone:'gold', name:'박지훈 회장', short:'박지훈 회장', mono:'박', boss:true },
     /* 초코 = 사진 왼쪽 맨 안쪽 연분홍 재킷 여성(회장님 바로 왼쪽) */
-    { k:'choko',    x:41.2, y:62.0, hx:36.6, hy:47.9, tone:'cyan', name:'초코', short:'초코', img:'ceo' },
-    { k:'advisor',  x:70.9, y:70.0, hx:74.2, hy:44.2, tone:'ruby', name:'수석 고문', short:'고문', img:'advisor' },
+    { k:'choko',    x:41.2, y:62.0, hx:36.6, hy:44.55, tone:'cyan', name:'초코', short:'초코', img:'ceo' },
+    { k:'advisor',  x:70.9, y:70.0, hx:74.2, hy:43.72, tone:'ruby', name:'수석 고문', short:'고문', img:'advisor' },
     /* QA 팀장 = 사진 오른쪽 안쪽에서 세 번째 검은 정장 여성 */
-    { k:'qa',       x:73.0, y:72.6, hx:80.1, hy:47.5, tone:'ruby', name:'QA 팀장', short:'QA', img:'qa' },
-    { k:'designer', x:84.3, y:81.2, hx:87.2, hy:51.3, tone:'ruby', name:'디자이너', short:'디자인', img:'designer' },
-    { k:'dev',      x:39.5, y:70.5, hx:32.9, hy:43.2, tone:'cyan', name:'개발팀장', short:'개발', img:'dev' },
+    { k:'qa',       x:73.0, y:72.6, hx:80.1, hy:47.03, tone:'ruby', name:'QA 팀장', short:'QA', img:'qa' },
+    { k:'designer', x:84.3, y:81.2, hx:87.2, hy:50.53, tone:'ruby', name:'디자이너', short:'디자인', img:'designer' },
+    { k:'dev',      x:39.5, y:70.5, hx:32.9, hy:43.8, tone:'cyan', name:'개발팀장', short:'개발', img:'dev' },
     /* 운영팀장 = 사진 오른쪽 맨 안쪽 남색 셔츠 남성(비어 있던 9번째 자리) — 픽셀 실측 */
-    { k:'ops',      x:60.0, y:66.0, hx:68.1, hy:43.0, tone:'cyan', name:'운영팀장', short:'운영팀장', img:'ops' },
-    { k:'alba3',    x:34.3, y:72.9, hx:27.2, hy:44.8, tone:'cyan', name:'알바 3호', short:'알바3', img:'alba3' },
-    { k:'alba2',    x:28.2, y:77.8, hx:21.0, hy:50.0, tone:'cyan', name:'알바 2호', short:'알바2', img:'alba2' },
-    { k:'alba1',    x:21.8, y:78.0, hx:11.3, hy:49.0, tone:'cyan', name:'알바 1호', short:'알바1', img:'alba1' }
+    { k:'ops',      x:60.0, y:66.0, hx:68.1, hy:44.26, tone:'cyan', name:'운영팀장', short:'운영팀장', img:'ops' },
+    { k:'alba3',    x:34.3, y:72.9, hx:27.2, hy:47.36, tone:'cyan', name:'알바 3호', short:'알바3', img:'alba3' },
+    { k:'alba2',    x:28.2, y:77.8, hx:21.0, hy:51.65, tone:'cyan', name:'알바 2호', short:'알바2', img:'alba2' },
+    { k:'alba1',    x:21.8, y:78.0, hx:11.3, hy:51.51, tone:'cyan', name:'알바 1호', short:'알바1', img:'alba1' }
   ];
 
   /* ── 게스트 모달 · 원터치 초대 ─────────────────────────────────────── */
@@ -5175,7 +5403,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     document.getElementById('gtitle').textContent = me ? '🎨 내 캐릭터 꾸미기' : '게스트 초대';
     document.getElementById('gsub').textContent = me
       ? '회장님 상석(정면 가죽의자)에 앉을 캐릭터입니다. 고르는 즉시 상석 실루엣이 캐릭터로 바뀝니다.'
-      : '이름과 직함을 적으면 대회의실 참석자로 바로 들어옵니다.';
+      : '이름을 적으면 대회의실 참석자로 바로 들어옵니다 · 직급은 수익금에 따라 자동입니다.';
     document.getElementById('ggo').textContent = me ? '회장님 캐릭터 적용' : '회의실로 초대';
     document.getElementById('gnote').textContent = me
       ? '언제든 다시 바꿀 수 있습니다 · 바꾸지 않으면 상석에는 실루엣이 앉아 있습니다.'
@@ -5209,7 +5437,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     var b = e.target.closest('[data-friend]');
     if (!b) return;
     var parts = b.getAttribute('data-friend').split('|');
-    if (inviteGuest(parts[0], parts[1] + ' · 외부 손님')) {
+    if (inviteGuest(parts[0], nameTier(parts[0], shopPnl()))) {
       b.classList.add('added');
       closeGuestModal();
     } else {
@@ -5294,7 +5522,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
   });
   document.getElementById('lgo').addEventListener('click', function () {
     var name = document.getElementById('lname').value;
-    var role = document.getElementById('lrole').value;
+    var role = nameTier(name, shopPnl());          /* 직급은 수익금에 따라 자동(사원~부사장) */
     var note = document.getElementById('lnote');
     if (!name.trim()) {
       note.textContent = '이름을 먼저 적어주세요.';
@@ -5302,13 +5530,13 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
       return;
     }
     if (inviteGuest(name, role)) {
-      note.textContent = '이름·직함과 캐릭터만 사용합니다 · 개인 정보는 저장되지 않습니다.';
+      note.textContent = '이름과 캐릭터만 사용합니다 · 직급은 수익금에 따라 자동 · 개인 정보는 저장되지 않습니다.';
       closeLounge();
     } else {
       note.textContent = '이미 초대한 이름입니다. 다른 이름으로 시도해 주세요.';
     }
   });
-  document.getElementById('lrole').addEventListener('keydown', function (e) {
+  document.getElementById('lname').addEventListener('keydown', function (e) {
     if (e.key === 'Enter') { e.preventDefault(); document.getElementById('lgo').click(); }
   });
   if (/[?&]guest=1/.test(location.search)) setTimeout(function () { openLounge(); }, 160);
@@ -5320,10 +5548,9 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
       return;
     }
     var name = document.getElementById('gname').value;
-    var role = document.getElementById('grole').value;
+    var role = nameTier(name, shopPnl());          /* 직급은 수익금에 따라 자동(사원~부사장) */
     if (inviteGuest(name, role)) {
       document.getElementById('gname').value = '';
-      document.getElementById('grole').value = '';
       closeGuestModal();
     } else {
       document.getElementById('gnote').textContent = '이름을 적어주세요 (이미 초대한 이름은 다시 못 넣습니다).';
@@ -5745,8 +5972,9 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     var taken = [];
     faceBoxes = [];
     screenHidden = [];
-    /* 중앙 CK 로고 금지 구역 — 어떤 말풍선도 회사 마크를 가리지 않는다 */
-    var LOGO_ZONE = { x0: 0.452, y0: 0.275, x1: 0.612, y1: 0.495 };
+    /* 중앙 CK 로고 금지 구역 — 어떤 말풍선도 회사 마크를 가리지 않는다
+       (회장님 지시: x 40~63% · y 16~45% 는 말풍선 금지 — 로고 양옆 오션뷰·창가·우측 여백에만 배치) */
+    var LOGO_ZONE = { x0: 0.40, y0: 0.16, x1: 0.63, y1: 0.45 };
     if (!phone) taken.push({ x: W * LOGO_ZONE.x0, y: H * LOGO_ZONE.y0, w: W * (LOGO_ZONE.x1 - LOGO_ZONE.x0), h: H * (LOGO_ZONE.y1 - LOGO_ZONE.y0) });
     var screenRect = null;
     if (pmodal && pmodal.classList.contains('open')) {
@@ -5945,10 +6173,14 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     sceneEl.classList.remove('live');
   });
 
-  /* ── 사이드바 접기 (3D 모드 넓은 캔버스) ─────────────────────────────── */
+  /* ── 사이드바 접기 (3D 모드 넓은 캔버스 · 모바일 좌측 서랍) ────────────── */
   var sideToggle = document.getElementById('sideToggle');
+  var sideCloseBtn = document.getElementById('sideClose');
+  var sideScrimEl = document.getElementById('sideScrim');
+  function sideIsOpen() { return document.body.classList.contains('side-open'); }
   function setSide(open) {
     document.body.classList.toggle('side-open', !!open);
+    if (sideScrimEl) sideScrimEl.setAttribute('aria-hidden', open ? 'false' : 'true');
     if (!sideToggle) return;
     sideToggle.setAttribute('aria-expanded', String(!!open));
     sideToggle.setAttribute('aria-label', open ? '참여자 패널 닫기' : '참여자 패널 열기');
@@ -5956,9 +6188,25 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
   }
   if (sideToggle) {
     sideToggle.addEventListener('click', function () {
-      setSide(!document.body.classList.contains('side-open'));
+      setSide(!sideIsOpen());
     });
   }
+  if (sideCloseBtn) {
+    sideCloseBtn.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); setSide(false); });
+  }
+  if (sideScrimEl) {
+    sideScrimEl.addEventListener('click', function () { setSide(false); });
+  }
+  /* 바깥 영역 클릭·ESC 로도 확실하게 닫는다(PC·모바일 공통) */
+  document.addEventListener('click', function (e) {
+    if (!sideIsOpen()) return;
+    if (e.target.closest && (e.target.closest('.sidebar') || e.target.closest('#sideToggle') ||
+        e.target.closest('[data-bs-side]') || e.target.closest('#sideScrim'))) return;
+    setSide(false);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && sideIsOpen()) setSide(false);
+  });
 
   /* ── 모드 전환 ────────────────────────────────────────────────────── */
   function setMode(m, silent) {
@@ -6097,7 +6345,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
       var p = PEOPLE[m.a];
       if (p && p.guest) { sec.guest.push(m); guestsSeen++; return; }
       if (STAFF.indexOf(m.a) >= 0) {
-        var k = staffKind(m);
+        var k = m.agenda ? 'proposal' : staffKind(m);   /* AI가 올린 결재안건은 분류와 상관없이 결재함으로 */
         sec.report.push({ m: m, kind: k });
         if (k === 'proposal') props.push(m);
       }
@@ -6482,7 +6730,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
   }
   function buildBStageDock() {
     if (!bsDockEl) return;
-    var html = '';
+    var html = '<button type="button" class="bs-side" data-bs-side="1" aria-label="참여자 · 조직도 패널 열기" title="참여자 · 조직도 (≡)">☰</button>';
     seatList().forEach(function (s) {
       var p = bsPersonOf(s.k);
       if (!p) return;
@@ -6529,6 +6777,8 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     });
   }
   if (bsDockEl) bsDockEl.addEventListener('click', function (e) {
+    var sb = e.target.closest('[data-bs-side]');
+    if (sb) { e.preventDefault(); setSide(true); return; }
     var b = e.target.closest('[data-bs]');
     if (!b) return;
     var k = b.getAttribute('data-bs');
@@ -6836,7 +7086,13 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
       var found = -1;
       SHOTS.forEach(function (s, i) { if (s.src === dataUrl) found = i; });
       if (found < 0) { SHOTS.push({ src: dataUrl, cap: cap || '공유한 그림', by: by || '박지훈 회장' }); found = SHOTS.length - 1; }
-      pmIdx = found + 1;
+      /* 슬라이드 순서는 [시황][리그][직원설명…][SHOTS…] 이므로 SHOTS 인덱스를 그대로 쓰면 안 된다.
+         실제 목록에서 이 그림의 위치를 찾아 그 슬라이드를 띄운다. */
+      pmIdx = found + 2;
+      var listNow = screenSlides();
+      for (var li = 0; li < listNow.length; li++) {
+        if (listNow[li].k === 'img' && listNow[li].s && listNow[li].s.src === dataUrl) { pmIdx = li; break; }
+      }
     } else if (!pmodal.classList.contains('open')) {
       pmIdx = 0;
     }
@@ -6908,11 +7164,42 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     fr.readAsDataURL(file);
   }
   function shareImage(dataUrl, name, w, h) {
-    extra.push({ a: 'me', t: nowLabel(), tag: 'general', x: '그림 공유 — ' + name, img: dataUrl });
+    /* 회장님 지시 — 대화창(말풍선·2D 피드)에는 그림을 직접 그리지 않고 글자만 남긴다.
+       실제 그림은 위쪽 📺 브리핑 스크린에만 띄우고(판서 도구 바로 사용), DB(hq_messages.img)에는
+       경량 JPEG dataURL 로 저장해 다른 접속자·5분 수거 스케줄이 같은 그림을 볼 수 있게 한다. */
+    var line = '📺 브리핑 스크린에 자료를 띄웠습니다 — ' + name;
+    extra.push({ a: 'me', t: nowLabel(), tag: 'general', x: line });
     SHOTS.push({ src: dataUrl, cap: name, by: '박지훈 회장', at: nowLabel(), w: w, h: h });
     render();
-    liveInsertRow('🖼️ 그림 공유 — ' + name + ' (말풍선 썸네일을 누르면 브리핑 스크린에 크게 뜹니다)', 'image');
+    compactDataUrl(dataUrl, function (dbUrl) { liveInsertRow(line, 'image', null, dbUrl); });
     setTimeout(function () { openScreen(dataUrl, name, '박지훈 회장'); }, 150);
+  }
+  /* DB 저장용 경량 사본 — 폭 480px·JPEG q0.6(≈20~35KB). 실패하면 원본을 그대로 쓴다. */
+  function compactDataUrl(url, cb) {
+    try {
+      var im = new Image();
+      im.onload = function () {
+        try {
+          var sc = Math.min(1, 480 / Math.max(im.width, im.height));
+          var cv = document.createElement('canvas');
+          cv.width = Math.max(1, Math.round(im.width * sc));
+          cv.height = Math.max(1, Math.round(im.height * sc));
+          var ctx = cv.getContext('2d');
+          ctx.fillStyle = '#0b1526'; ctx.fillRect(0, 0, cv.width, cv.height);
+          ctx.drawImage(im, 0, 0, cv.width, cv.height);
+          var out = cv.toDataURL('image/jpeg', 0.6);
+          cb(String(out).length < String(url).length ? out : url);
+        } catch (e) { cb(url); }
+      };
+      im.onerror = function () { cb(url); };
+      im.src = url;
+    } catch (e) { cb(url); }
+  }
+  /* 다른 접속자가 올린 그림도 스크린에서 볼 수 있도록 SHOTS 에 등록(대화창에는 안 그린다) */
+  function registerShot(src, cap) {
+    if (!src || String(src).slice(0, 5) !== 'data:') return;
+    for (var i = 0; i < SHOTS.length; i++) { if (SHOTS[i].src === src) return; }
+    SHOTS.push({ src: String(src), cap: cap || '공유한 그림', by: '회의실', at: nowLabel() });
   }
   var attachBtn = document.getElementById('attachBtn');
   var filePick = document.getElementById('filePick');
@@ -6927,6 +7214,34 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
       shrinkImage(f, 480, function (url, w, h) { shareImage(url, nm, w, h); });
     });
   }
+  /* ── 📋 클립보드 그림 붙여넣기 — 🖼️ 첨부 버튼과 같은 압축·미리보기 파이프라인 ──
+     · 입력창에 image/* 가 섞인 붙여넣기가 오면 글자 대신 그림으로 첨부한다.
+     · 텍스트만 붙여넣을 때는 브라우저 기본 동작 그대로 둔다. */
+  (function pasteImage() {
+    var ta = document.getElementById('input');
+    if (!ta) return;
+    ta.addEventListener('paste', function (e) {
+      var dt = e.clipboardData || window.clipboardData;
+      if (!dt) return;
+      var img = null;
+      var list = dt.files ? Array.prototype.slice.call(dt.files) : [];
+      for (var i = 0; i < list.length; i++) { if (/^image\//.test(list[i].type)) { img = list[i]; break; } }
+      if (!img && dt.items) {
+        for (var j = 0; j < dt.items.length; j++) {
+          var it = dt.items[j];
+          if (it && it.kind === 'file' && /^image\//.test(it.type)) { img = it.getAsFile(); break; }
+        }
+      }
+      if (!img) return;
+      e.preventDefault();
+      var base = String(img.name || '').replace(/\.[A-Za-z0-9]+$/, '').trim();
+      if (!base || /^image$/i.test(base)) {
+        var d = new Date();
+        base = '붙여넣은 그림 ' + d.getHours() + ':' + ('0' + d.getMinutes()).slice(-2);
+      }
+      shrinkImage(img, 480, function (url, w, h) { shareImage(url, base.slice(0, 40), w, h); });
+    });
+  })();
   document.addEventListener('click', function (e) {
     var cb = e.target.closest('.cast-btn');
     if (cb) {
@@ -7249,12 +7564,17 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
   function liveRowMsg(row) {
     var isQ = row.role === 'question';
     var body = String(row.text == null ? '' : row.text);
+    /* AI가 상정한 결재안건(role='decision' + '[결재안건] ' 접두어)은 결재함에 그대로 올린다.
+       회장님 결재 결과(‘[결재 ✅ 승인] …’)와 구분하려고 접두어까지 확인한다. */
+    var isAg = row.role === 'decision' && /^\s*\[결재안건/.test(body);
+    if (row.img) registerShot(row.img, String(row.sender || '') + ' 님 자료');   /* 스크린 보기용으로만 보관 */
     return {
       a: livePerson(row.sender, row.role, row.look),
       t: liveClock(row.created_at),
       tag: detect(body),
       kind: isQ ? 'question' : 'chat',
       x: body,
+      agenda: isAg,
       sid: row.id
     };
   }
@@ -7282,7 +7602,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     var q;
     try {
       q = c.from('hq_messages')
-        .select('id,room,sender,role,text,created_at')
+        .select('id,room,sender,role,text,created_at,img')
         .eq('room', LIVE_ROOM)
         .gte('created_at', liveFloor())          // 초기화 이전(테스트·지난 회의) 행은 불러오지 않는다
         .order('created_at', { ascending: true })
@@ -7445,7 +7765,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
   /* ── 전송: hq_messages insert + @초코/? 질문 1차 접수 안내 ─────────── */
   /* 한 줄을 hq_messages 에 남긴다. role: 회장 역할 | 'question' | 'decision' | 'staff'
      sender 를 비우면 내 이름으로 저장된다(AI 임직원 답변은 그 직원 이름으로 저장). */
-  function liveInsertRow(text, role, sender) {
+  function liveInsertRow(text, role, sender, img) {
     if (LIVE.state !== 'live' || !LIVE.client) return;
     var row = {
       room: LIVE_ROOM,
@@ -7453,6 +7773,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
       role: role || LIVE.myRole,
       text: String(text).slice(0, 2000)
     };
+    if (img) row.img = String(img);        /* 경량 JPEG dataURL — 대화창에는 안 그리고 스크린·수거용 */
     LIVE.pending++;
     try {
       LIVE.client.from('hq_messages').insert(row).then(function (res) {
@@ -7502,8 +7823,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     if (!lgo) return;
     lgo.addEventListener('click', function () {
       var n = (document.getElementById('lname').value || '').trim();
-      var r = (document.getElementById('lrole').value || '').trim();
-      if (n) liveSetMe(n, r || '외부 손님');
+      if (n) liveSetMe(n, nameTier(n, (typeof shopPnl === 'function' ? shopPnl() : 0)));
     });
   })();
 
@@ -7672,6 +7992,54 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     closePinModal();
     if (cb) cb();
   }
+
+  /* ── 🔑 관리자 PIN 변경 — 관리자 모드 ON 일 때 관리자 패널 안 버튼으로 연다 ────
+     · 기본 0104 외에 원하는 숫자 4자리로 바꾸고 localStorage('ckq-admin-pin')에 저장한다.
+     · 현재 PIN을 한 번 더 확인하고, 새 PIN은 두 번 입력해 오타를 막는다. */
+  function openPinChange() {
+    var m = document.getElementById('pinChg');
+    if (!m) return;
+    if (!adminMode()) { hqToast('👑 관리자 모드 ON에서만 PIN을 바꿀 수 있습니다', 'warn'); return; }
+    ['pinOld', 'pinNew', 'pinNew2'].forEach(function (id) { var e = document.getElementById(id); if (e) e.value = ''; });
+    var err = document.getElementById('pinChgErr');
+    if (err) err.textContent = '';
+    m.classList.add('open');
+    m.setAttribute('aria-hidden', 'false');
+    setTimeout(function () { var e = document.getElementById('pinOld'); if (e) e.focus(); }, 60);
+  }
+  function closePinChange() {
+    var m = document.getElementById('pinChg');
+    if (!m) return;
+    m.classList.remove('open');
+    m.setAttribute('aria-hidden', 'true');
+  }
+  function pinChangeSubmit() {
+    var v = function (id) { var e = document.getElementById(id); return String((e && e.value) || '').replace(/\s+/g, ''); };
+    var err = document.getElementById('pinChgErr');
+    var setErr = function (t) { if (err) err.textContent = t; };
+    var o = v('pinOld'), n = v('pinNew'), n2 = v('pinNew2');
+    if (!o) { setErr('현재 PIN을 입력해 주세요'); return; }
+    if (o !== String(adminPin())) { setErr('현재 PIN이 맞지 않습니다 — 다시 확인해 주세요'); return; }
+    if (!/^[0-9]{4}$/.test(n)) { setErr('새 PIN은 숫자 4자리로 정해 주세요'); return; }
+    if (n !== n2) { setErr('새 PIN 확인이 일치하지 않습니다'); return; }
+    if (n === o) { setErr('지금 쓰는 PIN과 같습니다 — 다른 번호로 정해 주세요'); return; }
+    try { localStorage.setItem(PIN_KEY, n); } catch (e2) {}
+    setAdminVerified();
+    closePinChange();
+    hqToast('🔑 관리자 PIN을 바꿨습니다 — 다음부터 바뀴 4자리로 인증하세요', 'ok');
+  }
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('[data-pin-change]')) { e.preventDefault(); e.stopPropagation(); openPinChange(); return; }
+    if (e.target.closest('#pinChgX') || e.target.closest('#pinChgCancel')) { e.preventDefault(); closePinChange(); return; }
+    if (e.target.closest('#pinChgGo')) { e.preventDefault(); pinChangeSubmit(); return; }
+    if (e.target.id === 'pinChg') { closePinChange(); return; }
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    var a = document.activeElement;
+    if (!a || !a.id) return;
+    if (a.id === 'pinOld' || a.id === 'pinNew' || a.id === 'pinNew2') { e.preventDefault(); pinChangeSubmit(); }
+  });
   /* PIN·모닝 모달은 스크립트 블록 뒤 HTML 에 있으므로 위임(delegation)으로 연결한다 */
   document.addEventListener('click', function (e) {
     if (e.target.closest('#pinGo')) { e.preventDefault(); pinSubmit(); return; }
@@ -7823,6 +8191,36 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     <p class="pin-err" id="pinErr"></p>
     <div class="pin-btns"><button type="button" class="pin-c" id="pinCancel">취소</button>
       <button type="button" class="pin-ok" id="pinGo">초기화 실행</button></div>
+  </div>
+</div>
+
+<!-- ── 🔑 관리자 PIN 변경 ───────────────────────────────────────────── -->
+<div class="pinm" id="pinChg" aria-hidden="true">
+  <div class="pin-s gold" role="dialog" aria-modal="true" aria-labelledby="pinChgTitle">
+    <div class="pin-h"><span>🔑</span><b id="pinChgTitle">관리자 PIN 변경</b>
+      <button class="pin-x" id="pinChgX" type="button" aria-label="닫기">✕</button></div>
+    <p class="pin-sub">회장님만 쓰는 <b>숫자 4자리</b>입니다. 이 브라우저에만 저장됩니다.</p>
+    <label class="pin-f"><span>현재 PIN</span>
+      <input class="pin-in" id="pinOld" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="••••" aria-label="현재 PIN"></label>
+    <label class="pin-f"><span>새 PIN (숫자 4자리)</span>
+      <input class="pin-in" id="pinNew" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="••••" aria-label="새 PIN"></label>
+    <label class="pin-f"><span>새 PIN 확인</span>
+      <input class="pin-in" id="pinNew2" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="••••" aria-label="새 PIN 확인"></label>
+    <p class="pin-hint">기본 PIN은 회장님 생일 4자리(0104)입니다 · 바꾼 PIN은 이 브라우저에만 남습니다.</p>
+    <p class="pin-err" id="pinChgErr"></p>
+    <div class="pin-btns"><button type="button" class="pin-c" id="pinChgCancel">취소</button>
+      <button type="button" class="pin-ok" id="pinChgGo">변경 저장</button></div>
+  </div>
+</div>
+
+<!-- ── 🖼️ AI 팀원 초상화 확대 ───────────────────────────────────────── -->
+<div class="pinm" id="crewZoom" aria-hidden="true">
+  <div class="cz-s" role="dialog" aria-modal="true" aria-label="AI 팀원 확대 보기">
+    <button class="pin-x" id="czX" type="button" aria-label="닫기" style="position:absolute;right:12px;top:12px;z-index:2">✕</button>
+    <img id="czImg" alt="">
+    <b id="czName">—</b>
+    <em id="czCap"></em>
+    <p id="czInfo"></p>
   </div>
 </div>
 
