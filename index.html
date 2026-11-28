@@ -3752,6 +3752,26 @@ html[data-theme="light"] .today-strip .ts-lbl{ color:#334155 }
   .macro-fg-grid .fg-guide p{ font-size:12px; line-height:1.45 }
   .macro-fg-grid .fg-hist{ gap:4px }
 }
+
+/* ============================================================================
+   전략 비교·설명 바(#stratBar)를 통합 컨트롤 바로 아래로 이동 (2026-11-28 3차)
+   · 바로 위 #topCtl 에 같은 성향·전략 버튼이 있으므로 바 안의 중복 컨트롤은 감춘다
+   · 남는 것: 지금 전략의 이름·설명(진입/손절/청산) + 유니버스 성과 + (공격형)블렌드
+   ============================================================================ */
+.strat-bar .strat-seg, .strat-bar .risk-pick-strat{ display:none }
+main.workspace > #stratBar{
+  padding:9px 14px 9px 16px; gap:8px 16px; border-radius:12px;
+  background:linear-gradient(100deg,rgba(10,22,36,.92),rgba(6,12,20,.78));
+}
+html[data-theme="light"] main.workspace > #stratBar{ background:linear-gradient(100deg,#FFFFFF,#F4FAFF) }
+main.workspace > #stratBar .strat-txt{ flex:1 1 340px }
+main.workspace > #stratBar .strat-txt b{ font-size:12px; font-weight:700; letter-spacing:.01em }
+main.workspace > #stratBar .strat-txt p{ font-size:11.5px; line-height:1.5 }
+main.workspace > #stratBar .strat-uni{ font-size:11.5px; gap:3px 12px }
+@media (max-width:760px){
+  main.workspace > #stratBar{ padding:8px 11px 8px 13px }
+  main.workspace > #stratBar .strat-txt p{ font-size:11.5px }
+}
 </style>
 </head>
 <body>
@@ -3860,42 +3880,6 @@ html[data-theme="light"] .today-strip .ts-lbl{ color:#334155 }
   </aside>
 
   <main class="workspace">
-    <!-- ① 성향(1) · 전략(2) — 첫 화면 최상단 통합 컨트롤 (아래 전략 비교 섹션과 상태 공유) -->
-    <section class="topctl" id="topCtl" aria-label="투자 성향과 전략 선택 — 첫 번째로 고르는 두 가지">
-      <div class="tc-grp">
-        <span class="tc-lab"><span class="rp-n">1</span>성향</span>
-        <div class="risk-switch tc-risk" id="topRisk" role="group" aria-label="투자 성향 — 안정형·공격형">
-          <button type="button" data-risk-btn="safe" class="on" aria-pressed="true" title="🛡️ 안정형 — 검증된 기본 규칙 그대로 · 스윙 손절 상한 -10% · 손절 뒤 10거래일 재진입 금지"><span class="rk-ic" aria-hidden="true">🛡️</span><span class="rk-tx">안정형</span></button>
-          <button type="button" data-risk-btn="aggr" aria-pressed="false" title="🔥 공격형 — 긴장감 테마 · 스윙 쿨다운 0일·손절 -15% · 추세 C2 50 + 6M모멘텀 Top5 50 가이드 · 변동성이 커집니다"><span class="rk-ic" aria-hidden="true">🔥</span><span class="rk-tx">공격형</span></button>
-        </div>
-      </div>
-      <span class="tc-sep" aria-hidden="true"></span>
-      <div class="tc-grp tc-grp-strat">
-        <span class="tc-lab"><span class="rp-n">2</span>전략</span>
-        <div class="strat-seg top-strat-seg" id="topStratSeg" role="tablist" aria-label="전략 모드 — 추세형 Top 100 / 스윙형 Top 150">
-          <button data-m="trend" class="on" role="tab" aria-selected="true" title="추세형(중기) — 시가총액 Top 100 · 102종목 분석"><b>📈 추세형</b><span>(Top 100)</span></button>
-          <button data-m="swing" role="tab" aria-selected="false" title="스윙형(단기) — 시가총액 Top 150 · 152종목 분석"><b>⚡ 스윙형</b><span>(Top 150)</span></button>
-        </div>
-      </div>
-      <span class="tc-now" id="tcNow" aria-live="polite"></span>
-    </section>
-
-    <div class="today-strip" id="todayStrip" aria-live="polite">
-      <span class="ts-k">오늘</span>
-      <span class="ts-i" id="tsBuy">—</span>
-      <span class="ts-sep" aria-hidden="true"></span>
-      <span class="ts-i" id="tsQqq">—</span>
-      <span class="ts-sep" id="tsCandSep" aria-hidden="true" hidden></span>
-      <span class="ts-i ts-cand" id="tsCand" hidden></span>
-    </div>
-
-    <div class="risk-banner" id="riskBanner" role="status" aria-live="polite" hidden>
-      <span class="rbn-ico" aria-hidden="true">🔥</span>
-      <b class="rbn-k">공격형 모드</b>
-      <span class="rbn-t" id="riskBannerTx">—</span>
-      <span class="rbn-warn">수익 구간이 넓어진 만큼 한 번의 손실도 커집니다 — 진입 전에 손절가를 먼저 정하세요</span>
-      <button class="rbn-off" id="riskBannerOff" type="button" title="안정형(기본 규칙)으로 되돌립니다">🛡️ 안정형으로</button>
-    </div>
     <div class="macro-fg-grid">
     <section class="fg-card card" id="fgCard" aria-label="CNN 공포·탐욕 지수">
       <div class="fg-top">
@@ -3958,6 +3942,62 @@ html[data-theme="light"] .today-strip .ts-lbl{ color:#334155 }
 
     </div>
 
+    <!-- ① 성향(1) · 전략(2) — 첫 화면 최상단 통합 컨트롤 (아래 전략 비교 섹션과 상태 공유) -->
+    <section class="topctl" id="topCtl" aria-label="투자 성향과 전략 선택 — 첫 번째로 고르는 두 가지">
+      <div class="tc-grp">
+        <span class="tc-lab"><span class="rp-n">1</span>성향</span>
+        <div class="risk-switch tc-risk" id="topRisk" role="group" aria-label="투자 성향 — 안정형·공격형">
+          <button type="button" data-risk-btn="safe" class="on" aria-pressed="true" title="🛡️ 안정형 — 검증된 기본 규칙 그대로 · 스윙 손절 상한 -10% · 손절 뒤 10거래일 재진입 금지"><span class="rk-ic" aria-hidden="true">🛡️</span><span class="rk-tx">안정형</span></button>
+          <button type="button" data-risk-btn="aggr" aria-pressed="false" title="🔥 공격형 — 긴장감 테마 · 스윙 쿨다운 0일·손절 -15% · 추세 C2 50 + 6M모멘텀 Top5 50 가이드 · 변동성이 커집니다"><span class="rk-ic" aria-hidden="true">🔥</span><span class="rk-tx">공격형</span></button>
+        </div>
+      </div>
+      <span class="tc-sep" aria-hidden="true"></span>
+      <div class="tc-grp tc-grp-strat">
+        <span class="tc-lab"><span class="rp-n">2</span>전략</span>
+        <div class="strat-seg top-strat-seg" id="topStratSeg" role="tablist" aria-label="전략 모드 — 추세형 Top 100 / 스윙형 Top 150">
+          <button data-m="trend" class="on" role="tab" aria-selected="true" title="추세형(중기) — 시가총액 Top 100 · 102종목 분석"><b>📈 추세형</b><span>(Top 100)</span></button>
+          <button data-m="swing" role="tab" aria-selected="false" title="스윙형(단기) — 시가총액 Top 150 · 152종목 분석"><b>⚡ 스윙형</b><span>(Top 150)</span></button>
+        </div>
+      </div>
+      <span class="tc-now" id="tcNow" aria-live="polite"></span>
+    </section>
+
+    <section class="strat-bar" id="stratBar" aria-label="전략 모드 전환">
+      <div class="strat-seg" id="stratSeg" role="tablist" aria-label="전략 모드">
+        <button data-m="trend" class="on" role="tab" aria-selected="true"><b>추세형</b><span>(중기)</span></button>
+        <button data-m="swing" role="tab" aria-selected="false"><b>스윙형</b><span>(단기)</span></button>
+      </div>
+      <div class="risk-pick risk-pick-strat" title="투자 성향 — 이 화면에서 가장 먼저 고르는 첫 번째 항목입니다">
+        <span class="rp-n" aria-hidden="true">1</span><span class="rp-t">성향</span>
+        <div class="risk-switch strat-risk" id="stratRisk" role="group" aria-label="투자 성향 — 안정형·공격형">
+          <button type="button" data-risk-btn="safe" class="on" aria-pressed="true" title="🛡️ 안정형 — 기본 규칙 그대로"><span class="rk-ic" aria-hidden="true">🛡️</span><span class="rk-tx">안정형</span></button>
+          <button type="button" data-risk-btn="aggr" aria-pressed="false" title="🔥 공격형 — 스윙 쿨다운 0일·손절 -15% · 추세 50:50 모멘텀 가이드"><span class="rk-ic" aria-hidden="true">🔥</span><span class="rk-tx">공격형</span></button>
+        </div>
+      </div>
+      <div class="strat-txt">
+        <b id="stratTitle">추세형 (중기)</b>
+        <p id="stratDesc">종합 기술점수 50 이상 + QQQ 100일선 단계 (또는 QQQ RSI(2)&lt;5 극단 패닉 예외 · RSI(2)&lt;15 패닉일 청산 보류) → 다음 날 시가 매수 · 손절 6 ATR · 트레일 10 ATR 청산 — 둘 다 즉시 · QQQ 100일선 이탈 시 전량 청산은 진입 3거래일 이후</p>
+      </div>
+      <div class="strat-uni" id="stratUni"></div>
+      <div class="strat-blend" id="stratBlend" hidden></div>
+    </section>
+
+    <div class="today-strip" id="todayStrip" aria-live="polite">
+      <span class="ts-k">오늘</span>
+      <span class="ts-i" id="tsBuy">—</span>
+      <span class="ts-sep" aria-hidden="true"></span>
+      <span class="ts-i" id="tsQqq">—</span>
+      <span class="ts-sep" id="tsCandSep" aria-hidden="true" hidden></span>
+      <span class="ts-i ts-cand" id="tsCand" hidden></span>
+    </div>
+
+    <div class="risk-banner" id="riskBanner" role="status" aria-live="polite" hidden>
+      <span class="rbn-ico" aria-hidden="true">🔥</span>
+      <b class="rbn-k">공격형 모드</b>
+      <span class="rbn-t" id="riskBannerTx">—</span>
+      <span class="rbn-warn">수익 구간이 넓어진 만큼 한 번의 손실도 커집니다 — 진입 전에 손절가를 먼저 정하세요</span>
+      <button class="rbn-off" id="riskBannerOff" type="button" title="안정형(기본 규칙)으로 되돌립니다">🛡️ 안정형으로</button>
+    </div>
     <section class="hero card" id="hero">
       <div class="hero-main">
         <div class="hero-id">
@@ -4147,26 +4187,6 @@ html[data-theme="light"] .today-strip .ts-lbl{ color:#334155 }
         </div>
       </div>
       <p class="nx-foot">본 화면의 백테스트·모의매매 결과는 과거 데이터 기반 참고용 시뮬레이션이며, 특정 종목의 매수·매도 권유가 아닙니다.</p>
-    </section>
-
-    <section class="strat-bar" id="stratBar" aria-label="전략 모드 전환">
-      <div class="strat-seg" id="stratSeg" role="tablist" aria-label="전략 모드">
-        <button data-m="trend" class="on" role="tab" aria-selected="true"><b>추세형</b><span>(중기)</span></button>
-        <button data-m="swing" role="tab" aria-selected="false"><b>스윙형</b><span>(단기)</span></button>
-      </div>
-      <div class="risk-pick risk-pick-strat" title="투자 성향 — 이 화면에서 가장 먼저 고르는 첫 번째 항목입니다">
-        <span class="rp-n" aria-hidden="true">1</span><span class="rp-t">성향</span>
-        <div class="risk-switch strat-risk" id="stratRisk" role="group" aria-label="투자 성향 — 안정형·공격형">
-          <button type="button" data-risk-btn="safe" class="on" aria-pressed="true" title="🛡️ 안정형 — 기본 규칙 그대로"><span class="rk-ic" aria-hidden="true">🛡️</span><span class="rk-tx">안정형</span></button>
-          <button type="button" data-risk-btn="aggr" aria-pressed="false" title="🔥 공격형 — 스윙 쿨다운 0일·손절 -15% · 추세 50:50 모멘텀 가이드"><span class="rk-ic" aria-hidden="true">🔥</span><span class="rk-tx">공격형</span></button>
-        </div>
-      </div>
-      <div class="strat-txt">
-        <b id="stratTitle">추세형 (중기)</b>
-        <p id="stratDesc">종합 기술점수 50 이상 + QQQ 100일선 단계 (또는 QQQ RSI(2)&lt;5 극단 패닉 예외 · RSI(2)&lt;15 패닉일 청산 보류) → 다음 날 시가 매수 · 손절 6 ATR · 트레일 10 ATR 청산 — 둘 다 즉시 · QQQ 100일선 이탈 시 전량 청산은 진입 3거래일 이후</p>
-      </div>
-      <div class="strat-uni" id="stratUni"></div>
-      <div class="strat-blend" id="stratBlend" hidden></div>
     </section>
 
     <section class="card aggr-card" id="aggrCard" aria-label="공격형 전략 가이드" hidden>

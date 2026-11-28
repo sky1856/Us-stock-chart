@@ -69,7 +69,7 @@ scripts/ui.css  scripts/engine.js  scripts/ui.js  scripts/edufig.js ─┘
 [☰(모바일)] [로고 ChoKo QUANT + US Top N Analyzer] [with ChoKo] [CREATED BY JiHoon Park]
 [장마감 날짜] [테마] [검색] [관심종목 pills + 추가]        ← 1440~1560px 에서는 둘째 줄로 내려간다
 ```
-- **헤더의 성향 스위치는 제거**(중복) — 성향은 메인 최상단 통합 컨트롤(`#topCtl`)과 하단 전략 바(`#stratBar`) 2곳에서만 고른다.
+- **헤더의 성향 스위치는 제거**(중복) — 성향은 첫 화면 통합 컨트롤(`#topCtl`)에서 고른다. `#stratBar` 안의 같은 스위치는 상태 동기화만 유지하고 화면에서는 숨긴다.
 - **헤더 높이는 고정값이 아니라 실측값**: `syncHeaderHeight()`가 `.topbar` 높이를 `--hdr-h`(html 변수)에 넣고, `.sidebar{top:var(--hdr-h)}`·`.shell{min-height:calc(100vh - var(--hdr-h))}`가 따라간다. ResizeObserver + resize 로 갱신 → 1440~1536px 처럼 헤더가 2줄이 되어도 관심종목 칩이 좌측 제목을 덮지 않는다.
 - **모바일(≤760px) 헤더는 60px 한 줄**: `[☰] [로고 26px + ChoKo QUANT] [검색 flex] [테마 아이콘]`. 서명 배지·with ChoKo·장마감 배지·관심종목은 숨긴다(≤1180px 관심종목은 이미 숨김).
 - 브랜딩: 사파이어 글래스 로고(34px, 이너 하이라이트 + 루비 림라이트), `ChoKo QUANT`(C·K 루비), 부제는 루비 헤어라인 + 마이크로 캡스, `with ChoKo`는 유리 칩 + 루비 점. **`.sig-badge`는 원본 그대로**.
@@ -78,18 +78,21 @@ scripts/ui.css  scripts/engine.js  scripts/ui.js  scripts/edufig.js ─┘
 - `CREATED BY JiHoon Park` 서명 배지는 **원본 디자인·필기체 그대로**(손대지 않는다). 옆에 `with ChoKo` 배지(C·K 강조) — 1180px 미만에서는 자리 확보를 위해 숨김.
 - 헤더의 성향 스위치는 **1021~1699px에서 이모지를 접어** 검색창 폭을 확보한다(색으로 구분).
 
-### 2-2. 메인 컬럼 순서 (2026-11-28 2차 — 회장님 확정 순서)
+### 2-2. 메인 컬럼 순서 (2026-11-28 3차 — 회장님 확정 순서)
 ```
-① #topCtl      1 성향 + 2 전략 통합 컨트롤  (+ #tcNow 요약)
+① .macro-fg-grid  [왼쪽 #fgCard 공포·탐욕 시계] [오른쪽 #macroStrip 거시지표(VIX·2Y·10Y·DXY·FED·일정)]  (모바일 1열)
+② #topCtl      1 성향 + 2 전략 통합 컨트롤  (+ #tcNow 요약)
+   #stratBar   기존 전략 비교·설명 블록을 **여기로 이동** — 전략 이름 + 진입/손절/청산 설명 + 유니버스 성과(+공격형 블렌드)
+               (바로 위 #topCtl 과 같은 성향·전략 버튼은 중복이라 CSS로 숨김: `.strat-bar .strat-seg, .strat-bar .risk-pick-strat{display:none}`)
    #todayStrip 오늘 요약 1줄: 신규 매수 N건 · 보유/매수대기/매도 · QQQ 해제 조건(+X.X% / RSI(2)<5) · 대기 후보
    #riskBanner (공격형일 때만)
-② .macro-fg-grid  [왼쪽 #fgCard 공포·탐욕 시계] [오른쪽 #macroStrip 거시지표(VIX·2Y·10Y·DXY·FED·일정)]
 ③ #hero        종목 히어로: 티커·가격·차트점수 → 3줄 행동 요약 → 스트립 → 신규진입/보유관리 → 손익비
 ④ .chart-card  메인 캔들 차트(툴바·드로잉·기간)
 ⑤ #beginCard 초보자 3단계 → #fundCard 펀더멘털 → #noticeCard 운용원칙
-   #stratBar  하단 전략 비교(전략 버튼 + 성향 스위치 + 유니버스 평균) → #aggrCard
-   #btPeriod → #kpis → #seCard → #ewCard → #eduCard → #paperCard → #lower → #logCard
+   #aggrCard → #btPeriod → #kpis → #seCard → #ewCard → #eduCard → #paperCard → #lower → #logCard
 ```
+- **#stratBar 는 새로 만든 박스가 아니라 기존 블록의 이동**이다(중복 설명 박스 금지). 안의 전략 버튼·성향 스위치는 위 #topCtl 과 같은 상태를 쓰므로 자리만 비운다(동기화 코드는 그대로).
+- 상단이 시장(공포·탐욕/거시) → 선택(성향·전략 + 규칙 설명) → 종목(히어로·차트) 순서라, 900px 높이 화면에서는 히어로가 첫 화면 아래쪽에 걸친다.
 - `#todayStrip` 숫자는 스캐너 탭과 **같은 `scanCounts()`** 를 쓴다(안내문·탭 불일치 방지). 대기 후보는 신규 매수가 0건일 때만, `sigOf().waitbuy` 중 `cool`(손절대기)을 뺀 종목을 추세=점수 / 스윙=RSI(2) 순으로 최대 3개 보여 준다.
 - 데스크톱(`≥1100px`)은 공포시계/거시지표 2열(`1fr 1.15fr`), 1100px 미만은 1열(공포시계 먼저).
 - 1600×900 첫 화면: 헤더(72) + 통합 컨트롤(65) + 히어로(560) + 차트 상단까지 보인다.
@@ -98,7 +101,7 @@ scripts/ui.css  scripts/engine.js  scripts/ui.js  scripts/edufig.js ─┘
 | 위치 | id | 비고 |
 |---|---|---|
 | 상단 통합 컨트롤 | `#topRisk` | **1번째 선택** — 라벨 `1 성향` (첫 화면) |
-| 하단 전략 비교 바 | `#stratRisk` | 라벨 `1 성향` |
+| 전략 설명 바(`#stratBar`) | `#stratRisk` | 라벨 `1 성향` — 위 #topCtl 과 중복이라 숨김(동기화만 유지) |
 
 - 두 스위치는 모두 `[data-risk-btn="safe|aggr"]`이고, 클릭은 `.risk-switch` 위임, 상태 표시는 `renderRisk()`가 `$$('[data-risk-btn]')` 전체를 갱신 → **어느 것을 눌러도 2곳이 동시에 바뀐다**.
 - 활성 색: 안정형 = 시안·에메랄드 그라데이션 + 밝은 테두리 글로우 / 공격형 = 레드·앰버 그라데이션 + 붉은 글로우.
@@ -108,7 +111,7 @@ scripts/ui.css  scripts/engine.js  scripts/ui.js  scripts/edufig.js ─┘
 | 위치 | id/class | 라벨 |
 |---|---|---|
 | 상단 통합 컨트롤 | `#topStratSeg.strat-seg` | `2 전략` · 📈 추세형(Top 100) / ⚡ 스윙형(Top 150) |
-| 하단 전략 비교 바 | `#stratSeg.strat-seg` | 추세형(중기) / 스윙형(단기) |
+| 전략 설명 바(`#stratBar`, 통합 컨트롤 바로 아래) | `#stratSeg.strat-seg` | 추세형(중기) / 스윙형(단기) — 위 #topCtl 과 중복이라 화면에서는 숨김(동기화만 유지) |
 
 - 클릭은 `$$('.strat-seg')` 위임 → `setStrategy(mode)`, 표시는 `renderStrategy()`가 `$$('.strat-seg button')`을 모두 갱신.
 - `setStrategy()`는 ① `uniReset()`(프리셋·카운트 캐시 폐기) ② 추천순 정렬로 자동 전환 ③ **그 전략의 추천 1위 종목 자동 선택**(`topScoreT`) ④ 주소의 `#종목`·`?t=` 제거(자동 선택은 딥링크를 남기지 않음).
