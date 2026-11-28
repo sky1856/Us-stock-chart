@@ -1730,6 +1730,9 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
 .om-b .crew-b{width:auto !important; height:auto !important; min-width:62px; padding:4px 7px !important;
   border-radius:8px !important; font-size:9.5px !important; font-weight:800; line-height:1.25}
 .crew-empty{font-size:10.5px; color:#8FA6C0; padding:8px 2px}
+.crew-capd{margin-left:auto; font-size:9.5px; font-weight:700; color:#9FD8FF}
+.crew-price{font-style:normal; display:block; margin-top:2px; font-size:10px; font-weight:700; color:#FFE2AE}
+.crew-price b{color:#FFF6E2}
 .crew-lockf{flex:0 0 auto; font-size:9.5px; font-weight:800; color:#8FA6C0; padding:4px 6px; border-radius:7px;
   background:rgba(255,255,255,.04); border:1px solid rgba(146,190,255,.18)}
 .crew-gate{margin:0 0 9px; padding:10px 11px; border-radius:12px; display:flex; flex-direction:column; gap:5px;
@@ -2132,7 +2135,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     <div class="gs-sec">🛍️ 초코퀀트 상점 <em>· 의상 20종 · 지갑으로 구매</em></div>
     <div class="shop-top"><span class="shop-wallet">🪙 내 지갑 <b data-wallet>—</b></span>
 <span class="shop-tier" data-tier>내 직급 <b>—</b></span><button type="button" class="shop-adm-b" data-quiz="1">🎓 오늘의 퀴즈 +$300</button>
-<span class="shop-note">의상 20종 · 무료 3종</span></div><span class="shop-bd" data-wbreak></span><div class="shop-grid" id="%s" role="group" aria-label="🛍️ 초코퀀트 상점 — 의상 20종"></div><div class="company-box" data-company-box></div><div class="office-wrap"><div class="office-h">🏛️ 전용 사무실 <em>내 회의실 배경</em></div><div class="office-grid" data-office-grid></div></div><div class="book-wrap" data-books></div><div class="crew-wrap"><div class="crew-h">👥 AI 팀원 채용 <em>대표(창업)만 · 종류별 최대 50명 · 매일 정산</em></div><div data-crew></div></div><div class="myoffice-wrap" data-myoffice hidden><div class="myoffice-h">🏢 내 사무실 · 회사 경영 <em>팀원 인사 · 보상 · 교본 장착</em><span class="om-co" data-co-name></span></div><div data-crew-mgmt></div></div><div class="battle-box" data-battle-box></div><details class="adm-panel" data-admin hidden><summary>🔐 관리자 패널 <em>잔액·보너스는 회장·초코만</em></summary><div class="adm-body"><button type="button" class="shop-adm-b" data-wbonus="1000">+$1,000 보너스</button><input class="shop-adm-i" type="number" min="0" step="100" placeholder="잔액" data-wset-in aria-label="관리자 잔액 지정"><button type="button" class="shop-adm-b" data-wset>조정</button><button type="button" class="shop-adm-b danger" data-wreset>잔액 리셋</button></div></details>
+<span class="shop-note">의상 20종 · 무료 3종</span></div><span class="shop-bd" data-wbreak></span><div class="shop-grid" id="%s" role="group" aria-label="🛍️ 초코퀀트 상점 — 의상 20종"></div><div class="company-box" data-company-box></div><div class="office-wrap"><div class="office-h">🏛️ 전용 사무실 <em>내 회의실 배경</em></div><div class="office-grid" data-office-grid></div></div><div class="book-wrap" data-books></div><div class="crew-wrap"><div class="crew-h">👥 AI 팀원 채용 <em>대표(창업)만 · 사무실 정원만큼 · 매일 정산</em><span class="crew-capd" data-crew-cap></span></div><div data-crew></div></div><div class="myoffice-wrap" data-myoffice hidden><div class="myoffice-h">🏢 내 사무실 · 회사 경영 <em>팀원 인사 · 보상 · 교본 장착</em><span class="om-co" data-co-name></span></div><div data-crew-mgmt></div></div><div class="battle-box" data-battle-box></div><details class="adm-panel" data-admin hidden><summary>🔐 관리자 패널 <em>잔액·보너스는 회장·초코만</em></summary><div class="adm-body"><button type="button" class="shop-adm-b" data-wbonus="1000">+$1,000 보너스</button><input class="shop-adm-i" type="number" min="0" step="100" placeholder="잔액" data-wset-in aria-label="관리자 잔액 지정"><button type="button" class="shop-adm-b" data-wset>조정</button><button type="button" class="shop-adm-b danger" data-wreset>잔액 리셋</button></div></details>
 <div class="shop-req"><div class="shop-req-h">✨ 상점 신상 의상·아이템 요청하기</div><div class="shop-req-row"><input id="greq" type="text" maxlength="120" autocomplete="off" placeholder="예: 민트색 트렌치코트 · 안경 없는 캐주얼 버전"><button type="button" class="shop-req-b" data-req="greq">등록</button></div></div>
     <!-- 이전 링크·스크립트 호환용 숨김 훅: 액세서리 선택은 스타일 프리셋으로 매핑된다 -->
     <div class="gs-chips" id="gacc" role="group" aria-label="액세서리" aria-hidden="true" style="display:none">
@@ -2194,7 +2197,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
         <div class="gs-sec">🛍️ 초코퀀트 상점 <em>· 의상 20종 · 지갑으로 구매</em></div>
         <div class="shop-top"><span class="shop-wallet">🪙 내 지갑 <b data-wallet>—</b></span>
 <span class="shop-tier" data-tier>내 직급 <b>—</b></span><button type="button" class="shop-adm-b" data-quiz="1">🎓 오늘의 퀴즈 +$300</button>
-<span class="shop-note">의상 20종 · 무료 3종</span></div><span class="shop-bd" data-wbreak></span><div class="shop-grid" id="%s" role="group" aria-label="🛍️ 초코퀀트 상점 — 의상 20종"></div><div class="company-box" data-company-box></div><div class="office-wrap"><div class="office-h">🏛️ 전용 사무실 <em>내 회의실 배경</em></div><div class="office-grid" data-office-grid></div></div><div class="book-wrap" data-books></div><div class="crew-wrap"><div class="crew-h">👥 AI 팀원 채용 <em>대표(창업)만 · 종류별 최대 50명 · 매일 정산</em></div><div data-crew></div></div><div class="myoffice-wrap" data-myoffice hidden><div class="myoffice-h">🏢 내 사무실 · 회사 경영 <em>팀원 인사 · 보상 · 교본 장착</em><span class="om-co" data-co-name></span></div><div data-crew-mgmt></div></div><div class="battle-box" data-battle-box></div><details class="adm-panel" data-admin hidden><summary>🔐 관리자 패널 <em>잔액·보너스는 회장·초코만</em></summary><div class="adm-body"><button type="button" class="shop-adm-b" data-wbonus="1000">+$1,000 보너스</button><input class="shop-adm-i" type="number" min="0" step="100" placeholder="잔액" data-wset-in aria-label="관리자 잔액 지정"><button type="button" class="shop-adm-b" data-wset>조정</button><button type="button" class="shop-adm-b danger" data-wreset>잔액 리셋</button></div></details>
+<span class="shop-note">의상 20종 · 무료 3종</span></div><span class="shop-bd" data-wbreak></span><div class="shop-grid" id="%s" role="group" aria-label="🛍️ 초코퀀트 상점 — 의상 20종"></div><div class="company-box" data-company-box></div><div class="office-wrap"><div class="office-h">🏛️ 전용 사무실 <em>내 회의실 배경</em></div><div class="office-grid" data-office-grid></div></div><div class="book-wrap" data-books></div><div class="crew-wrap"><div class="crew-h">👥 AI 팀원 채용 <em>대표(창업)만 · 사무실 정원만큼 · 매일 정산</em><span class="crew-capd" data-crew-cap></span></div><div data-crew></div></div><div class="myoffice-wrap" data-myoffice hidden><div class="myoffice-h">🏢 내 사무실 · 회사 경영 <em>팀원 인사 · 보상 · 교본 장착</em><span class="om-co" data-co-name></span></div><div data-crew-mgmt></div></div><div class="battle-box" data-battle-box></div><details class="adm-panel" data-admin hidden><summary>🔐 관리자 패널 <em>잔액·보너스는 회장·초코만</em></summary><div class="adm-body"><button type="button" class="shop-adm-b" data-wbonus="1000">+$1,000 보너스</button><input class="shop-adm-i" type="number" min="0" step="100" placeholder="잔액" data-wset-in aria-label="관리자 잔액 지정"><button type="button" class="shop-adm-b" data-wset>조정</button><button type="button" class="shop-adm-b danger" data-wreset>잔액 리셋</button></div></details>
 <div class="shop-req"><div class="shop-req-h">✨ 상점 신상 의상·아이템 요청하기</div><div class="shop-req-row"><input id="lreq" type="text" maxlength="120" autocomplete="off" placeholder="예: 민트색 트렌치코트 · 안경 없는 캐주얼 버전"><button type="button" class="shop-req-b" data-req="lreq">등록</button></div></div>
         <div class="gs-sec">🙂 얼굴 스타일</div>
         <div class="gs-chips" id="lface" role="group" aria-label="얼굴 스타일">
@@ -3649,7 +3652,20 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     for (var i = 0; i < CREW.length; i++) if (CREW[i].k === k) return CREW[i];
     return null;
   }
-  var CREW_MAX = 50;                     // 종류별 최대 50명
+  /* 사무실 등급별 '총 채용 정원' — 더 큰 사무실로 이사하면 늘어난다 */
+  var CREW_CAP = { default: 5, garage: 5, sky: 15, wall: 30, cyber: 50, salon: Infinity };
+  function crewCap() {
+    if (shopIsAdmin()) return Infinity;                  /* 회장·초코는 무제한 */
+    var c = CREW_CAP[SHOP.office || 'default'];
+    return (c == null) ? 5 : c;
+  }
+  function crewHave_total() { return (SHOP.crew || []).length; }
+  function crewRoom() { return Math.max(0, crewCap() - (SHOP.crew || []).length); }
+  function crewCapText() {
+    var cap = crewCap(), n = (SHOP.crew || []).length;
+    return '현재 ' + n + ' / 정원 ' + (cap === Infinity ? '∞' : cap + '명')
+      + (cap === Infinity ? '' : ' (더 큰 사무실로 이사 시 확장)');
+  }
   function crewHave(k) { return (SHOP.crew || []).filter(function (x) { return x === k; }).length; }
   /* ── 창업한 대표(company) 또는 관리자(회장·초코)만 인사·채용 권한을 가진다 ── */
   function canManageCrew() { return !!SHOP.company || shopIsAdmin(); }
@@ -3670,7 +3686,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     var n = crewCount(), bal = shopBalance(), owner = canManageCrew();
     var html = CREW.map(function (c) {
       var have = crewHave(c.k);
-      var room = CREW_MAX - have;
+      var room = crewRoom();                       /* 사무실 정원에서만 제한 (종류별 상한 없음) */
       var q1 = Math.min(1, room), q10 = Math.min(10, room);
       var b1 = q1 > 0 && c.price * q1 <= bal + 1e-9;
       var b10 = q10 > 0 && c.price * q10 <= bal + 1e-9;
@@ -3680,14 +3696,16 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
         + (have ? ' <b class="crew-lv">Lv.' + crewLevel(c.k) + '</b>' : '')
         + '<em>' + c.cap + '</em>'
         + '<i class="crew-skill">🎯 ' + c.skill + '</i>'
+        + '<i class="crew-price">고용 <b>' + hqUSD(c.price) + '</b> · 기본 일급 <b>' + hqUSD(c.pay) + '/일</b>'
+        + (bookOf(c.k) ? ' · 📘 ' + ((bookInfo(bookOf(c.k)) || {}).nm || '교본') : '') + '</i>'
         + '<i class="crew-live">오늘 1명당 ' + hqSigned(crewOneDay(c))
         + ' · 몸값 ' + hqUSD(crewValue(c.k))
         + ' · 연봉 ' + hqUSD(crewSalary(c.k)) + '/일</i>'
         + '</span>'
-        + '<span class="crew-have">' + have + '/' + CREW_MAX + '</span>'
+        + '<span class="crew-have">' + have + '명</span>'
         + (owner
           ? '<button type="button" class="crew-b" data-crewbuy="' + c.k + '" data-qty="' + q1 + '"'
-            + ((b1 && q1 > 0) ? '' : ' aria-disabled="true"') + ' title="1명 채용">+1</button>'
+            + ((b1 && q1 > 0) ? '' : ' aria-disabled="true"') + ' title="1명 채용 · ' + hqUSD(c.price) + '">+1 ' + hqUSD(c.price) + '</button>'
             + '<button type="button" class="crew-b" data-crewbuy="' + c.k + '" data-qty="' + q10 + '"'
             + ((b10 && q10 > 0) ? '' : ' aria-disabled="true"') + ' title="10명 채용">+10</button>'
           : '<span class="crew-lockf">🔒 대표 전용</span>')
@@ -3698,7 +3716,9 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
         + '<span>창업하면 낡은 스타트업 단칸방을 선물로 드리고, 팀원 채용·인사·성과금까지 내 사무실에서 관리할 수 있습니다.</span>'
         + '<button type="button" class="crew-gate-b" data-cogoto="1">🏢 회사 설립하고 채용하기</button></div>' + html;
     }
-    html += '<div class="crew-sum">👥 내 팀원 ' + n + '명 · 오늘 손익 ' + hqSigned(crewDaily())
+    Array.prototype.forEach.call(document.querySelectorAll('[data-crew-cap]'), function (el) { el.textContent = crewCapText(); });
+    html += '<div class="crew-sum">👥 내 팀원 ' + n + '명 · 정원 ' + (crewCap() === Infinity ? '∞' : crewCap() + '명')
+      + ' · 오늘 손익 ' + hqSigned(crewDaily())
       + ' (시황 연동 · 수익도 손실도 실시간) · 1명당 ' + hqUSD(Math.min.apply(null, CREW.map(function (c) { return c.price; })))
       + '~' + hqUSD(Math.max.apply(null, CREW.map(function (c) { return c.price; }))) + ' · 전문가 12종</div>';
     Array.prototype.forEach.call(document.querySelectorAll('[data-crew]'), function (el) { el.innerHTML = html; });
@@ -3750,7 +3770,8 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
         + '</span></div>';
     }).join('');
     if (!rows) rows = '<div class="crew-empty">아직 채용한 팀원이 없습니다 — 위 상점에서 팀원을 채용하면 여기서 인사·보상을 관리합니다.</div>';
-    rows = '<div class="om-sum">👥 팀원 ' + crewCount() + '명 · 하루 운용 손익 ' + hqSigned(crewDaily())
+    rows = '<div class="om-sum">👥 팀원 ' + crewHave_total() + '명 / 정원 ' + (crewCap() === Infinity ? '무제한' : crewCap() + '명')
+      + ' · 하루 운용 손익 ' + hqSigned(crewDaily())
       + ' · 하루 급여 ' + hqUSD(crewSalaryAll()) + ' · 순 ' + hqSigned(crewDaily() - crewSalaryAll()) + '</div>' + rows;
     Array.prototype.forEach.call(document.querySelectorAll('[data-crew-mgmt]'), function (el) { el.innerHTML = rows; });
   }
@@ -3762,8 +3783,12 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
       return;
     }
     var have = crewHave(k);
-    qty = Math.max(1, Math.min(Number(qty) || 1, CREW_MAX - have));
-    if (have >= CREW_MAX) { hqToast(c.nm + '은(는) 종류별 최대 ' + CREW_MAX + '명까지 채용할 수 있습니다', 'warn'); return; }
+    var room = crewRoom();
+    if (room <= 0) {
+      hqToast('👥 사무실 정원(' + (crewCap() === Infinity ? '무제한' : crewCap() + '명') + ')이 가득 찼습니다 — 🏛️ 더 큰 사무실로 이사하면 정원이 늘어납니다', 'warn');
+      return;
+    }
+    qty = Math.max(1, Math.min(Number(qty) || 1, room));
     var cost = c.price * qty, bal = shopBalance();
     if (cost > bal + 1e-9) {
       hqToast('잔액이 부족합니다 — ' + c.nm + ' ' + qty + '명 ' + hqUSD(cost) + ' · 보유 ' + hqUSD(bal), 'warn');
@@ -3776,7 +3801,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     SHOP.at = new Date().toISOString();
     shopSave(); paintShop(); lbPush(true);
     hqToast('👥 ' + c.nm + ' ' + qty + '명 채용 — ' + hqUSD(cost) + ' 차감 · 오늘 손익 '
-      + hqSigned(crewOneDay(c) * qty) + ' · 보유 ' + crewHave(k) + '/' + CREW_MAX + '명', 'ok');
+      + hqSigned(crewOneDay(c) * qty) + ' · 보유 ' + crewHave(k) + '명 · 정원 ' + (crewCap() === Infinity ? '무제한' : crewCap() + '명'), 'ok');
   }
   /* 매일 1회 — 팀원들이 벌어온 수입을 총수익금에 더한다 */
   function crewSettle() {
