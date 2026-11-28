@@ -1367,6 +1367,16 @@ body.mode3d .sidembtn{display:grid}
 @media (max-width:1180px){ .wall-tv .wt-chip .wt-t{display:none} .wall-tv .wt-chip{padding:4px 6px} }
 @media (max-width:900px){ .wall-tv .wt-chip{display:none} }
 
+/* ── 내 사무실(비-본사) 배경일 때 — 본사 사진 좌표에 맞춘 오버레이(명패·실루엣·벽 TV·말풍선)를 모두 숨긴다 */
+body.office-alt .plates,
+body.office-alt .seat,
+body.office-alt .wall-live,
+body.office-alt .wall-tv,
+body.office-alt .wall-chip,
+body.office-alt .holo-layer,
+body.office-alt .table-glow,
+body.office-alt .stage-hint{display:none !important}
+
 /* ── 벽면 소형 순위 전광판 — 카페 디지털 메뉴판처럼 다크 글래스 · 원근 베젤 ── */
 .wall-live{position:absolute; left:61.0%; top:20.6%; width:7.6%; height:16.4%; z-index:2; padding:0;
   border:0; background:none; cursor:pointer; border-radius:7px; transform-origin:left center;
@@ -4079,6 +4089,10 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     }).join('');
     Array.prototype.forEach.call(document.querySelectorAll('[data-office-grid]'), function (el) { el.innerHTML = html; });
   }
+  function syncOfficeScene() {
+    var alt = (SHOP.office || 'default') !== 'default';
+    try { document.body.classList.toggle('office-alt', alt); } catch (e) {}
+  }
   function applyOffice(k) {
     var o = null;
     for (var i = 0; i < OFFICES.length; i++) if (OFFICES[i].k === k) o = OFFICES[i];
@@ -4087,6 +4101,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     if (!src) return;
     Array.prototype.forEach.call(document.querySelectorAll('[data-asset="room"]'), function (img) { img.src = src; });
     SHOP.office = k;
+    syncOfficeScene();
     shopSave();
   }
   function officeBuy(k) {
@@ -7327,6 +7342,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
   /* 상점 지갑 초기화 — 첫 입장 $10,000 1회 지급(이미 받았으면 유지) */
   (function shopBoot() {
     var first = shopInit();
+    try { syncOfficeScene(); } catch (e) {}
     paintShop();
     lbLoad();
     lbPush(true);
