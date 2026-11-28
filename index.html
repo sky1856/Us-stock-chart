@@ -1732,6 +1732,10 @@ body{
   .sig-badge::before{top:7px; bottom:7px}
   .sig-k{font-size:11px; letter-spacing:.18em}
   .sig-n{font-size:18px}
+  /* 종목명·섹터·기준일 칩이 한 줄에 다 들어가지 않으면 기준일 칩이 잘려 보였으므로
+     좁은 화면에서는 칩 단위로 줄바꿈을 허용한다 (각 조각은 줄 안에서 끊기지 않음) */
+  .cname{display:flex; flex-wrap:wrap; align-items:center; white-space:normal; row-gap:2px}
+  .cname>span{white-space:nowrap}
 }
 @media (max-width:430px){
   .sig-badge{margin-left:auto}
