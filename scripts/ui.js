@@ -909,7 +909,22 @@
     var short = (el.clientWidth || 0) < 190;
     el.placeholder = short ? '종목 검색' : '종목 검색 · 티커 또는 회사명';
   }
-  window.addEventListener('resize', function () { fitSearchPlaceholder(); });
+  /* 📱 ≤1023px — 헤더 검색창을 공포·탐욕 시계(#fgCard) 바로 위 슬롯(#msearchSlot)으로 옮기고,
+     헤더 오른쪽에는 🏢 회의실 버튼만 남긴다(2026-11-28 회장님 지시). 노드를 옮길 뿐이라
+     검색 이벤트·드롭다운·⌘K·딥링크는 그대로 동작한다. */
+  var searchHome = null;
+  function relocateSearch() {
+    var el = $('#globalSearch'), s = el ? el.closest('.search') : null, slot = $('#msearchSlot');
+    if (!s || !slot) return;
+    if (!searchHome) searchHome = { parent: s.parentNode, next: s.nextSibling };
+    if (window.innerWidth <= 1023) {
+      if (s.parentNode !== slot) slot.appendChild(s);
+    } else if (s.parentNode !== searchHome.parent) {
+      searchHome.parent.insertBefore(s, searchHome.next);
+    }
+    fitSearchPlaceholder();
+  }
+  window.addEventListener('resize', function () { relocateSearch(); });
   function renderFavs() {
     var el = $('#favPills'); if (!el) return;
     el.innerHTML = state.watch.map(function (t) {
@@ -6270,8 +6285,11 @@
             var b = mhBasisOf(it), opt = mhBestPeek(it.t) || null;
             var row = $('#mhList .mh-row[data-t="' + it.t + '"]');
             return { t: it.t, rule: mhRuleOf(it), basis: b ? b.mode : '', ko: b ? b.ko : '', pend: !!(b && b.pend),
-              best: opt && opt.best ? { rule: opt.best.rule, ret: opt.best.ret, sharpe: opt.best.sharpe, mdd: opt.best.mdd } : null,
-              all: opt ? opt.all : null, reco: mhRecoOf(it), row: row ? row.innerText.replace(/\s+/g, ' ') : '' };
+              best: opt && opt.best ? { rule: opt.best.rule, ret: opt.best.ret, period: opt.best.period, fair: opt.best.fair,
+                sharpe: opt.best.sharpe, mdd: opt.best.mdd, trades: opt.best.trades } : null,
+              all: opt ? opt.all.map(function (r) { return { rule: r.rule, ko: r.ko, ret: r.ret, period: r.period, bars: r.bars,
+                fair: r.fair, sharpe: r.sharpe, mdd: r.mdd, trades: r.trades }; }) : null,
+              reco: mhRecoOf(it), row: row ? row.innerText.replace(/\s+/g, ' ') : '' };
           }),
           sumBasis: (($('#mhSum') || {}).innerText || '').replace(/\s+/g, ' '),
           faqOpen: $('#mhFaq') ? !$('#mhFaq').hidden : null,
@@ -7056,8 +7074,10 @@
                QQQ 100일선 아래(시장 위험) → 전량 청산(최소 보유 3거래일 · 패닉일 보류)
      · 매수 기준은 종목마다 고른다 — item.rule: 'auto' | 'safe_trend' | 'aggr_trend' | 'safe_swing' | 'aggr_swing'
          'auto' = 안정·공격 × 추세·스윙 4조합 백테스트(engine.js 실제 함수) 중 최고를 그 종목에 적용
-                  (추세 1Y · 스윙 1M — 전략 고유 기간의 실제 백테스트 수익률)
-         직접 고른 기준이 같은 기간 수익률로 1%p 이상 차이 나면 💡 추천 칩(누르면 그 기준으로 전환)
+                  (추세 1Y · 스윙 1M — 전략 고유 기간의 실제 백테스트 수익률 · 배지에 고유 수치 표기)
+         승자는 **연환산(CAGR) 수익률**로 가린다 — 추세 1Y는 그 자체가 연 수익률이고, 스윙 1M은
+                  21거래일 수익률을 1년으로 환산해 견주므로 기간이 다른 두 전략을 왜곡 없이 비교한다
+         직접 고른 기준이 연환산으로 5%p 이상 앞서면 💡 추천 칩(누르면 그 기준으로 전환)
          상단 모드 '내 성향 기준'은 저장된 기준을 무시하고 지금 내 성향(성향·전략 버튼) 규칙을 전 종목에 적용
      · 주문·결제 기능은 없다. 실제 계좌·증권사와 연동하지 않는 기록·진단 전용.
      · 저장: localStorage['apex.myhold.v1']
@@ -7146,8 +7166,9 @@
          20일선 이탈로 끝나는 초단기 전략이라 같은 창으로 재면 한쪽이 늘 불리하다.
          그래서 배지·추천 숫자도 추세 `1Y +XX%` · 스윙 `1M +XX%` 로 각각 적는다.
      · 4조합(안정·공격 × 추세·스윙) 전체에서 고른다 — 성향 제한 없음(2026-11-28 확정).
-     · 비교는 각 전략의 고유 기간 수익률끼리 — 추세끼리 1Y vs 1Y · 스윙끼리 1M vs 1M,
-         추세 ↔ 스윙은 `추세 1Y` 대 `스윙 1M` 을 그대로 견준다(라벨도 1Y / 1M 그대로).
+     · 승부는 **연환산(CAGR) 수익률**로 가린다 (2026-11-28) — 추세끼리(1Y vs 1Y)·스윙끼리(1M vs 1M)는
+         기간이 같아 순서가 누적 수익률과 같고, 추세 ↔ 스윙은 스윙 1M을 연환산해 같은 잣대로 견준다.
+         (1Y +50% 대 1M +4%를 그대로 비교하면 스윙이 늘 지므로, 배지에는 고유 수치와 연환산을 함께 적는다)
      · 같은 종목·같은 기준일은 다시 돌리지 않는다 — 메모리 캐시
          mhBtCache['티커|asOf|기준'] → { ret, cagr, sharpe, mdd, win, trades, period }
          mhOptCache['티커|asOf']     → { best, all, asOf }
@@ -7160,6 +7181,25 @@
   /* 전략 고유 기간 — 추세 1Y(252거래일) · 스윙 1M(21거래일) */
   var MH_BARS = { trend: ((QE.BT_PERIODS && QE.BT_PERIODS['1Y']) || 252), swing: 21 };
   var MH_PERIOD = { trend: '1Y', swing: '1M' };
+  /* 공정 비교값 — 연환산(CAGR). 추세 1Y는 그대로 연 수익률, 스윙 1M은 252/21 로 1년 환산.
+     추천 칩은 연환산으로 5%p 이상 앞설 때만 띄운다 (1M 1%p 차이는 연환산으로 12%p가 넘어 과민해진다) */
+  var MH_RECO_GAP = 0.05;
+  function mhCagr(ret, bars) {
+    var n = bars > 0 ? bars : 252, x = 1 + (isFinite(ret) ? ret : 0);
+    if (!(x > 0)) return -1;
+    return Math.pow(x, 252 / n) - 1;
+  }
+  function mhFairOf(r) {
+    if (!r) return null;
+    if (r.fair != null && isFinite(r.fair)) return r.fair;
+    return mhCagr(r.ret, r.bars);
+  }
+  /* 화면 표기용 연환산 — 21거래일 수익을 1년으로 환산하면 작은 달 수익도 세 자리가 되므로 999%에서 자른다 */
+  function mhFairPct(v, d) {
+    if (v == null || !isFinite(v)) return '—';
+    if (v > 9.99) return '+999%↑';
+    return pct(v, d === undefined ? 1 : d);
+  }
   function mhAsOf(t) {
     var a = A[t];
     return (a && a.dates && a.close && a.close.length) ? a.dates[a.close.length - 1] : '';
@@ -7181,7 +7221,8 @@
         else r = QE.backtest(a.series, a.ind, a.scoreSeries, o);
       }
       if (r && r.stats) out = { ret: r.stats.totalReturn, cagr: r.stats.cagr, sharpe: r.stats.sharpe,
-        mdd: r.stats.mdd, win: r.stats.winRate, trades: r.stats.trades, bars: bars, period: MH_PERIOD[spec.strat] };
+        mdd: r.stats.mdd, win: r.stats.winRate, trades: r.stats.trades, bars: bars, period: MH_PERIOD[spec.strat],
+        fair: (r.stats.cagr != null && isFinite(r.stats.cagr)) ? r.stats.cagr : mhCagr(r.stats.totalReturn, bars) };
     } catch (e) { out = null; }
     mhBtCache[key] = out;
     return out;
@@ -7191,13 +7232,16 @@
     var r = mhBacktestOf(t, rule);
     if (!r) return null;
     return { rule: rule, ko: MH_RULES[rule].tag, strat: MH_RULES[rule].strat,
-      ret: r.ret, period: r.period, sharpe: r.sharpe, mdd: r.mdd, win: r.win, trades: r.trades };
+      ret: r.ret, period: r.period, bars: r.bars, fair: mhFairOf(r),
+      sharpe: r.sharpe, mdd: r.mdd, win: r.win, trades: r.trades };
   }
-  /* a 가 b 보다 나은가 — 각자 고유 기간 수익률로 견준다 (동률이면 거래 유무 → 샤프 → 1Y 근거) */
+  /* a 가 b 보다 나은가 — 연환산(CAGR) 수익률로 공정 비교 (동률이면 거래 유무 → 샤프 → 1Y 근거)
+     추세 1Y끼리·스윙 1M끼리는 순서가 누적 수익률과 같고, 추세↔스윙에서만 환산이 승부를 바꾼다 */
   function mhBetter(a, b) {
     if (!b) return true;
-    if (a.ret > b.ret + 1e-4) return true;
-    if (b.ret > a.ret + 1e-4) return false;
+    var fa = mhFairOf(a), fb = mhFairOf(b);
+    if (fa > fb + 1e-4) return true;
+    if (fb > fa + 1e-4) return false;
     if (a.trades > 0 && !(b.trades > 0)) return true;      /* 거래가 아예 없던 조합보다 실제로 매매한 조합 */
     if (b.trades > 0 && !(a.trades > 0)) return false;
     if (a.sharpe > b.sharpe + 1e-6) return true;
@@ -7225,6 +7269,14 @@
     if (!asOf) return undefined;
     var key = t + '|' + asOf;
     return (key in mhOptCache) ? mhOptCache[key] : undefined;
+  }
+  /* 배지 툴팁용 공정 비교 근거 — 4조합 각각의 고유 기간 수익률과 연환산 */
+  function mhFairTable(t) {
+    var opt = mhBestPeek(t);
+    if (!opt || !opt.all || !opt.all.length) return '계산 중';
+    return opt.all.map(function (r) {
+      return r.ko + ' ' + r.period + ' ' + pct(r.ret, 1) + '(연 ' + mhFairPct(mhFairOf(r), 1) + ')';
+    }).join(' · ');
   }
   function mhOptAsk(t) {
     if (!mhAsOf(t) || mhBestPeek(t) !== undefined) return;
@@ -7255,10 +7307,11 @@
     if (b === undefined) { mhOptAsk(it.t); return { mode: 'auto', rule: 'auto', pend: true }; }
     if (!b) return { mode: 'auto', rule: 'auto', pend: true };       /* 데이터 없음 → 진단도 없음 */
     return { mode: 'auto', rule: 'auto', best: b, profile: MH_RULES[b.best.rule].profile,
-      strat: MH_RULES[b.best.rule].strat, ko: b.best.ko, ret: b.best.ret, period: b.best.period };
+      strat: MH_RULES[b.best.rule].strat, ko: b.best.ko, ret: b.best.ret, period: b.best.period,
+      fair: mhFairOf(b.best) };
   }
-  /* 💡 추천 — 4조합 1등이 지금 기준보다 고유 기간 수익률로 1%p 이상 앞설 때만
-     (추세끼리 1Y vs 1Y · 스윙끼리 1M vs 1M · 추세↔스윙은 1Y 대 1M 을 라벨 그대로) */
+  /* 💡 추천 — 4조합 1등이 지금 기준보다 **연환산(CAGR)**으로 5%p 이상 앞설 때만
+     (추세끼리 1Y · 스윙끼리 1M · 추세↔스윙은 스윙 1M을 연환산해 같은 잣대로 견준다) */
   function mhRecoOf(it) {
     var rule = mhRuleOf(it);
     if (rule === 'auto') return null;
@@ -7268,8 +7321,10 @@
     var curRow = null;
     opt.all.forEach(function (r) { if (r.rule === rule) curRow = r; });
     if (!curRow) return null;
-    if (opt.best.ret - curRow.ret < 0.01) return null;
+    var fb = mhFairOf(opt.best), fc = mhFairOf(curRow);
+    if (!(fb - fc >= MH_RECO_GAP)) return null;
     return { rule: opt.best.rule, ko: opt.best.ko, best: opt.best.ret, cur: curRow.ret,
+      bestFair: fb, curFair: fc, gap: fb - fc,
       period: opt.best.period, curPeriod: curRow.period };
   }
 
@@ -7420,7 +7475,7 @@
     var basisS = auto ? '종목별 설정 (자동 포함)'
       : ('내 성향 기준 · ' + (riskAggr() ? '공격형' : '안정형') + ' · ' + (stratKey() === 'swing' ? '스윙형' : '추세형'));
     var basisT = auto
-      ? ('⚡ 자동 ' + st.autoN + '종목 · 직접 지정 ' + st.pickN + '종목 — 자동은 4조합(추세 1Y · 스윙 1M)을 각 전략의 고유 기간 수익률로 비교해 가장 앞선 조합을 적용합니다')
+      ? ('⚡ 자동 ' + st.autoN + '종목 · 직접 지정 ' + st.pickN + '종목 — 자동은 4조합(추세 1Y · 스윙 1M)의 수익률을 연환산(CAGR)해 같은 잣대로 비교하고 가장 앞선 조합을 적용합니다')
       : '내 성향(성향·전략 버튼)의 규칙을 모든 종목에 똑같이 적용합니다 (카드에 저장된 매수 기준은 그대로 유지)';
     return '<div class="c"><div class="k">총 평가금액</div><div class="v">' + (have ? usd(st.mv, 2) : '—') + '</div>' +
       '<div class="s">' + (st.n ? '보유 ' + st.n + '종목 · 매입 ' + usd(st.cost, 2) : '아직 등록한 종목이 없습니다') + '</div></div>' +
@@ -7444,7 +7499,12 @@
     if (r.pend) { cls2 = 'pend'; txt = '⏳ 4조합 계산 중…'; tip = '4조합(안정·공격 × 추세·스윙)을 돌리는 중입니다 — 추세 1Y · 스윙 1M'; }
     else if (!b) { cls2 = 'none'; txt = '기준 없음'; }
     else if (b.mode === 'screen') { cls2 = 'screen'; txt = '🎛️ 내 성향 기준 · ' + b.ko; tip = '내 성향(성향·전략 버튼) 규칙을 따릅니다 — 저장된 매수 기준: ' + MH_RULES[cur].ko; }
-    else if (b.mode === 'auto') { cls2 = 'auto'; txt = '⚡ 자동 → ' + b.ko + ' (' + (b.period || '5Y') + ' ' + pct(b.ret, 0) + ')'; tip = '4조합 중 각 전략의 고유 기간(추세 1Y · 스윙 1M) 수익률 비교에서 가장 앞선 조합 — ' + b.ko + ' · ' + (b.period || '5Y') + ' ' + pct(b.ret, 2); }
+    else if (b.mode === 'auto') {
+      cls2 = 'auto';
+      txt = '⚡ 자동 → ' + b.ko + ' (' + (b.period || '5Y') + ' ' + pct(b.ret, 1) + ' · 연 ' + mhFairPct(b.fair, 0) + ')';
+      tip = '4조합을 연환산(CAGR) 수익률로 공정 비교한 1등 — ' + b.ko + ' · ' + (b.period || '5Y') + ' ' + pct(b.ret, 2) +
+        ' ≒ 연 ' + mhFairPct(b.fair, 1) + ' (이번 기간 속도가 1년 내내 이어질 때의 수익률·참고) · 비교 근거: ' + mhFairTable(it.t);
+    }
     else { cls2 = 'pick'; txt = '매수 기준: ' + b.ko; tip = '직접 고른 기준 — ' + (b.strat === 'swing' ? '스윙형' : '추세형') + ' · ' + (b.profile === 'aggr' ? '공격형' : '안정형') + ' 규칙으로 진단합니다'; }
     return '<div class="mhbasis">' + mhRuleSelect(it.t, cur) +
       '<span class="mhb-badge ' + cls2 + '" title="' + mhEsc(tip) + '">' + txt + '</span></div>';
@@ -7483,9 +7543,9 @@
     }
     var bd = { hold: ['hold', '🟢 홀드'], warn: ['warn', '🟡 손절 주의'], sell: ['sell', '🔴 매도·청산 신호'] }[d.badge] || ['hold', '🟢 홀드'];
     var chips = d.exit.map(function (c) { return '<span class="' + c.k + '">' + c.t + '</span>'; }).join('');
-    var reco = r.reco ? '<div class="mh-why-reco"><button type="button" class="mh-reco" data-mh="reco" data-rule="' + r.reco.rule + '" title="이 종목의 매수 기준을 ' + r.reco.ko + '으로 바꿉니다 — 전략 고유 기간 수익률(추세 1Y · 스윙 1M) 비교에서 더 앞선 조합">' +
-      '💡 추천: ' + r.reco.ko + ' (' + r.reco.period + ' ' + pct(r.reco.best, 0) + ' vs ' + r.reco.curPeriod + ' ' + pct(r.reco.cur, 0) + ') · 전환</button></div>' : '';
-    var why = (r.b && r.b.mode === 'auto' ? '⚡ 4조합 중 최고(' + r.b.ko + ' · ' + (r.b.period || '5Y') + ') 기준 — ' : '') + d.reason;
+    var reco = r.reco ? '<div class="mh-why-reco"><button type="button" class="mh-reco" data-mh="reco" data-rule="' + r.reco.rule + '" title="이 종목의 매수 기준을 ' + r.reco.ko + '으로 바꿉니다 — 연환산(CAGR) 공정 비교에서 연 ' + mhFairPct(r.reco.bestFair, 1) + ' vs 연 ' + mhFairPct(r.reco.curFair, 1) + '">' +
+      '💡 추천: ' + r.reco.ko + ' (' + r.reco.period + ' ' + pct(r.reco.best, 1) + ' ≒ 연 ' + mhFairPct(r.reco.bestFair, 0) + ' vs 현재 ' + r.reco.curPeriod + ' ' + pct(r.reco.cur, 1) + ') · 전환</button></div>' : '';
+    var why = (r.b && r.b.mode === 'auto' ? '⚡ 4조합 중 최고(' + r.b.ko + ' · ' + (r.b.period || '5Y') + ' ' + pct(r.b.ret, 1) + ' · 연 ' + mhFairPct(r.b.fair, 1) + ') 기준 — ' : '') + d.reason;
     return head +
       '<div class="mhb"><span class="mh-badge ' + bd[0] + '">' + bd[1] + '</span></div>' + tk + basis +
       '<div class="mhc mh-px"><span class="lbl">현재가</span><b>' + usd(d.price) + '</b><i>평단 ' + usd(it.avg) + '</i></div>' +
@@ -7503,7 +7563,7 @@
       : '내 성향 기준 · ' + (riskAggr() ? '공격형' : '안정형') + ' · ' + (stratKey() === 'swing' ? '스윙형' : '추세형')) +
       '</b>으로 ' + M.asOf + ' 종가 기준 계산 — ';
     var body = auto
-      ? '<b>⚡ 수익최적 자동</b>은 <b>추세형 1Y(최근 1년·252거래일) · 스윙형 1M(최근 1개월·21거래일)</b> 백테스트를 돌려, 각 전략의 고유 기간 수익률로 4조합을 견줘 가장 앞선 조합을 그 종목에 적용합니다 (추세끼리 1Y 끼리 · 스윙끼리 1M 끼리 · 추세↔스윙은 1Y 대 1M). 카드의 <b>기준 선택</b>으로 직접 고르면 그 규칙을 따르고, 1등이 <b>1%p 이상</b> 앞서면 <b>💡 추천</b> 칩이 뜹니다.'
+      ? '<b>⚡ 수익최적 자동</b>은 <b>추세형 1Y(최근 1년·252거래일) · 스윙형 1M(최근 1개월·21거래일)</b> 백테스트를 돌려, 4조합을 <b>연환산(CAGR) 수익률</b>로 같은 잣대에서 견줘 가장 앞선 조합을 그 종목에 적용합니다 — 카드에는 각자의 고유 수치(추세 1Y · 스윙 1M)와 연환산을 함께 적습니다. 카드의 <b>기준 선택</b>으로 직접 고르면 그 규칙을 따르고, 1등이 연환산으로 <b>5%p 이상</b> 앞서면 <b>💡 추천</b> 칩이 뜹니다.'
       : '지금 화면에서 고른 <b>내 성향(성향·전략 버튼)</b>의 규칙을 모든 종목에 똑같이 적용합니다 — 카드에 저장된 매수 기준은 그대로 남아 있어 <b>⚡ 수익최적 자동</b>으로 돌아오면 다시 쓰입니다.';
     return head + body + ' <b>매수·매도 주문은 하지 않고</b> 실제 계좌·증권사와 연동하지 않는 참고용 진단입니다.';
   }
@@ -7724,7 +7784,7 @@
       { q: '🟢·🟡·🔴 판단 기준은 뭔가요?',
         a: '종목마다 고른 기준의 <b>실제 백테스트 규칙</b>으로 마지막 종가 기준 진단합니다.<br>· <b>스윙형</b>: 손절 max(평단 − ' + stopAtr + ' ATR, 평단 −' + capS + '%/공격형 −' + capA + '%) · 이익 +' + gate + '% 이상에서 20일선 아래 ' + need + '거래일 연속 마감 → 청산<br>· <b>추세형</b>: 손절 평단 − ' + tStop + ' ATR · 평단 +' + tStart + ' ATR 도달 후 고점 − ' + tTrail + ' ATR 트레일 · QQQ 100일선 아래면 전량 청산<br>· 🟢 여유 · 🟡 주의(청산선 3% 이내 또는 20일선 1일 이탈) · 🔴 규칙상 손절·청산 신호' },
       { q: '⚡ 수익최적 자동 vs 직접 선택 차이는?',
-        a: '내가 산 의도(스윙/추세·안정/공격)가 있으면 <b>직접 고르고</b>, 잘 모르겠으면 <b>⚡ 수익최적 자동</b>이 4조합(안정·공격 × 추세·스윙)을 돌려 가장 앞선 조합을 골라 줍니다. 기간은 전략에 맞춰 <b>추세는 1Y(최근 1년·252거래일)·스윙은 1M(최근 1개월·21거래일)</b>이고, 비교도 각 전략의 고유 기간 수익률로 합니다 — 추세끼리 1Y · 스윙끼리 1M · 추세와 스윙을 견줄 때는 <b>추세 1Y 대 스윙 1M</b> 을 그대로 견줍니다. 직접 고른 경우에도 1등이 <b>1%p 이상</b> 앞서면 카드에 <b>💡 추천 · 전환</b> 칩이 떠서 한 번에 바꿀 수 있습니다. 공격형은 <b>스윙 손절 상한(−' + capA + '%)·손절 후 재진입 금지(0일)</b>만 바꾸므로, 추세형 두 조합은 5년 성과가 같아 자동에서는 <b>안정·추세</b>로 표시됩니다.' },
+        a: '내가 산 의도(스윙/추세·안정/공격)가 있으면 <b>직접 고르고</b>, 잘 모르겠으면 <b>⚡ 수익최적 자동</b>이 4조합(안정·공격 × 추세·스윙)을 돌려 가장 앞선 조합을 골라 줍니다. 기간은 전략에 맞춰 <b>추세는 1Y(최근 1년·252거래일)·스윙은 1M(최근 1개월·21거래일)</b>이고, 배지에는 각자의 고유 수치(<b>추세 1Y · 스윙 1M</b>)를 적습니다. 승부는 <b>연환산(CAGR) 수익률</b>로 가립니다 — 추세 1Y는 그대로 연 수익률, 스윙 1M은 1년으로 환산해 같은 잣대로 견주므로(1Y +50%와 1M +4%를 그대로 비교해 스윙이 늘 지는 일이 없습니다) 스윙이 실제로 유리한 종목은 스윙이 정상 추천됩니다. 직접 고른 경우에도 1등이 연환산으로 <b>5%p 이상</b> 앞서면 카드에 <b>💡 추천 · 전환</b> 칩이 떠서 한 번에 바꿀 수 있습니다. 공격형은 <b>스윙 손절 상한(−' + capA + '%)·손절 후 재진입 금지(0일)</b>만 바꾸므로, 추세형 두 조합은 5년 성과가 같아 자동에서는 <b>안정·추세</b>로 표시됩니다.' },
       { q: '매수일은 왜 입력하나요?',
         a: '추세형의 <b>최소 ' + tHold + '거래일 보유 예외</b>와 <b>매수 후 최고가</b>(트레일 손절선: 고점 − ' + tTrail + ' ATR)를 정확히 계산하기 위해서입니다. 비워 두어도 진단은 되지만, 이 두 가지가 빠져 규칙보다 일찍 청산 신호가 보일 수 있습니다. 휴장일에 매수했다면 그 다음 거래일 종가 기준으로 계산하고 화면에 그 사실을 적습니다.' },
       { q: '다른 기기(폰↔PC)로 옮기려면?',
@@ -7865,6 +7925,7 @@
     beginInit();                                      /* 초보자 3단계 보는 법 — 접기/펼치기 저장 상태 */
     eduInit();                                        /* 오늘의 주식 공부 카드 (날짜별 자동 변경) */
     wire();
+    relocateSearch();                                 /* 📱 모바일이면 검색창을 공포·탐욕 시계 위로 */
     cleanSync();                                     /* 깔끔 보기 버튼·툴바 상태 동기화 */
     backupInit();                                    /* 가상투자·관심종목·작도·설정 백업/복원 */
     mhInit();                                        /* 💼 실전 보유 관리 — 저장된 보유 복원·탭 조립 */

@@ -2664,6 +2664,29 @@ html[data-theme="light"] .theme-btn:hover{background:#E0F2FE;border-color:rgba(1
   .theme-btn{padding:6px 9px}
   .theme-btn .th-tx{display:none}
 }
+/* ---------- 🏢 회의실 진입 버튼 (헤더 우측 · 테마 버튼 바로 옆) ---------- */
+.hq-btn{
+  display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;
+  padding:6px 11px;border-radius:99px;border:1px solid rgba(250,204,21,.34);
+  background:linear-gradient(180deg,rgba(250,204,21,.10),rgba(250,204,21,.03));
+  color:#FDE68A;font-size:12.5px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;
+  text-decoration:none;transition:.16s;
+}
+.hq-btn .th-ic{font-size:13px;line-height:1}
+.hq-btn:hover{color:#FEF3C7;border-color:rgba(250,204,21,.62);
+  background:linear-gradient(180deg,rgba(250,204,21,.20),rgba(250,204,21,.06));
+  box-shadow:0 0 18px -8px rgba(250,204,21,.85)}
+.hq-btn:focus-visible{outline:none;border-color:rgba(250,204,21,.7);box-shadow:0 0 0 3px rgba(250,204,21,.18)}
+html[data-theme="light"] .hq-btn{background:#FFFCF2;border-color:rgba(180,83,9,.28);color:#92400E}
+html[data-theme="light"] .hq-btn:hover{background:#FEF3C7;border-color:rgba(180,83,9,.48);color:#78350F;box-shadow:0 0 14px -8px rgba(180,83,9,.55)}
+html[data-risk="aggr"] .hq-btn{border-color:rgba(240,160,120,.28);background:rgba(255,140,90,.05);color:#FFE1D0}
+html[data-risk="aggr"] .hq-btn:hover{border-color:rgba(240,160,120,.52);background:rgba(255,120,80,.10);color:#FFF1E8}
+html[data-theme="light"][data-risk="aggr"] .hq-btn{background:#FFFFFF;border-color:rgba(190,18,60,.20);color:#9F1239}
+html[data-theme="light"][data-risk="aggr"] .hq-btn:hover{background:#FFE4E6;border-color:rgba(190,18,60,.42);color:#881337}
+@media (max-width:620px){
+  .hq-btn{padding:6px 9px}
+  .hq-btn .th-tx{display:none}
+}
 /* <<< LIGHT-THEME MANUAL <<< */
 
 /* ============================================================
@@ -3573,6 +3596,8 @@ html[data-theme="light"] .sim-chip{ color:#0369A1; background:rgba(56,189,248,.1
   .search kbd{ display:none }
   .theme-btn{ flex:0 0 auto; height:32px; padding:0 8px; gap:0 }
   .theme-btn .th-tx{ display:none }
+  .hq-btn{ flex:0 0 auto; height:32px; padding:0 8px; gap:0 }
+  .hq-btn .th-tx{ display:none }
   #menuBtn{ width:32px !important; height:32px !important }
 }
 
@@ -4538,7 +4563,8 @@ html[data-theme="light"] .acp-tb td b.pos{ color:#047857 }
 .mh-sum .s{font-size:12px;color:var(--txt3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mh-sum .v.pos{color:var(--up2)}
 .mh-sum .v.neg{color:var(--dn2)}
-.mh-sum .v.sm{font-size:15px;padding-top:2px}
+.mh-sum .v.sm{font-size:15px;padding-top:2px;white-space:normal;overflow:visible;text-overflow:clip;line-height:1.28}
+/* 🟢·🟡·🔴 판단 3개는 줄임표 없이 전부 보인다(2026-11-28 회장님 모바일 제보) — 좁은 칸에서는 다음 줄로 */
 
 .mh-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;padding:12px 15px;border-bottom:1px solid var(--line)}
 .mf-fields{display:grid;grid-template-columns:minmax(140px,1.2fr) 112px 104px 134px 150px minmax(130px,1fr);gap:8px;min-width:0}
@@ -4673,6 +4699,8 @@ html[data-theme="light"] .mhact button:hover{border-color:rgba(15,23,42,.24);col
   .mh-sum{grid-template-columns:1fr 1fr}
   .mh-sum .c{padding:9px 12px}
   .mh-sum .v{font-size:17px}
+  .mh-sum .v.sm{font-size:14px}
+  .mh-sum .s{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.3}
   .mh-form{padding:11px 12px}
   .mf-fields{grid-template-columns:1fr 1fr}
   .mf.f-sym,.mf.f-memo{grid-column:1 / -1}
@@ -4745,3 +4773,26 @@ html[data-theme="light"] .mf select{background:#FFFFFF;border-color:rgba(15,23,4
 /* hidden 속성이 display 규칙에 지지 않도록 (시드 컨트롤·탭 패널) */
 .paper-card .pt-acct[hidden],.paper-card #pcSubHold[hidden],.paper-card #pcSubPaper[hidden],
 .mh-pane[hidden],.pt-pane[hidden],.paper-card .pt-pane[hidden]{display:none!important}
+
+/* ---- 📱 좁은 폰(≤480px) — 요약 '오늘 판단' 🟢·🟡·🔴 3개가 한 줄에 다 보이게 (2026-11-28) ---- */
+@media (max-width:480px){
+  .mh-sum .c{padding:9px 10px}
+  .mh-sum .v.sm{font-size:13px;letter-spacing:-.045em;gap:0}
+  .mh-sum .s{font-size:11.5px}
+}
+
+/* ============================================================
+   📱 모바일(≤1023px) 종목 검색 자리 이동 — 2026-11-28
+   · 헤더 검색창을 공포·탐욕 시계(#fgCard) 바로 위 슬롯(#msearchSlot)으로 옮기고
+     헤더 오른쪽에는 🏢 회의실 버튼만 남긴다(ui.js relocateSearch)
+   ============================================================ */
+.msearch-slot{display:none}
+@media (max-width:1023px){
+  .msearch-slot{display:block}
+  .msearch-slot .search{width:100%;max-width:none;min-width:0;flex:1 1 auto}
+  .msearch-slot .search input{width:100%;padding-right:16px;background:#0E131C}
+  .msearch-slot .search kbd{display:none}
+  .msearch-slot .search-pop{max-height:min(60vh, 380px)}
+  html[data-theme="light"] .msearch-slot .search input{background:#FFFFFF;border-color:rgba(15,23,42,.14)}
+  html[data-theme="light"] .msearch-slot .search input:focus{background:#FFFFFF;border-color:rgba(14,116,144,.45)}
+}

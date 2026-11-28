@@ -42,6 +42,8 @@
   </div>
   <div class="market-badge"><i class="dot"></i><span id="asOf">—</span>&nbsp;장마감<span class="upd" id="asOfUpd"></span></div>
   <button class="theme-btn" id="themeBtn" type="button" aria-pressed="false" aria-label="화이트 모드로 전환" title="화이트 모드로 전환"><span class="th-ic" aria-hidden="true">🌙</span><span class="th-tx">다크</span></button>
+  <!-- 🏢 회의실 — 초코퀀트 가상사옥(3D 톡방) 새 탭 링크 · 테마 버튼 바로 옆 (2026-11-28) -->
+  <a class="hq-btn" id="hqBtn" href="https://sky1856.github.io/Us-stock-chart/hq/" target="_blank" rel="noopener" aria-label="초코퀀트 회의실 열기(새 탭)" title="🏢 초코퀀트 회의실 — 가상사옥 3D 톡방 열기 (새 탭)"><span class="th-ic" aria-hidden="true">🏢</span><span class="th-tx">회의실</span></a>
   <div class="search">
     <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
     <input id="globalSearch" type="text" placeholder="종목 검색 · 티커 또는 회사명" autocomplete="off" spellcheck="false">
@@ -129,6 +131,8 @@
   </aside>
 
   <main class="workspace">
+    <!-- 📱 모바일(≤1023px) 종목 검색 자리 — ui.js `relocateSearch()`가 헤더 검색창을 이 자리로 옮긴다 (2026-11-28) -->
+    <div class="msearch-slot" id="msearchSlot"></div>
     <div class="macro-fg-grid">
     <section class="fg-card card" id="fgCard" aria-label="CNN 공포·탐욕 지수">
       <div class="fg-top">
