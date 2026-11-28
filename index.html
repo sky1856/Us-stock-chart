@@ -2682,29 +2682,95 @@ html[data-theme="light"] .theme-btn:hover{background:#E0F2FE;border-color:rgba(1
   .theme-btn{padding:6px 9px}
   .theme-btn .th-tx{display:none}
 }
-/* ---------- 🏢 회의실 진입 버튼 (헤더 우측 · 테마 버튼 바로 옆) ---------- */
+/* ---------- 🏢 회의실 진입 버튼 (헤더 우측 · 테마 버튼 바로 옆) ----------
+   2026-11-28 고급화 — 다크 사파이어 글래스 + 금빛↔시안 메탈릭 보더·글로우.
+   보더는 ::before 마스크(padding-box xor)로 그려 테마·성향 4조합에서 색만 바꾼다. */
 .hq-btn{
-  display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;
-  padding:6px 11px;border-radius:99px;border:1px solid rgba(250,204,21,.34);
-  background:linear-gradient(180deg,rgba(250,204,21,.10),rgba(250,204,21,.03));
-  color:#FDE68A;font-size:12.5px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;
-  text-decoration:none;transition:.16s;
+  position:relative;display:inline-flex;align-items:center;gap:7px;flex:0 0 auto;
+  height:36px;padding:0 15px;border-radius:12px;border:1px solid transparent;
+  background:
+    radial-gradient(120% 160% at 18% 0%, rgba(56,189,248,.14), rgba(56,189,248,0) 58%),
+    linear-gradient(180deg, rgba(19,35,58,.94), rgba(7,14,25,.96));
+  background-clip:padding-box;
+  color:#F7EBCC;font-size:13px;font-weight:700;letter-spacing:.01em;white-space:nowrap;
+  text-decoration:none;transition:box-shadow .18s, transform .18s, background .18s;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.10) inset,
+    0 0 0 1px rgba(250,204,21,.12) inset,
+    0 8px 22px -14px rgba(0,0,0,.95),
+    0 0 22px -12px rgba(250,204,21,.60);
 }
-.hq-btn .th-ic{font-size:13px;line-height:1}
-.hq-btn:hover{color:#FEF3C7;border-color:rgba(250,204,21,.62);
-  background:linear-gradient(180deg,rgba(250,204,21,.20),rgba(250,204,21,.06));
-  box-shadow:0 0 18px -8px rgba(250,204,21,.85)}
-.hq-btn:focus-visible{outline:none;border-color:rgba(250,204,21,.7);box-shadow:0 0 0 3px rgba(250,204,21,.18)}
-html[data-theme="light"] .hq-btn{background:#FFFCF2;border-color:rgba(180,83,9,.28);color:#92400E}
-html[data-theme="light"] .hq-btn:hover{background:#FEF3C7;border-color:rgba(180,83,9,.48);color:#78350F;box-shadow:0 0 14px -8px rgba(180,83,9,.55)}
-html[data-risk="aggr"] .hq-btn{border-color:rgba(240,160,120,.28);background:rgba(255,140,90,.05);color:#FFE1D0}
-html[data-risk="aggr"] .hq-btn:hover{border-color:rgba(240,160,120,.52);background:rgba(255,120,80,.10);color:#FFF1E8}
-html[data-theme="light"][data-risk="aggr"] .hq-btn{background:#FFFFFF;border-color:rgba(190,18,60,.20);color:#9F1239}
-html[data-theme="light"][data-risk="aggr"] .hq-btn:hover{background:#FFE4E6;border-color:rgba(190,18,60,.42);color:#881337}
-@media (max-width:620px){
-  .hq-btn{padding:6px 9px}
+.hq-btn::before{
+  content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;
+  background:linear-gradient(135deg, rgba(250,204,21,.92), rgba(226,232,240,.45) 42%, rgba(56,189,248,.72) 72%, rgba(250,204,21,.80));
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor; mask-composite:exclude;
+  opacity:.9;transition:opacity .18s;
+}
+.hq-btn .th-ic{display:inline-flex;align-items:center;justify-content:center;line-height:1}
+.hq-btn .hq-ic{width:17px;height:17px;flex:0 0 auto;color:#F3D27A;filter:drop-shadow(0 0 6px rgba(250,204,21,.45));transition:color .18s, filter .18s}
+.hq-btn:hover .hq-ic{color:#FFE9AE;filter:drop-shadow(0 0 9px rgba(250,204,21,.7))}
+.hq-btn .hq-ic .pt{fill:#7DD3FC;stroke:none;opacity:.9}
+html[data-theme="light"] .hq-btn .hq-ic{color:#8A5A12;filter:drop-shadow(0 0 4px rgba(180,83,9,.35))}
+html[data-theme="light"] .hq-btn .hq-ic .pt{fill:#0E7490}
+html[data-risk="aggr"] .hq-btn .hq-ic{color:#F6C49A;filter:drop-shadow(0 0 6px rgba(244,164,96,.45))}
+html[data-risk="aggr"] .hq-btn .hq-ic .pt{fill:#FDA4AF}
+html[data-theme="light"][data-risk="aggr"] .hq-btn .hq-ic{color:#9F1239}
+.hq-btn .th-tx{background:linear-gradient(180deg,#FFF8E4,#E7C87A);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hq-btn:hover{
+  transform:translateY(-1px);
+  background:
+    radial-gradient(120% 160% at 18% 0%, rgba(56,189,248,.22), rgba(56,189,248,0) 60%),
+    linear-gradient(180deg, rgba(26,47,76,.96), rgba(9,18,32,.97));
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.16) inset,
+    0 0 0 1px rgba(250,204,21,.16) inset,
+    0 12px 26px -14px rgba(0,0,0,.95),
+    0 0 26px -8px rgba(250,204,21,.55),
+    0 0 18px -10px rgba(56,189,248,.65);
+}
+.hq-btn:hover::before{opacity:1}
+.hq-btn:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(250,204,21,.22), 0 0 22px -10px rgba(56,189,248,.8)}
+html[data-theme="light"] .hq-btn{
+  background:
+    radial-gradient(120% 160% at 18% 0%, rgba(14,116,144,.10), rgba(14,116,144,0) 60%),
+    linear-gradient(180deg,#FFFDF6,#F6EFDD);
+  color:#7A4A08;
+  box-shadow:0 1px 0 rgba(255,255,255,.9) inset, 0 6px 16px -12px rgba(120,72,10,.55), 0 0 16px -12px rgba(180,83,9,.55);
+}
+html[data-theme="light"] .hq-btn::before{
+  background:linear-gradient(135deg, rgba(180,83,9,.75), rgba(120,113,108,.35) 42%, rgba(14,116,144,.62) 72%, rgba(180,83,9,.70));
+}
+html[data-theme="light"] .hq-btn .th-tx{background:linear-gradient(180deg,#8A4B08,#B45309);-webkit-background-clip:text;background-clip:text;color:transparent}
+html[data-theme="light"] .hq-btn:hover{background:linear-gradient(180deg,#FFF8E2,#F3E7C8);
+  box-shadow:0 1px 0 rgba(255,255,255,.95) inset, 0 8px 18px -12px rgba(120,72,10,.6), 0 0 18px -10px rgba(180,83,9,.6)}
+html[data-risk="aggr"] .hq-btn{
+  background:
+    radial-gradient(120% 160% at 18% 0%, rgba(255,140,90,.14), rgba(255,140,90,0) 60%),
+    linear-gradient(180deg, rgba(33,20,26,.95), rgba(15,9,13,.97));
+  color:#FFE9D9;
+}
+html[data-risk="aggr"] .hq-btn::before{
+  background:linear-gradient(135deg, rgba(244,164,96,.9), rgba(237,213,196,.40) 42%, rgba(244,63,94,.66) 72%, rgba(244,114,182,.72));
+}
+html[data-risk="aggr"] .hq-btn .th-tx{background:linear-gradient(180deg,#FFF1E6,#F3C79E);-webkit-background-clip:text;background-clip:text;color:transparent}
+html[data-risk="aggr"] .hq-btn:hover{background:
+    radial-gradient(120% 160% at 18% 0%, rgba(255,140,90,.22), rgba(255,140,90,0) 62%),
+    linear-gradient(180deg, rgba(45,26,32,.96), rgba(20,11,16,.97));
+  box-shadow:0 1px 0 rgba(255,255,255,.14) inset, 0 10px 24px -14px rgba(0,0,0,.95), 0 0 24px -9px rgba(255,120,80,.5)}
+html[data-theme="light"][data-risk="aggr"] .hq-btn{background:linear-gradient(180deg,#FFFCF9,#F8EDEA);color:#8A1C3B;
+  box-shadow:0 1px 0 rgba(255,255,255,.9) inset, 0 6px 16px -12px rgba(120,20,50,.5)}
+html[data-theme="light"][data-risk="aggr"] .hq-btn::before{
+  background:linear-gradient(135deg, rgba(190,18,60,.62), rgba(148,163,184,.35) 45%, rgba(180,83,9,.55))}
+html[data-theme="light"][data-risk="aggr"] .hq-btn .th-tx{background:linear-gradient(180deg,#8A1236,#B45309);-webkit-background-clip:text;background-clip:text;color:transparent}
+@media (max-width:760px){
+  .hq-btn{height:36px;min-width:38px;padding:0 10px;gap:0;justify-content:center}
   .hq-btn .th-tx{display:none}
 }
+@media (max-width:620px){
+  .hq-btn{padding:0 9px}
+}
+
 /* <<< LIGHT-THEME MANUAL <<< */
 
 /* ============================================================
@@ -3614,7 +3680,7 @@ html[data-theme="light"] .sim-chip{ color:#0369A1; background:rgba(56,189,248,.1
   .search kbd{ display:none }
   .theme-btn{ flex:0 0 auto; height:32px; padding:0 8px; gap:0 }
   .theme-btn .th-tx{ display:none }
-  .hq-btn{ flex:0 0 auto; height:32px; padding:0 8px; gap:0 }
+  .hq-btn{ flex:0 0 auto; height:36px; min-width:38px; padding:0 9px; gap:0; justify-content:center }
   .hq-btn .th-tx{ display:none }
   #menuBtn{ width:32px !important; height:32px !important }
 }
@@ -4841,7 +4907,7 @@ html[data-theme="light"] .mf select{background:#FFFFFF;border-color:rgba(15,23,4
   <div class="market-badge"><i class="dot"></i><span id="asOf">—</span>&nbsp;장마감<span class="upd" id="asOfUpd"></span></div>
   <button class="theme-btn" id="themeBtn" type="button" aria-pressed="false" aria-label="화이트 모드로 전환" title="화이트 모드로 전환"><span class="th-ic" aria-hidden="true">🌙</span><span class="th-tx">다크</span></button>
   <!-- 🏢 회의실 — 초코퀀트 가상사옥(3D 톡방) 새 탭 링크 · 테마 버튼 바로 옆 (2026-11-28) -->
-  <a class="hq-btn" id="hqBtn" href="https://sky1856.github.io/Us-stock-chart/hq/" target="_blank" rel="noopener" aria-label="초코퀀트 회의실 열기(새 탭)" title="🏢 초코퀀트 회의실 — 가상사옥 3D 톡방 열기 (새 탭)"><span class="th-ic" aria-hidden="true">🏢</span><span class="th-tx">회의실</span></a>
+  <a class="hq-btn" id="hqBtn" href="https://sky1856.github.io/Us-stock-chart/hq/" target="_blank" rel="noopener" aria-label="초코퀀트 회의실 열기(새 탭)" title="🏢 초코퀀트 회의실 — 가상사옥 3D 톡방 열기 (새 탭)"><span class="th-ic" aria-hidden="true"><svg class="hq-ic" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.4 19.7h15.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M6.3 19.7v-8.1l2.6-1.6 2.6 1.6v8.1" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M12.7 19.7V8.3l2.9-1.8 2.9 1.8v11.4" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M14.5 11.7h2.2M14.5 14.4h2.2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" opacity=".85"/><path d="M6.9 14.2h1.7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" opacity=".7"/><circle class="pt" cx="15.6" cy="4.7" r="1"/></svg></span><span class="th-tx">회의실</span></a>
   <div class="search">
     <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
     <input id="globalSearch" type="text" placeholder="종목 검색 · 티커 또는 회사명" autocomplete="off" spellcheck="false">
