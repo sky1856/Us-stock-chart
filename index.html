@@ -5040,14 +5040,36 @@ html[data-theme="light"] .wf-tb td:first-child{ color:#1E293B }
 .sidebar[data-asset="crypto"] .side-info{display:none}
 
 .hq-pane{display:block}
+/* 탭이 아닐 때는 확실히 감춘다 — .hq-pane{display:block} 이 hidden 속성을 이겨 늘 보이던 문제 (2026-11-29) */
+.hq-pane[hidden]{display:none!important}
 .hq-top{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:10px 15px;
   border-bottom:1px solid var(--line);background:rgba(56,189,248,.035)}
 .hq-wallet{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
 .hqw-t{font-size:12.5px;font-weight:700;color:#BEE9FF;white-space:nowrap}
-#hqName{width:154px;height:30px;border:1px solid var(--line);border-radius:8px;background:#0B1018;
-  padding:0 9px;font-size:12.5px;color:var(--txt);min-width:0}
-#hqName::placeholder{color:var(--txt4)}
-#hqName:focus{outline:none;border-color:rgba(56,189,248,.5);box-shadow:0 0 0 3px rgba(56,189,248,.09)}
+/* 내 지갑 칩 — '박지훈 [회장]' (이름 끝 직급은 떼고 배지로만) */
+.hqw-me{display:inline-flex;align-items:center;gap:5px;min-width:0;max-width:100%;font-size:12.5px;
+  color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hqw-me b{font-weight:700;overflow:hidden;text-overflow:ellipsis}
+.hqw-me.none{font-weight:600;color:var(--txt3)}
+.hqw-tier{display:inline-flex;align-items:center;height:17px;padding:0 6px;border-radius:99px;
+  font-size:10.5px;font-weight:700;letter-spacing:.01em;white-space:nowrap;
+  border:1px solid rgba(148,163,184,.38);color:#CBD5E1;background:rgba(148,163,184,.13)}
+.hqw-tier.chair{border-color:rgba(246,205,122,.55);color:#F6CD7A;background:rgba(246,205,122,.13)}
+.hqw-tier.ceo{border-color:rgba(196,181,253,.55);color:#DDD6FE;background:rgba(196,181,253,.13)}
+/* 등록된 내 지갑을 못 찾았을 때 — 다른 사람 목록 대신 이 안내 버튼만 */
+.hq-gate{flex:1 1 100%;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:9px 11px;
+  border:1px solid rgba(56,189,248,.32);border-radius:10px;background:rgba(56,189,248,.07);min-width:0}
+.hq-gate[hidden]{display:none}
+.hq-gate-a{display:inline-flex;align-items:center;gap:6px;max-width:100%;font-size:12.5px;font-weight:700;
+  color:#BAE6FD;text-decoration:none;border:1px solid rgba(56,189,248,.45);border-radius:8px;
+  padding:6px 10px;background:linear-gradient(180deg,rgba(56,189,248,.22),rgba(56,189,248,.08));white-space:nowrap}
+.hq-gate-a:hover{color:#E0F2FE;border-color:rgba(56,189,248,.7)}
+.hq-gate-s{font-size:11.5px;color:var(--txt3);line-height:1.5;min-width:0;flex:1 1 200px}
+.hq-gate-s b{color:var(--txt)}
+/* 연결 전에는 주문·보유 영역을 잠근다 (남의 지갑으로 주문할 길을 화면에서도 없앤다) */
+.hq-pane.locked .hq-body{opacity:.5}
+.hq-pane.locked .hq-body *{pointer-events:none}
+.hq-submit:disabled{cursor:not-allowed;opacity:.55}
 .hq-wallet button{height:30px;padding:0 11px;border-radius:8px;font-size:12.5px;font-weight:600;
   border:1px solid var(--line);color:var(--txt2);white-space:nowrap;transition:.14s}
 .hq-wallet button:hover{color:var(--txt);border-color:rgba(255,255,255,.22);background:rgba(255,255,255,.03)}
@@ -5065,6 +5087,7 @@ html[data-theme="light"] .wf-tb td:first-child{ color:#1E293B }
   border-radius:99px;white-space:nowrap;max-width:100%}
 .hqr-i b{color:#7DD3FC;font-family:var(--mono);font-size:11px}
 .hqr-i em{font-style:normal;font-family:var(--mono);color:var(--txt2);font-size:11px}
+.hqr-i .hqw-tier{height:15px;font-size:10px;padding:0 4px;margin-left:1px}
 .hqr-i.me{border-color:rgba(56,189,248,.45);background:rgba(56,189,248,.10)}
 
 .hq-sum{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-bottom:1px solid var(--line);background:rgba(255,255,255,.008)}
@@ -5143,15 +5166,21 @@ html[data-theme="light"] .wf-tb td:first-child{ color:#1E293B }
 
 html[data-theme="light"] .hq-top{background:rgba(0,114,173,.04)}
 html[data-theme="light"] .hqw-t{color:#0072AD}
-html[data-theme="light"] #hqLink{color:#07405F;background:linear-gradient(180deg,rgba(0,114,173,.18),rgba(0,114,173,.06));border-color:rgba(0,114,173,.38)}
+html[data-theme="light"] .hqw-tier{color:#3F4C5F;background:rgba(15,23,42,.06);border-color:rgba(15,23,42,.18)}
+html[data-theme="light"] .hqw-tier.chair{color:#8A5A00;background:rgba(180,120,0,.12);border-color:rgba(180,120,0,.34)}
+html[data-theme="light"] .hqw-tier.ceo{color:#5B46A8;background:rgba(91,70,168,.12);border-color:rgba(91,70,168,.32)}
+html[data-theme="light"] .hq-gate{background:rgba(0,114,173,.05);border-color:rgba(0,114,173,.28)}
+html[data-theme="light"] .hq-gate-a{color:#07405F;background:linear-gradient(180deg,rgba(0,114,173,.16),rgba(0,114,173,.05));border-color:rgba(0,114,173,.38)}
 html[data-theme="light"] .hq-wallet button{color:#334155;background:#fff}
 html[data-theme="light"] .hq-wallet button:hover{color:#0F172A;border-color:rgba(15,23,42,.28)}
 html[data-theme="light"] .hq-go{color:#0072AD}
-html[data-theme="light"] #hqName,html[data-theme="light"] .hq-f input,
+html[data-theme="light"] .hq-f input,
 html[data-theme="light"] .hq-tabs{background:#fff}
 html[data-theme="light"] .hq-hold,html[data-theme="light"] .hq-fills{color:var(--txt2)}
 html[data-theme="light"] .hq-sum .v.pos{color:#0E9F6E}
 html[data-theme="light"] .hq-sum .v.neg{color:#D6435B}
+html[data-theme="light"] .hq-submit.buy{color:#065F46;background:linear-gradient(180deg,rgba(16,185,129,.26),rgba(16,185,129,.12));border-color:rgba(16,185,129,.5)}
+html[data-theme="light"] .hq-submit.sell{color:#9F1239;background:linear-gradient(180deg,rgba(244,63,94,.2),rgba(244,63,94,.08));border-color:rgba(244,63,94,.46)}
 
 @media (max-width:1023px){
   .hq-body{grid-template-columns:minmax(0,1fr)}
@@ -5164,7 +5193,9 @@ html[data-theme="light"] .hq-sum .v.neg{color:#D6435B}
   .hq-sum .c:nth-child(3){border-left:0}
   .hq-state{flex:1 1 100%;text-align:left}
   .hq-wallet{flex:1 1 100%}
-  #hqName{flex:1 1 120px;width:auto}
+  .hqw-me{flex:1 1 100%}
+  .hq-gate-a{flex:1 1 100%;justify-content:center;text-align:center;white-space:normal;line-height:1.4}
+  .hq-gate-s{flex:1 1 100%}
   .mh-tabs button{font-size:11.5px;padding:7px 6px;gap:4px}
   .mtt-lo{display:none}
   .mtt-sh{display:inline}
@@ -5924,7 +5955,7 @@ html[data-theme="light"] .hq-sum .v.neg{color:#D6435B}
       <div class="mh-tabs" id="mhTabs" role="tablist" aria-label="보유 관리 화면">
         <button type="button" role="tab" id="mtabHold" data-mtab="hold" class="on" aria-selected="true" aria-controls="mhPane" title="내가 실제로 보유한 종목을 등록하면 매일 장마감 기준으로 손절가·청산 기준·오늘 판단을 계산합니다 — 주문 기능은 없습니다"><span aria-hidden="true">💼</span>내 실전 보유 관리<em id="mhTabN">0</em></button>
         <button type="button" role="tab" id="mtabPaper" data-mtab="paper" aria-selected="false" aria-controls="ptPane" title="가상 시드로 실제 종가를 따라 매매를 연습합니다 — 실제 주문이 아닙니다"><span aria-hidden="true">🧪</span>모의투자</button>
-        <button type="button" role="tab" id="mtabRoom" data-mtab="room" aria-selected="false" aria-controls="hqPane" title="회의실(가상사옥) 지갑과 연결해 검색기의 실제 종가로 매수·매도합니다 — 현금은 회의실과 같은 지갑(기본 $10,000), 매도 실현손익은 회의실 실시간 순위·직급·창업 자금에 반영됩니다"><span aria-hidden="true">🏢</span><span class="mtt-lo">회의실 가상투자</span><span class="mtt-sh">회의실</span></button>
+        <button type="button" role="tab" id="mtabRoom" data-mtab="room" aria-selected="false" aria-controls="hqPane" title="이 브라우저에 등록된 내 회의실 지갑(ckq.hq.wallet.v1 · hq_wallets)으로만 연결해 검색기의 실제 종가로 매수·매도합니다 — 남의 지갑은 고를 수 없고, 매도 실현손익은 회의실 실시간 순위·직급·창업 자금에 반영됩니다"><span aria-hidden="true">🏢</span><span class="mtt-lo">회의실 가상투자</span><span class="mtt-sh">회의실</span></button>
         <span class="mh-tabnote" id="mhTabNote">실전 기록 · 자동 진단</span>
       </div>
 
@@ -6045,13 +6076,15 @@ html[data-theme="light"] .hq-sum .v.neg{color:#D6435B}
         <div class="hq-top">
           <div class="hq-wallet">
             <span class="hqw-t">🏢 회의실 지갑</span>
-            <input id="hqName" type="text" list="hqNameList" maxlength="14" placeholder="닉네임 (예: 박지훈 회장)" autocomplete="off" spellcheck="false" aria-label="회의실 닉네임">
-            <datalist id="hqNameList"></datalist>
-            <button type="button" id="hqLink" title="이 브라우저의 회의실 지갑(ckq.hq.wallet.v1)에 연결합니다 — 없으면 회의실 서버(hq_wallets)의 잔액으로 맞춥니다">연결</button>
-            <button type="button" id="hqPull" title="회의실·서버의 최신 잔액·수익·순위를 다시 읽어 옵니다">↻ 새로고침</button>
-            <a class="hq-go" id="hqGoRoom" href="hq/" target="_blank" rel="noopener" title="가상사옥 회의실 열기">회의실 열기 →</a>
+            <span class="hqw-me none" id="hqMe" aria-live="polite">확인 중…</span>
+            <button type="button" id="hqPull" title="회의실·서버의 최신 잔액·수익·순위를 다시 읽고 내 지갑 등록을 다시 확인합니다">↻ 새로고침</button>
+            <a class="hq-go" id="hqGoRoom" href="./hq/" target="_blank" rel="noopener" title="가상사옥 회의실 열기">회의실 열기 →</a>
           </div>
           <div class="hq-state" id="hqNameState">아직 연결하지 않았습니다</div>
+          <div class="hq-gate" id="hqGate" hidden>
+            <a class="hq-gate-a" id="hqGateGo" href="./hq/" target="_blank" rel="noopener">🏢 회의실에서 먼저 내 캐릭터로 입장(등록)해 주세요 →</a>
+            <span class="hq-gate-s" id="hqGateNote"></span>
+          </div>
           <div class="hq-rank" id="hqRank"></div>
         </div>
         <div class="hq-sum" id="hqSum"></div>
@@ -18193,7 +18226,7 @@ var EDUFIG = (function () {
   var HQ_SB_URL = 'https://ysetufmhcimqtpwvewmw.supabase.co';
   var HQ_SB_KEY = 'sb_publishable_eQ0nKLJQIjJ2ZKNukvex3A_uMWUDADA';
   var HQ_TABLE = 'hq_wallets';
-  var hq = { name: '', side: 'buy', rows: [], busy: false, at: 0 };
+  var hq = { name: '', side: 'buy', rows: [], busy: false, at: 0, verified: false, gateKind: '', gateName: '' };
   var hqWallet = null;
   var hqInv = { v: 1, name: '', realized: 0, positions: {}, fills: [] };
 
@@ -18286,9 +18319,10 @@ var EDUFIG = (function () {
       body: opts.body ? JSON.stringify(opts.body) : undefined
     });
   }
-  /* 내 행을 UPSERT — 다른 칸(의상 수·팀원·회사·사무실·룩)은 서버에 있던 값을 그대로 다시 써서 지우지 않는다 */
+  /* 내 행을 UPSERT — 다른 칸(의상 수·팀원·회사·사무실·룩)은 서버에 있던 값을 그대로 다시 써서 지우지 않는다
+     · 등록이 확인된 내 지갑(hq.verified)일 때만 보낸다 — 남의 행을 건드릴 길을 남기지 않는다 */
   function hqPush() {
-    if (!hq.name || !hqWallet) return;
+    if (!hq.verified || !hq.name || !hqWallet) return;
     var b = hqBook();
     var body = { name: hq.name, balance: b.cash, pnl: b.pnl, updated_at: new Date().toISOString() };
     var row = null;
@@ -18303,11 +18337,51 @@ var EDUFIG = (function () {
       }).catch(function () { hqStatus(hqStatusHtml('로컬 저장됨 · 서버 연결 실패')); });
     } catch (e) { hqStatus(hqStatusHtml('로컬 저장됨 · 서버 연결 실패')); }
   }
+  /* ── 직급 — 회의실(hq/) 규칙을 읽기만 한다(hq/ 는 이 작업에서 손대지 않는다) ──
+     회장·대표는 고정, 나머지는 총수익금(pnl) 기준 — 15,000 부사장 / 10,000 실장 / 7,500 부서장 /
+     5,000 팀장 / 3,000 수석 / 1,500 책임 / 500 선임 / 그 아래 사원. */
+  var HQ_TIERS = [[15000, '부사장'], [10000, '실장'], [7500, '부서장'],
+                  [5000, '팀장'], [3000, '수석'], [1500, '책임'], [500, '선임']];
+  var HQ_TIER_WORDS = ['부사장', '부서장', '실장', '팀장', '수석', '책임', '선임', '사원', '회장', '대표'];
+  function hqTierOf(pnl) {
+    var v = Number(pnl) || 0;
+    for (var i = 0; i < HQ_TIERS.length; i++) if (v >= HQ_TIERS[i][0]) return HQ_TIERS[i][1];
+    return '사원';
+  }
+  function hqTier(name, pnl) {
+    var n = String(name || '');
+    if (/박지훈/.test(n)) return '회장';
+    if (/초코/.test(n)) return '대표';
+    return hqTierOf(pnl);
+  }
+  /* '박지훈 회장' → '박지훈' — 이름 끝의 직급은 떼고 배지로만 보여준다(중복 표기 방지) */
+  function hqPlainName(name) {
+    var n = String(name == null ? '' : name).replace(/\s+/g, ' ').trim();
+    for (var i = 0; i < HQ_TIER_WORDS.length; i++) {
+      var w = HQ_TIER_WORDS[i];
+      if (n.length > w.length && n.slice(-w.length) === w) return n.slice(0, -w.length).trim();
+    }
+    return n;
+  }
+  function hqTierCls(t) { return t === '회장' ? ' chair' : (t === '대표' ? ' ceo' : ''); }
+  /* 이름 + 직급 배지 — '박지훈 [회장]' */
+  function hqNameHtml(name, pnl) {
+    var full = String(name == null ? '' : name);
+    var t = hqTier(full, pnl), base = hqPlainName(full);
+    return '<b>' + mhEsc(base || full) + '</b><span class="hqw-tier' + hqTierCls(t) + '">' + t + '</span>';
+  }
+  /* 내 직급을 정하는 총수익금 — 서버 순위 행이 있으면 그 값(회의실과 같은 기준) */
+  function hqMyPnl() {
+    var mine = null;
+    (hq.rows || []).forEach(function (r) { if (String(r.name) === hq.name) mine = r; });
+    return mine ? mine.pnl : hqPnl(hqWallet);
+  }
+
   function hqStatusHtml(note) {
-    if (!hqWallet) return '아직 연결하지 않았습니다';
+    if (!hq.verified || !hqWallet) return '아직 연결하지 않았습니다 — 이 브라우저에 등록된 <b>내 지갑</b>으로만 매매할 수 있습니다';
     var b = hqBook(), mine = null;
     (hq.rows || []).forEach(function (r, i) { if (String(r.name) === hq.name) mine = { r: r, i: i }; });
-    var s = '🏢 <b>' + mhEsc(hq.name) + '</b> 지갑 연결됨 · 현금 <b>' + usd(b.cash) + '</b>';
+    var s = '🏢 회의실 지갑 연결됨 · 현금 <b>' + usd(b.cash) + '</b>';
     if (mine) s += ' · 서버 잔액 <b>' + usd(mine.r.balance) + '</b> · 순위 <b>' + (mine.i + 1) + '위</b>';
     /* 회의실에서 캐릭터를 삭제·잔액 리셋하면 spent 가 0 이 되어 보유 원금이 지갑에서 사라진다 — 자동 수정하지 않고 알린다 */
     if (hqWallet && b.cost > 0.01 && (Number(hqWallet.spent) || 0) + 1 < b.cost) {
@@ -18325,10 +18399,6 @@ var EDUFIG = (function () {
         .then(function (rows) {
           if (Array.isArray(rows)) {
             hq.rows = rows; hq.at = Date.now();
-            var dl = $('#hqNameList');
-            if (dl) dl.innerHTML = rows.map(function (x) {
-              return '<option value="' + mhEsc(String(x.name || '')) + '">' + usd(x.balance) + ' · ' + hqSgn(x.pnl) + '</option>';
-            }).join('');
             hqStatus(hqStatusHtml(''));
             hqRankLine();
           }
@@ -18343,60 +18413,102 @@ var EDUFIG = (function () {
     if (!box) return;
     if (!hq.rows.length) { box.innerHTML = '<span class="hqr-l">회의실 순위</span><span class="hqr-e">서버에 연결된 지갑이 없습니다</span>'; return; }
     box.innerHTML = '<span class="hqr-l">회의실 순위</span>' + hq.rows.slice(0, 5).map(function (r, i) {
-      var me = String(r.name) === hq.name;
-      return '<span class="hqr-i' + (me ? ' me' : '') + '"><b>' + (i + 1) + '</b>' + mhEsc(String(r.name || '—')) +
+      var me = hq.verified && String(r.name) === hq.name;
+      return '<span class="hqr-i' + (me ? ' me' : '') + '"><b>' + (i + 1) + '</b>' + hqNameHtml(String(r.name || '—'), r.pnl) +
         '<em>' + usd(r.balance) + '</em></span>';
     }).join('');
   }
-  /* 서버 잔액으로 지갑을 맞춘다 — 이 브라우저에 회의실 지갑이 없을 때만 */
-  function hqSeedFromServer(name, done) {
+  /* ── 연결 — 이 브라우저의 '내 지갑'만 연결한다 ──
+     · 남의 지갑을 고를 수 있는 목록·직접 입력창은 없다(고르면 남의 돈으로 매매하게 된다).
+     · 내 이름을 아는 순서: ① 이 브라우저 지갑(ckq.hq.wallet.v1) 의 name
+                            ② 이 브라우저의 회의실 가상투자 기록(ckq.hq.invest.v1) 의 name
+                            ③ 둘 다 없으면 지갑 지문(잔액·수익·의상 수)으로 hq_wallets 행과 1:1 대조
+     · ②·③ 으로 찾은 이름도 Supabase hq_wallets 에 실제 등록돼 있어야 연결된다.
+     · 하나라도 못 맞추면 다른 사람 목록을 띄우지 않고 안내 버튼(#hqGate)만 보여준다. */
+  function hqOwnName() {
+    var w = hqWallet || hqWalletLoad();
+    var n = (w && typeof w.name === 'string') ? w.name : '';
+    if (!n && hqInv && typeof hqInv.name === 'string') n = hqInv.name;
+    n = String(n || '').replace(/\s+/g, ' ').trim();
+    return n ? n.slice(0, 14) : '';
+  }
+  /* 지갑 지문 — 기본값(10,000 · 무료 의상 2벌 · 회사/사무실/팀원 없음)만으로는 지문이 아니다
+     (그 상태로 맞추면 새 방문자가 먼저 등록된 게스트의 행을 집어갈 수 있다).
+     잔액·수익·의상 수가 모두 같고 후보가 정확히 하나일 때만 '내 것'으로 본다. */
+  function hqFingerprint() {
+    if (!hqWallet || !(hq.rows || []).length) return null;
+    var bal = hqCash(hqWallet), pnl = hqPnl(hqWallet);
+    var outfits = Object.keys(hqWallet.owned || {}).length;
+    var crew = (hqWallet.crew || []).length;
+    var bank = (hqWallet.bank && typeof hqWallet.bank === 'object') ? hqWallet.bank : {};
+    var dist = outfits > 2 || crew > 0 || !!String(hqWallet.company || '').trim() ||
+      String(hqWallet.office || 'default') !== 'default' ||
+      Math.abs(bal - HQ_BASE) > 0.005 || Math.abs(pnl) > 0.005 ||
+      Math.abs(Number(bank.dep) || 0) + Math.abs(Number(bank.loan) || 0) > 0.005;
+    if (!dist) return null;
+    var hit = hq.rows.filter(function (r) {
+      return Math.abs((Number(r.balance) || 0) - bal) < 0.011 &&
+        Math.abs((Number(r.pnl) || 0) - pnl) < 0.011 &&
+        (Number(r.outfits_count) || 0) === outfits;
+    });
+    return hit.length === 1 ? hit[0] : null;
+  }
+  /* hq_wallets 에서 이름으로 한 행만 (순위 50위 밖이어도 확인되게 직접 조회)
+     cb(row, answered) — answered=false 면 서버 응답을 못 받은 것(미등록과 구분) */
+  function hqRowByName(name, cb) {
     try {
-      hqSrv({ query: '?select=name,balance,pnl&name=eq.' + encodeURIComponent(name) })
+      hqSrv({ query: '?select=name,balance,pnl,outfits_count,staff_count,company,office,look&name=eq.' +
+        encodeURIComponent(name) + '&limit=1' })
         .then(function (r) { return r && r.ok ? r.json() : null; })
         .then(function (rows) {
-          var row = (Array.isArray(rows) && rows[0]) || null;
-          if (row && hqWallet) {
-            var pnl = hqR2(row.pnl), bal = hqR2(row.balance);
-            hqWallet.prize = pnl;
-            hqWallet.pnlCut = 0;
-            hqWallet.spent = 0;
-            hqWallet.cashAdj = hqR2(bal - HQ_BASE - pnl);
-          }
-          if (done) done(!!row);
+          if (!Array.isArray(rows)) return cb(null, false);
+          cb(rows[0] || null, true);
         })
-        .catch(function () { if (done) done(false); });
-    } catch (e) { if (done) done(false); }
+        .catch(function () { cb(null, false); });
+    } catch (e) { cb(null, false); }
   }
-
-  /* ── 연결 ── */
-  function hqConnect(name) {
-    name = String(name == null ? (($('#hqName') || {}).value || '') : name).replace(/\s+/g, ' ').trim().slice(0, 14);
-    if (!name) return hqMsg('닉네임을 입력해 주세요 — 회의실에서 쓰는 이름 그대로', 'err');
-    hq.name = name;
-    hqInv.name = name;
+  /* 확인된 '내 지갑'에 연결 — 이 브라우저 지갑(ckq.hq.wallet.v1)이 없으면 절대 연결하지 않는다 */
+  function hqBindOwn(name, row) {
+    name = String(name || '').replace(/\s+/g, ' ').trim().slice(0, 14);
     var w = hqWalletLoad();
-    if (w) {
-      hqWallet = w;
-      hqMsg('회의실 지갑에 연결했습니다 — 이 브라우저의 회의실 지갑(잔액·수익)을 그대로 씁니다', 'ok');
-      hqInvSave(); hqRender(); hqPull(); hqPush();
-      return;
-    }
-    hqWallet = { v: 1, granted: true, spent: 0, bonus: 0, prize: 0, pnlCut: 0, cashAdj: 0,
-      owned: {}, crew: [], at: new Date().toISOString() };
-    hqInvSave(); hqRender();
-    hqSeedFromServer(name, function (found) {
-      hqWalletSave();
-      hqRender(); hqPull();
-      hqMsg(found
-        ? '회의실 서버의 잔액·총수익금으로 지갑을 맞췄습니다 (이 기기 첫 연결)'
-        : '이 닉네임의 회의실 지갑이 아직 없습니다 — 기본 $10,000 으로 시작합니다', 'ok');
-      if (found) hqPush();          /* 서버에 있던 지갑만 되쓴다 — 없는 닉네임으로 새 행을 만들지 않는다 */
+    if (!name || !w) { hq.verified = false; hq.gateKind = 'nowallet'; hqRender(); return; }
+    hqWallet = w;
+    hq.name = name;
+    hq.verified = true;
+    hq.gateKind = '';
+    /* 다음부터는 이름으로 바로 연결되도록 지갑에 본인 이름을 적어 둔다 (회의실은 모르는 칸을 그대로 보존한다) */
+    if (hqWallet.name !== name) { hqWallet.name = name; hqWalletSave(); }
+    if (hqInv.name !== name) { hqInv.name = name; hqInvSave(); }
+    hqMsg('내 회의실 지갑(' + hqPlainName(name) + ' · ' + hqTier(name, row ? row.pnl : hqPnl(hqWallet)) +
+      ')에 연결했습니다 — 이 브라우저 지갑으로만 매매합니다', 'ok');
+    hqRender();
+    hqPull();
+  }
+  /* 이름 후보를 서버 등록과 대조한다 */
+  function hqCheckName(name) {
+    hqMsg('회의실 서버에서 내 지갑 등록을 확인하는 중…');
+    hqRowByName(name, function (row, answered) {
+      if (!answered) { hq.verified = false; hq.gateKind = 'offline'; hqRender(); hqMsg(''); return; }
+      if (row) { hqMsg(''); hqBindOwn(name, row); return; }
+      hq.verified = false; hq.gateKind = 'notreg'; hq.gateName = name; hqRender(); hqMsg('');
+    });
+  }
+  /* 탭을 열 때·새로고침할 때 — 이 브라우저의 내 지갑을 찾아 등록을 확인한다 */
+  function hqBoot() {
+    hqWallet = hqWalletLoad();
+    if (!hqWallet) { hq.verified = false; hq.gateKind = 'nowallet'; hqRender(); hqPull(); return; }
+    var nm = hqOwnName();
+    if (nm) { hqCheckName(nm); hqPull(); return; }
+    hqPull(function () {
+      var row = hqFingerprint();
+      if (row) hqCheckName(String(row.name));
+      else { hq.verified = false; hq.gateKind = 'nomatch'; hqRender(); }
     });
   }
 
   /* ── 매수 · 매도 ── */
   function hqTrade(side) {
-    if (!hq.name || !hqWallet) return hqMsg('먼저 회의실 지갑을 연결해 주세요 — 닉네임을 넣고 [연결]', 'err');
+    if (!hq.verified || !hq.name || !hqWallet) return hqMsg('이 브라우저에 등록된 내 회의실 지갑으로만 매매할 수 있습니다 — 아래 안내대로 회의실에서 내 캐릭터로 먼저 입장(등록)해 주세요', 'err');
     var t = String((($('#hqOrderSym') || {}).value || '')).trim().toUpperCase();
     if (!t) t = state.cur;
     var a = A[t];
@@ -18445,10 +18557,32 @@ var EDUFIG = (function () {
       return '<div class="c"><div class="k">' + k + '</div><div class="v ' + (c || '') + '">' + v +
         '</div><div class="s">' + s + '</div></div>';
     };
-    var con = !!hqWallet;                      /* 연결 전에는 숫자 대신 — (0 으로 보이면 잔액이 0인 줄 안다) */
+    var con = hq.verified && !!hqWallet;       /* 연결 전에는 숫자 대신 — (0 으로 보이면 잔액이 0인 줄 안다) */
+    /* 내 지갑 칩 — '박지훈 [회장]' (이름 끝 직급은 떼고 배지로만) */
+    var chip = $('#hqMe');
+    if (chip) {
+      if (con) { chip.className = 'hqw-me'; chip.innerHTML = hqNameHtml(hq.name, hqMyPnl()); }
+      else { chip.className = 'hqw-me none'; chip.textContent = '미연결'; }
+    }
+    /* 안내 문구 — 등록된 내 지갑을 못 찾았을 때만 다른 사람 목록 대신 이 버튼만 보여준다 */
+    var gate = $('#hqGate'), pane = $('#hqPane');
+    if (pane) pane.classList.toggle('locked', !con);
+    if (gate) gate.hidden = con;
+    if (!con) {
+      var note = $('#hqGateNote');
+      var gk = hq.gateKind || 'nowallet';
+      var gname = hq.gateName ? hqPlainName(hq.gateName) : '';
+      var txt = {
+        nowallet: '이 브라우저에는 아직 회의실 지갑이 없습니다 — 회의실에서 내 캐릭터로 입장해 등록하면 그 지갑으로만 연결됩니다.',
+        notreg: '이 브라우저 지갑의 이름' + (gname ? ' <b>' + mhEsc(gname) + '</b>' : '') + '이(가) 회의실 서버(hq_wallets)에 등록되어 있지 않습니다 — 회의실에서 그 이름으로 입장해 순위에 올린 뒤 ↻ 새로고침을 눌러 주세요.',
+        nomatch: '이 브라우저 지갑을 회의실 서버의 어느 지갑과 연결할지 확인하지 못했습니다(다른 사람 지갑은 고를 수 없습니다) — 회의실에서 내 캐릭터로 한 번 입장해 순위에 올린 뒤 ↻ 새로고침을 눌러 주세요.',
+        offline: '회의실 서버에 연결하지 못해 등록을 확인할 수 없습니다 — 잠시 후 ↻ 새로고침을 눌러 주세요.'
+      }[gk] || '회의실에서 내 캐릭터로 먼저 입장(등록)해 주세요.';
+      if (note) note.innerHTML = txt;
+    }
     $('#hqSum').innerHTML =
-      cell2('회의실 총 자산', con ? usd(b.total, 2) : '—', con ? '현금 + 보유 평가' : '닉네임을 넣고 [연결]', '') +
-      cell2('사용 가능 현금', con ? usd(b.cash, 2) : '—', con ? '회의실 지갑 잔액' : '회의실과 같은 지갑', '') +
+      cell2('회의실 총 자산', con ? usd(b.total, 2) : '—', con ? '현금 + 보유 평가' : '회의실에서 입장(등록) 후 연결', '') +
+      cell2('사용 가능 현금', con ? usd(b.cash, 2) : '—', con ? '회의실 지갑 잔액' : '내 지갑만 연결됩니다', '') +
       cell2('평가손익 (미실현)', con ? hqSgn(b.unreal) : '—', b.cost ? hqQ(b.rows.length) + '종목 · ' + pct(b.unrealPct, 2) : '보유 없음', cls(b.unreal)) +
       cell2('실현손익', con ? hqSgn(b.realized) : '—', '매도 확정 · 회의실 prize', cls(b.realized));
     hqStatus(hqStatusHtml(''));
@@ -18477,7 +18611,7 @@ var EDUFIG = (function () {
 
     hqEst();
     var sub = $('#hqSubmit');
-    if (sub) { sub.textContent = hq.side === 'buy' ? '매수' : '매도'; sub.className = 'hq-submit ' + hq.side; }
+    if (sub) { sub.textContent = hq.side === 'buy' ? '매수' : '매도'; sub.className = 'hq-submit ' + hq.side; sub.disabled = !con; }
     $$('#hqSide button').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-side') === hq.side); });
   }
   /* 주문 패널 — 지금 차트 종목의 실제 종가로 계산 */
@@ -18496,6 +18630,10 @@ var EDUFIG = (function () {
     var qty = Number((($('#hqQty') || {}).value || '')) || 0;
     var amt = qty * px, b = hqBook();
     var pos = hqInv.positions[t] || { q: 0, avg: 0 };
+    if (!hq.verified) {      /* 잠금 상태 — 0을 잔액처럼 보여주지 않는다 */
+      el.innerHTML = '주문금액 <b>' + usd(amt) + '</b><br>이 브라우저에 등록된 내 지갑을 연결하면 매수·매도할 수 있습니다';
+      return;
+    }
     var line = '주문금액 <b>' + usd(amt) + '</b><br>';
     if (hq.side === 'buy') {
       line += '지갑 현금 <b>' + usd(b.cash) + '</b> → 매수 후 <b>' + usd(Math.max(0, b.cash - amt)) + '</b><br>';
@@ -18508,9 +18646,6 @@ var EDUFIG = (function () {
   }
   function hqInit() {
     hqInvLoad();
-    var name = hqInv.name || '';
-    var ni = $('#hqName');
-    if (ni && name) ni.value = name;
     var dl = $('#hqSymList');
     if (dl) dl.innerHTML = M.tickers.map(function (x) {
       return '<option value="' + x.t + '">' + x.nk + ' · ' + (x.sk || '') + '</option>';
@@ -18538,10 +18673,8 @@ var EDUFIG = (function () {
     };
     var sub = $('#hqSubmit');
     if (sub) sub.onclick = function () { hqTrade(hq.side); };
-    var link = $('#hqLink');
-    if (link) link.onclick = function () { hqConnect(); };
     var pull = $('#hqPull');
-    if (pull) pull.onclick = function () { hqMsg('회의실·서버의 최신 잔액을 읽는 중…'); hqPull(); };
+    if (pull) pull.onclick = function () { hqMsg('회의실·서버의 최신 지갑을 읽는 중…'); hqBoot(); };
     var qi2 = $('#hqQty');
     if (qi2) qi2.oninput = hqEst;
     var os = $('#hqOrderSym');
@@ -18558,14 +18691,15 @@ var EDUFIG = (function () {
       var c = e.target.closest('button[data-hqchart]');
       if (c) { select(c.getAttribute('data-hqchart')); }
     };
-    /* 다른 탭(회의실)에서 지갑이 바뀌면 즉시 반영 */
+    /* 다른 탭(회의실)에서 지갑이 바뀌면 즉시 반영 — 지갑이 사라지면 연결도 풀린다 */
     window.addEventListener('storage', function (e) {
       if (!e || e.key !== HQW_KEY) return;
       var w = hqWalletLoad();
-      if (w) { hqWallet = w; if (hq.name) hqRender(); }
+      if (!w) { hqWallet = null; hq.verified = false; hq.gateKind = 'nowallet'; hqRender(); return; }
+      hqWallet = w;
+      if (hq.verified) hqRender(); else hqBoot();
     });
-    if (name) hqConnect(name);
-    else hqRender();
+    hqBoot();
   }
 
   /* ---------------- 탭 전환 ---------------- */

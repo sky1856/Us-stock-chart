@@ -5022,14 +5022,36 @@ html[data-theme="light"] .wf-tb td:first-child{ color:#1E293B }
 .sidebar[data-asset="crypto"] .side-info{display:none}
 
 .hq-pane{display:block}
+/* 탭이 아닐 때는 확실히 감춘다 — .hq-pane{display:block} 이 hidden 속성을 이겨 늘 보이던 문제 (2026-11-29) */
+.hq-pane[hidden]{display:none!important}
 .hq-top{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:10px 15px;
   border-bottom:1px solid var(--line);background:rgba(56,189,248,.035)}
 .hq-wallet{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
 .hqw-t{font-size:12.5px;font-weight:700;color:#BEE9FF;white-space:nowrap}
-#hqName{width:154px;height:30px;border:1px solid var(--line);border-radius:8px;background:#0B1018;
-  padding:0 9px;font-size:12.5px;color:var(--txt);min-width:0}
-#hqName::placeholder{color:var(--txt4)}
-#hqName:focus{outline:none;border-color:rgba(56,189,248,.5);box-shadow:0 0 0 3px rgba(56,189,248,.09)}
+/* 내 지갑 칩 — '박지훈 [회장]' (이름 끝 직급은 떼고 배지로만) */
+.hqw-me{display:inline-flex;align-items:center;gap:5px;min-width:0;max-width:100%;font-size:12.5px;
+  color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hqw-me b{font-weight:700;overflow:hidden;text-overflow:ellipsis}
+.hqw-me.none{font-weight:600;color:var(--txt3)}
+.hqw-tier{display:inline-flex;align-items:center;height:17px;padding:0 6px;border-radius:99px;
+  font-size:10.5px;font-weight:700;letter-spacing:.01em;white-space:nowrap;
+  border:1px solid rgba(148,163,184,.38);color:#CBD5E1;background:rgba(148,163,184,.13)}
+.hqw-tier.chair{border-color:rgba(246,205,122,.55);color:#F6CD7A;background:rgba(246,205,122,.13)}
+.hqw-tier.ceo{border-color:rgba(196,181,253,.55);color:#DDD6FE;background:rgba(196,181,253,.13)}
+/* 등록된 내 지갑을 못 찾았을 때 — 다른 사람 목록 대신 이 안내 버튼만 */
+.hq-gate{flex:1 1 100%;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:9px 11px;
+  border:1px solid rgba(56,189,248,.32);border-radius:10px;background:rgba(56,189,248,.07);min-width:0}
+.hq-gate[hidden]{display:none}
+.hq-gate-a{display:inline-flex;align-items:center;gap:6px;max-width:100%;font-size:12.5px;font-weight:700;
+  color:#BAE6FD;text-decoration:none;border:1px solid rgba(56,189,248,.45);border-radius:8px;
+  padding:6px 10px;background:linear-gradient(180deg,rgba(56,189,248,.22),rgba(56,189,248,.08));white-space:nowrap}
+.hq-gate-a:hover{color:#E0F2FE;border-color:rgba(56,189,248,.7)}
+.hq-gate-s{font-size:11.5px;color:var(--txt3);line-height:1.5;min-width:0;flex:1 1 200px}
+.hq-gate-s b{color:var(--txt)}
+/* 연결 전에는 주문·보유 영역을 잠근다 (남의 지갑으로 주문할 길을 화면에서도 없앤다) */
+.hq-pane.locked .hq-body{opacity:.5}
+.hq-pane.locked .hq-body *{pointer-events:none}
+.hq-submit:disabled{cursor:not-allowed;opacity:.55}
 .hq-wallet button{height:30px;padding:0 11px;border-radius:8px;font-size:12.5px;font-weight:600;
   border:1px solid var(--line);color:var(--txt2);white-space:nowrap;transition:.14s}
 .hq-wallet button:hover{color:var(--txt);border-color:rgba(255,255,255,.22);background:rgba(255,255,255,.03)}
@@ -5047,6 +5069,7 @@ html[data-theme="light"] .wf-tb td:first-child{ color:#1E293B }
   border-radius:99px;white-space:nowrap;max-width:100%}
 .hqr-i b{color:#7DD3FC;font-family:var(--mono);font-size:11px}
 .hqr-i em{font-style:normal;font-family:var(--mono);color:var(--txt2);font-size:11px}
+.hqr-i .hqw-tier{height:15px;font-size:10px;padding:0 4px;margin-left:1px}
 .hqr-i.me{border-color:rgba(56,189,248,.45);background:rgba(56,189,248,.10)}
 
 .hq-sum{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-bottom:1px solid var(--line);background:rgba(255,255,255,.008)}
@@ -5125,15 +5148,21 @@ html[data-theme="light"] .wf-tb td:first-child{ color:#1E293B }
 
 html[data-theme="light"] .hq-top{background:rgba(0,114,173,.04)}
 html[data-theme="light"] .hqw-t{color:#0072AD}
-html[data-theme="light"] #hqLink{color:#07405F;background:linear-gradient(180deg,rgba(0,114,173,.18),rgba(0,114,173,.06));border-color:rgba(0,114,173,.38)}
+html[data-theme="light"] .hqw-tier{color:#3F4C5F;background:rgba(15,23,42,.06);border-color:rgba(15,23,42,.18)}
+html[data-theme="light"] .hqw-tier.chair{color:#8A5A00;background:rgba(180,120,0,.12);border-color:rgba(180,120,0,.34)}
+html[data-theme="light"] .hqw-tier.ceo{color:#5B46A8;background:rgba(91,70,168,.12);border-color:rgba(91,70,168,.32)}
+html[data-theme="light"] .hq-gate{background:rgba(0,114,173,.05);border-color:rgba(0,114,173,.28)}
+html[data-theme="light"] .hq-gate-a{color:#07405F;background:linear-gradient(180deg,rgba(0,114,173,.16),rgba(0,114,173,.05));border-color:rgba(0,114,173,.38)}
 html[data-theme="light"] .hq-wallet button{color:#334155;background:#fff}
 html[data-theme="light"] .hq-wallet button:hover{color:#0F172A;border-color:rgba(15,23,42,.28)}
 html[data-theme="light"] .hq-go{color:#0072AD}
-html[data-theme="light"] #hqName,html[data-theme="light"] .hq-f input,
+html[data-theme="light"] .hq-f input,
 html[data-theme="light"] .hq-tabs{background:#fff}
 html[data-theme="light"] .hq-hold,html[data-theme="light"] .hq-fills{color:var(--txt2)}
 html[data-theme="light"] .hq-sum .v.pos{color:#0E9F6E}
 html[data-theme="light"] .hq-sum .v.neg{color:#D6435B}
+html[data-theme="light"] .hq-submit.buy{color:#065F46;background:linear-gradient(180deg,rgba(16,185,129,.26),rgba(16,185,129,.12));border-color:rgba(16,185,129,.5)}
+html[data-theme="light"] .hq-submit.sell{color:#9F1239;background:linear-gradient(180deg,rgba(244,63,94,.2),rgba(244,63,94,.08));border-color:rgba(244,63,94,.46)}
 
 @media (max-width:1023px){
   .hq-body{grid-template-columns:minmax(0,1fr)}
@@ -5146,7 +5175,9 @@ html[data-theme="light"] .hq-sum .v.neg{color:#D6435B}
   .hq-sum .c:nth-child(3){border-left:0}
   .hq-state{flex:1 1 100%;text-align:left}
   .hq-wallet{flex:1 1 100%}
-  #hqName{flex:1 1 120px;width:auto}
+  .hqw-me{flex:1 1 100%}
+  .hq-gate-a{flex:1 1 100%;justify-content:center;text-align:center;white-space:normal;line-height:1.4}
+  .hq-gate-s{flex:1 1 100%}
   .mh-tabs button{font-size:11.5px;padding:7px 6px;gap:4px}
   .mtt-lo{display:none}
   .mtt-sh{display:inline}
