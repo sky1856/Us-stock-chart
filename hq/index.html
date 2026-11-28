@@ -4615,6 +4615,8 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
   function lbName() { return String(normName((typeof LIVE !== 'undefined' && LIVE.myName) || MY_NAME)).slice(0, 14); }
   function lbPush(force) {
     if (typeof SB_URL === 'undefined' || typeof SB_KEY === 'undefined') return;
+    /* 임직원 6명 행은 3개월 시뮬 결과 전용 — 같은 이름으로 입장한 게스트 지갑이 덮어쓰지 않는다 */
+    try { if (typeof hqStaffOf === 'function' && hqStaffOf(lbName())) return; } catch (e) {}
     /* 이름 마이그레이션 확인 전에는 새 행을 만들지 않는다 — 옛 '박지훈 회장' 행과 겹치지 않게 */
     if (!LB.ready) { lbReady(function () { lbPush(force); }); return; }
     if (!force && Date.now() - LB.pushedAt < 20000) return;   // 20초 스로틀
