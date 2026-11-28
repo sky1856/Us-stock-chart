@@ -171,7 +171,7 @@
   }
 
   var cache = new Map();
-  /* 첫 접속 기본 종목은 고정값이 아니라 '그날 종합 점수 1위' — boot()에서 정한다 (아래 topScoreT) */
+  /* 첫 접속 기본 종목은 고정값이 아니라 '선택한 전략의 추천 1위' — boot()에서 정한다 (아래 topScoreT) */
   var autoPick = false;
   var state = {
     cur: '', range: 128, btRange: 128, filter: 'all', preset: '', sort: 'rec', q: '', listQ: '',
@@ -407,18 +407,19 @@
   }
   function all() { return M.tickers.map(function (x) { return get(x.t); }).filter(Boolean); }
 
-  /* 첫 화면 기본 종목 — 전체 102종목 중 종합 기술점수(score)가 가장 높은 종목.
-     시총 순서를 유지하며 최댓값을 찾으므로 동점이면 시총 상위 종목이 이긴다.
-     데이터가 갱신되어 1위가 바뀌면 다음 접속부터 그 종목이 자동으로 뜬다 (하드코딩 없음). */
+  /* 자동 선택 종목 — '지금 선택한 전략(state.strategy)'의 추천 1위.
+     좌측 스캐너를 추천순으로 정렬했을 때 맨 위 1행과 같은 종목이 되도록, 스캐너와 똑같은
+     필터·검색(scanRows)과 비교 함수(recCmp)를 그대로 쓴다 — 화면과 자동 선택이 어긋나지 않는다.
+       추세형: 진입/보유 단계(tier) → 종합 기술점수
+       스윙형: 진입/보유 단계(tier) → 스윙 적합도(RSI(2) 과매도 깊이 · W 단계 · 종합점수)
+     동점이면 데이터(시총) 순서가 그대로 유지되고, 데이터가 갱신되어 1위가 바뀌면
+     다음 접속·전략 전환 때 그 종목이 자동으로 뜬다 (하드코딩 없음). */
   function topScoreT() {
-    var best = '', bs = -Infinity;
-    M.tickers.forEach(function (x) {
-      var a = A[x.t]; if (!a) return;
-      var sc = rowOf(a).score;
-      if (sc == null || !isFinite(sc)) return;
-      if (sc > bs) { bs = sc; best = x.t; }
-    });
-    return best;
+    var rows = scanRows();
+    if (!rows.length) rows = M.tickers.map(function (x) { return A[x.t]; }).filter(Boolean);  /* 필터로 목록이 비면 전체에서 */
+    if (!rows.length) return '';
+    rows.sort(recCmp);
+    return rows[0].sym || '';
   }
 
   /* ---------------- as-of view (리플레이) ---------------- */
@@ -551,7 +552,7 @@
     setTimeout(fgRealtime, 500);
     var t0 = performance.now();
     M.tickers.forEach(function (x) { A[x.t] = get(x.t); });
-    var topT = topScoreT();                    /* 첫 접속 = 종합 점수 1위 종목 (URL로 종목을 지정한 경우는 start()에서 덮어쓴다) */
+    var topT = topScoreT();                    /* 첫 접속 = 선택한 전략(추세형/스윙형)의 추천 1위 종목 (URL로 종목을 지정한 경우는 start()에서 덮어쓴다) */
     if (topT) { state.cur = topT; autoPick = true; }
     else if (!A[state.cur]) state.cur = (M.tickers[0] || {}).t || '';
     wSyncToggle();
@@ -1124,23 +1125,29 @@
     state.sort = 'rec';
     syncSortUi();
   }
-  function renderScanner() {
+  /* 스캐너에 지금 보이는 종목(탭·프리셋·검색 적용, 정렬 전) — 자동 선택(topScoreT)도 같은 함수를 쓴다 */
+  function scanRows() {
     var q = state.listQ.trim().toLowerCase();
-    var rows = M.tickers.map(function (x) { return A[x.t]; }).filter(function (a) {
+    return M.tickers.map(function (x) { return A[x.t]; }).filter(function (a) {
       if (!a) return false;
       var rv = rowOf(a);
       if (!matchesFilter(a, rv)) return false;
       if (!q) return true;
       return (a.sym + ' ' + a.meta.n + ' ' + a.meta.nk + ' ' + (a.meta.sk || '') + ' ' + (a.meta.s || '')).toLowerCase().indexOf(q) >= 0;
     });
+  }
+  /* 추천순 비교 — 선택한 전략(state.strategy) 기준: 진입/보유 단계 → 적합도 → 종합점수 */
+  function recCmp(a, b) {
+    var ar = rankInfo(a), br = rankInfo(b);
+    if (br.tier !== ar.tier) return br.tier - ar.tier;
+    if (br.fit !== ar.fit) return br.fit - ar.fit;
+    return br.score - ar.score;
+  }
+  function renderScanner() {
+    var rows = scanRows();
     var cmp = {
       mc: function (a, b) { return (b.meta.mc || 0) - (a.meta.mc || 0); },
-      rec: function (a, b) {
-        var ar = rankInfo(a), br = rankInfo(b);
-        if (br.tier !== ar.tier) return br.tier - ar.tier;
-        if (br.fit !== ar.fit) return br.fit - ar.fit;
-        return br.score - ar.score;
-      },
+      rec: recCmp,
       score: function (a, b) { return rowOf(b).score - rowOf(a).score; },
       ret: function (a, b) {
         var av = stratBundle(a), bv = stratBundle(b);
@@ -1357,15 +1364,30 @@
     }
     renderPresetGuide();          /* 전략을 바꾸면 스캐너 3줄 가이드도 그 전략 것으로 */
   }
+  /* 전략 버튼(추세형 ↔ 스윙형) — 누를 때마다 그 전략의 추천 1위 종목으로 자동 전환한다.
+     앞서 다른 종목을 직접 골라 두었어도 그 전략 기준 1위(= 좌측 스캐너 추천순 1행)를 보여 준다.
+     자동 전환이므로 주소창에 #종목·?t=를 남기지 않는다(북마크에 옛 종목이 굳지 않도록 기존 딥링크도 정리). */
   function setStrategy(mode) {
     if (mode !== 'swing' && mode !== 'trend') return;
-    var changed = state.strategy !== mode;
     state.strategy = mode;
     stratPersist();
     adoptRecSort();                                           /* 전략 버튼 → 좌측 스캐너 추천 순위로 자동 전환 */
+    var top = topScoreT();                                    /* 바뀐 전략 기준 1위 */
+    if (top) { state.cur = top; autoPick = true; clearDeepLink(); }
     renderStrategy();
     renderScanner();                                          /* 좌측 스캐너 신호·순위를 새 전략 기준으로 즉시 재집계 */
-    if (changed && state.cur && A[state.cur]) select(state.cur, true);   /* 선택 기간은 그대로 유지 */
+    if (state.cur && A[state.cur]) select(state.cur, true);    /* 위에서 고른 1위 종목을 그대로 표시 (기간 유지) */
+  }
+  /* 자동 선택 시 주소에 박힌 종목(#종목 · ?t=종목)을 지운다 — 화면(전략 1위)과 주소가 어긋나지 않게 */
+  function clearDeepLink() {
+    try {
+      var s = location.search || '', cleaned = '';
+      if (s) {
+        var parts = s.replace(/^\?/, '').split('&').filter(function (kv) { return kv && !/^t=/.test(kv); });
+        cleaned = parts.length ? '?' + parts.join('&') : '';
+      }
+      if (location.hash || cleaned !== s) history.replaceState(null, '', location.pathname + cleaned);
+    } catch (e) { /* file:// 등 replaceState가 막힌 환경에서는 그냥 둔다 */ }
   }
   /* 기간 변경 → 아래 KPI·자산곡선·트레이드 로그·종목 평균 재계산 (setPeriod 가 차트 기간까지 함께 맞춘다) */
   function applyBtPeriod() {
