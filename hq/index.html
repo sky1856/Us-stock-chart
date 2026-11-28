@@ -3431,12 +3431,20 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
       e.preventDefault();
       lbLoad();
       try { paintBattles(); } catch (err) {}
+      var fromTv = !!e.target.closest('#wallLive');
       if (typeof openGuestModal === 'function') openGuestModal('guest');
       setTimeout(function () {
         var t1 = document.getElementById('gtitle'), s1 = document.getElementById('gsub');
         if (t1) t1.textContent = '🛍️ 초코퀀트 상점 · 실시간 리그';
         if (s1) s1.textContent = '의상 20종 · 사무실 5종 · AI 팀원 · 기법 교본을 지갑으로 구매하고, 순위표에서 다른 회사를 방문해 보세요.';
-      }, 30);
+        /* 벽 TV(LIVE TOP 5)를 눌렀으면 순위표가 맨 위에 바로 보이게 */
+        if (fromTv) {
+          var sheet = document.querySelector('#gmodal .gsheet');
+          var lb = sheet ? sheet.querySelector('.lb-box') : null;
+          if (lb && lb.scrollIntoView) lb.scrollIntoView({ block: 'start' });
+          else if (sheet) sheet.scrollTop = 0;
+        }
+      }, fromTv ? 140 : 30);
       return;
     }
   });
