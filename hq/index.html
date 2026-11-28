@@ -4589,7 +4589,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
   function hqStaffRow(s) {
     return { name: s.name, balance: s.balance, pnl: s.pnl, outfits_count: s.outfits,
       staff_count: (s.staff || []).length, company: s.company || '', office: s.office || 'default',
-      look: s.look || '', furniture: (s.furn || []).join('·'), crew_names: (s.staff || []).join('·'),
+      look: s.look || '', furniture: (s.furn || []).join('|'), crew_names: (s.staff || []).join('|'),
       note: s.note || '', seeded: 1 };
   }
   function lbMergeStaff(rows) {
@@ -6252,11 +6252,11 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
       + '<div class="vst-cell"><span>보유 의상</span><b>' + hqNum(r.outfits_count) + '벌</b></div>'
       + '<div class="vst-cell"><span>회사</span><b>' + esc(String(r.company || '—')) + '</b></div>'
       + '<div class="vst-cell vst-furn"><span>🛋️ 인테리어</span><b>'
-      + (furnNames ? furnNames.split('·').map(function (x) { return '<span class="furn-chip">' + esc(x) + '</span>'; }).join('')
+      + (furnNames ? furnNames.split('|').map(function (x) { return '<span class="furn-chip">' + esc(x) + '</span>'; }).join('')
                    : (nm === lbName() ? furnBadges() : '<span class="furn-none">아직 구매한 가구가 없습니다</span>'))
       + '</b></div>'
       + (crewNames ? '<div class="vst-cell main vst-crew"><span>👥 AI 팀원 구경</span><b>'
-          + crewNames.split('·').map(function (x) { return '<span class="furn-chip">🤖 ' + esc(x) + '</span>'; }).join(' ')
+          + crewNames.split('|').map(function (x) { return '<span class="furn-chip">🤖 ' + esc(x) + '</span>'; }).join(' ')
           + '</b></div>' : '')
       + (pnlNote ? '<div class="vst-cell main vst-note"><span>📊 수익 구성 · 플레이</span><b>' + esc(pnlNote)
           + (playNote ? '<i>' + esc(playNote) + '</i>' : '') + '</b></div>' : '')
