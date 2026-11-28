@@ -171,8 +171,10 @@
   }
 
   var cache = new Map();
+  /* 첫 접속 기본 종목은 고정값이 아니라 '그날 종합 점수 1위' — boot()에서 정한다 (아래 topScoreT) */
+  var autoPick = false;
   var state = {
-    cur: 'NVDA', range: 128, btRange: 128, filter: 'all', preset: '', sort: 'rec', q: '', listQ: '',
+    cur: '', range: 128, btRange: 128, filter: 'all', preset: '', sort: 'rec', q: '', listQ: '',
     show: { ma: true, ichi: true, bb: true, sig: true, rsi: true, macd: true, ew: true, w: true, sar: false, env: false, tri: false, div: true },
     maOn: { 5: true, 20: true, 60: true, 120: true, 240: true },
     simIdx: 0, tool: 'cursor', ewMode: 0, clean: false,
@@ -405,6 +407,20 @@
   }
   function all() { return M.tickers.map(function (x) { return get(x.t); }).filter(Boolean); }
 
+  /* 첫 화면 기본 종목 — 전체 102종목 중 종합 기술점수(score)가 가장 높은 종목.
+     시총 순서를 유지하며 최댓값을 찾으므로 동점이면 시총 상위 종목이 이긴다.
+     데이터가 갱신되어 1위가 바뀌면 다음 접속부터 그 종목이 자동으로 뜬다 (하드코딩 없음). */
+  function topScoreT() {
+    var best = '', bs = -Infinity;
+    M.tickers.forEach(function (x) {
+      var a = A[x.t]; if (!a) return;
+      var sc = rowOf(a).score;
+      if (sc == null || !isFinite(sc)) return;
+      if (sc > bs) { bs = sc; best = x.t; }
+    });
+    return best;
+  }
+
   /* ---------------- as-of view (리플레이) ---------------- */
   function lastIdx() { return M.dates.length - 1; }
   function idxOf(a) { return Math.max(0, Math.min(state.simIdx, a.close.length - 1)); }
@@ -535,6 +551,9 @@
     setTimeout(fgRealtime, 500);
     var t0 = performance.now();
     M.tickers.forEach(function (x) { A[x.t] = get(x.t); });
+    var topT = topScoreT();                    /* 첫 접속 = 종합 점수 1위 종목 (URL로 종목을 지정한 경우는 start()에서 덮어쓴다) */
+    if (topT) { state.cur = topT; autoPick = true; }
+    else if (!A[state.cur]) state.cur = (M.tickers[0] || {}).t || '';
     wSyncToggle();
     $('#uniCount').textContent = String(M.tickers.length);      /* 스캐너 '전체' 집계와 같은 수 — 데이터에서 동적 반영 */
     var fa = $('#favAdd'); if (fa) fa.title = '관심종목 추가 — ' + M.tickers.length + '종목 검색';
@@ -1381,7 +1400,12 @@
     chart.setRange(state.range);
     ptRender();
     if (window.innerWidth <= 900) closeDrawer();
-    try { history.replaceState(null, '', '#' + t); } catch (e) {}
+    /* 자동 선택(첫 접속 기본 종목)은 주소에 #종목을 남기지 않는다 — 북마크·주소창에 그 종목이 굳어
+       다음 접속에 점수 1위가 아니라 옛 종목이 뜨는 일을 막는다. 직접 고른 종목은 지금처럼 링크가 된다. */
+    if (!autoPick) {
+      try { history.replaceState(null, '', '#' + t); } catch (e) {}
+    }
+    autoPick = false;
   }
 
   /* ============================================================
@@ -5667,6 +5691,10 @@
   /* ---------------- go ---------------- */
   function start() {
     var h = (location.hash || '').replace('#', '');   /* boot()이 기본 종목을 고르기 전에 딥링크 보관 */
+    if (!h) {                                          /* ?t=SYMBOL 쿼리도 딥링크로 받는다 */
+      var mq = /[?&]t=([^&#]*)/.exec(location.search || '');
+      if (mq) { try { h = decodeURIComponent(mq[1]).toUpperCase(); } catch (e) { h = ''; } }
+    }
     cleanRestore();                                  /* 깔끔 보기 저장 상태 — 첫 draw 전에 */
     accBuild();                                       /* 접힘 상태를 먼저 복원해 화면 깜빡임 방지 */
     beginInit();                                      /* 초보자 3단계 보는 법 — 접기/펼치기 저장 상태 */
