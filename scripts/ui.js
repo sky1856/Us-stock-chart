@@ -7058,7 +7058,7 @@
          'auto' = 안정·공격 × 추세·스윙 4조합 백테스트(engine.js 실제 함수) 중 최고를 그 종목에 적용
                   (추세 1Y · 스윙 1M — 전략 고유 기간의 실제 백테스트 수익률)
          직접 고른 기준이 같은 기간 수익률로 1%p 이상 차이 나면 💡 추천 칩(누르면 그 기준으로 전환)
-         상단 모드 '화면 기준 따르기'는 저장된 기준을 무시하고 성향·전략 버튼 규칙을 전 종목에 적용
+         상단 모드 '내 성향 따르기'는 저장된 기준을 무시하고 지금 내 성향(성향·전략 버튼) 규칙을 전 종목에 적용
      · 주문·결제 기능은 없다. 실제 계좌·증권사와 연동하지 않는 기록·진단 전용.
      · 저장: localStorage['apex.myhold.v1']
      ============================================================ */
@@ -7416,12 +7416,12 @@
     var have = st.dn > 0;
     var judge = have ? ('🟢 ' + st.grn + ' · 🟡 ' + st.yel + ' · 🔴 ' + st.red + (st.pend ? ' · ⏳ ' + st.pend : '')) : '—';
     var auto = myhold.mode === 'auto';
-    var basisV = auto ? '⚡ 수익최적화 자동' : '🎛️ 화면 기준 따르기';
+    var basisV = auto ? '⚡ 수익최적화 자동' : '🎛️ 내 성향 따르기';
     var basisS = auto ? '종목별 설정 (자동 포함)'
-      : ((riskAggr() ? '공격형' : '안정형') + ' · ' + (stratKey() === 'swing' ? '스윙형' : '추세형'));
+      : ('내 성향 · ' + (riskAggr() ? '공격형' : '안정형') + ' · ' + (stratKey() === 'swing' ? '스윙형' : '추세형'));
     var basisT = auto
       ? ('⚡ 자동 ' + st.autoN + '종목 · 직접 지정 ' + st.pickN + '종목 — 자동은 4조합(추세 1Y · 스윙 1M)을 각 전략의 고유 기간 수익률로 비교해 가장 앞선 조합을 적용합니다')
-      : '상단 성향·전략 버튼의 규칙을 모든 종목에 똑같이 적용합니다 (카드에 저장된 매수 기준은 그대로 유지)';
+      : '내 성향(성향·전략 버튼)의 규칙을 모든 종목에 똑같이 적용합니다 (카드에 저장된 매수 기준은 그대로 유지)';
     return '<div class="c"><div class="k">총 평가금액</div><div class="v">' + (have ? usd(st.mv, 2) : '—') + '</div>' +
       '<div class="s">' + (st.n ? '보유 ' + st.n + '종목 · 매입 ' + usd(st.cost, 2) : '아직 등록한 종목이 없습니다') + '</div></div>' +
       '<div class="c"><div class="k">총 손익</div><div class="v ' + (have ? cls(st.pnl) : '') + '">' + (have ? sgn(st.pnl) : '—') + '</div>' +
@@ -7443,7 +7443,7 @@
     var it = r.it, b = r.b, cur = mhRuleOf(it), cls2 = 'none', txt = '기준 없음', tip = '';
     if (r.pend) { cls2 = 'pend'; txt = '⏳ 4조합 계산 중…'; tip = '4조합(안정·공격 × 추세·스윙)을 돌리는 중입니다 — 추세 1Y · 스윙 1M'; }
     else if (!b) { cls2 = 'none'; txt = '기준 없음'; }
-    else if (b.mode === 'screen') { cls2 = 'screen'; txt = '🎛️ 화면 기준 · ' + b.ko; tip = '상단 성향·전략 버튼 규칙을 따릅니다 — 저장된 매수 기준: ' + MH_RULES[cur].ko; }
+    else if (b.mode === 'screen') { cls2 = 'screen'; txt = '🎛️ 내 성향 기준 · ' + b.ko; tip = '내 성향(성향·전략 버튼) 규칙을 따릅니다 — 저장된 매수 기준: ' + MH_RULES[cur].ko; }
     else if (b.mode === 'auto') { cls2 = 'auto'; txt = '⚡ 자동 → ' + b.ko + ' (' + (b.period || '5Y') + ' ' + pct(b.ret, 0) + ')'; tip = '4조합 중 각 전략의 고유 기간(추세 1Y · 스윙 1M) 수익률 비교에서 가장 앞선 조합 — ' + b.ko + ' · ' + (b.period || '5Y') + ' ' + pct(b.ret, 2); }
     else { cls2 = 'pick'; txt = '매수 기준: ' + b.ko; tip = '직접 고른 기준 — ' + (b.strat === 'swing' ? '스윙형' : '추세형') + ' · ' + (b.profile === 'aggr' ? '공격형' : '안정형') + ' 규칙으로 진단합니다'; }
     return '<div class="mhbasis">' + mhRuleSelect(it.t, cur) +
@@ -7500,11 +7500,11 @@
   function mhFootHtml() {
     var auto = myhold.mode === 'auto';
     var head = '<b>' + (auto ? '종목별 매수 기준'
-      : '화면 기준 · ' + (riskAggr() ? '공격형' : '안정형') + ' · ' + (stratKey() === 'swing' ? '스윙형' : '추세형')) +
+      : '내 성향 기준 · ' + (riskAggr() ? '공격형' : '안정형') + ' · ' + (stratKey() === 'swing' ? '스윙형' : '추세형')) +
       '</b>으로 ' + M.asOf + ' 종가 기준 계산 — ';
     var body = auto
       ? '<b>⚡ 수익최적 자동</b>은 <b>추세형 1Y(최근 1년·252거래일) · 스윙형 1M(최근 1개월·21거래일)</b> 백테스트를 돌려, 각 전략의 고유 기간 수익률로 4조합을 견줘 가장 앞선 조합을 그 종목에 적용합니다 (추세끼리 1Y 끼리 · 스윙끼리 1M 끼리 · 추세↔스윙은 1Y 대 1M). 카드의 <b>기준 선택</b>으로 직접 고르면 그 규칙을 따르고, 1등이 <b>1%p 이상</b> 앞서면 <b>💡 추천</b> 칩이 뜹니다.'
-      : '상단 성향·전략 버튼의 규칙을 모든 종목에 똑같이 적용합니다 — 카드에 저장된 매수 기준은 그대로 남아 있어 <b>⚡ 수익최적화 자동</b>으로 돌아오면 다시 쓰입니다.';
+      : '지금 화면에서 고른 <b>내 성향(성향·전략 버튼)</b>의 규칙을 모든 종목에 똑같이 적용합니다 — 카드에 저장된 매수 기준은 그대로 남아 있어 <b>⚡ 수익최적화 자동</b>으로 돌아오면 다시 쓰입니다.';
     return head + body + ' <b>매수·매도 주문은 하지 않고</b> 실제 계좌·증권사와 연동하지 않는 참고용 진단입니다.';
   }
 
@@ -7516,7 +7516,7 @@
       b.setAttribute('aria-pressed', b.getAttribute('data-mbmode') === myhold.mode ? 'true' : 'false');
     });
     var nt = $('#mhBasisNote');
-    if (nt) nt.textContent = myhold.mode === 'auto' ? '종목별 4조합 최고' : '성향·전략 버튼 그대로';
+    if (nt) nt.textContent = myhold.mode === 'auto' ? '종목별 4조합 최고' : '내 성향 그대로';
   }
 
   function mhRender() {
@@ -7783,7 +7783,7 @@
     mhSave(); mhRender();
     mhMsg(m === 'auto'
       ? '⚡ 수익최적화 자동 — 종목별로 저장된 매수 기준(자동 = 5년 최고 조합)으로 진단합니다'
-      : '🎛️ 화면 기준 따르기 — 상단 성향·전략 버튼의 규칙으로 모든 종목을 진단합니다 (저장된 매수 기준은 그대로)', 'ok');
+      : '🎛️ 내 성향 따르기 — 지금 내 성향·전략 버튼의 규칙으로 모든 종목을 진단합니다 (저장된 매수 기준은 그대로)', 'ok');
   }
 
   function mhInit() {
