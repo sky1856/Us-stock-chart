@@ -2817,6 +2817,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
   /* 지시선 끝점을 지금 화면의 사람 머리 위 점(.ha)으로 다시 맞춘다 —
      스테이지가 기울거나(패럴랙스·등장 전환) 시점이 움직여도 점이 머리를 놓치지 않게. */
   var _tailItems = [];
+  var _phoneCards = [];
   function retargetTails() {
     if (mode !== '3d' || !_tailItems.length) return;
     var hr = holoLayer.getBoundingClientRect();
@@ -3162,6 +3163,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
       phoneBand = { top: bandTop, bottom: bandBot, used: 0 };
     }
     var phoneSlot = shown.length - 1;
+    _phoneCards = [];
 
     shown.forEach(function (k) {
       if (!shownSet[k]) return;
@@ -3203,6 +3205,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
         var cwReal = cardEl ? (cardEl.offsetWidth || cardBox.w) : cardBox.w;
         cx = Math.max(cwReal / 2 + 4, Math.min(W - cwReal / 2 - 4, cx));
         pos = { cx: cx, cy: cy, rect: { x: cx - CW / 2, y: cy - cardH, w: CW, h: cardH } };
+        _phoneCards.push({ el: h, cy: cy, top: cy - cardH });
         phoneSlot--;
       } else {
         pos = findSpot(ax, ay, CW, CH, taken, W, H, 50, 30);
@@ -3233,6 +3236,17 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     });
 
     drawTails(tails);
+    /* 모바일 — 두 말풍선 묶음을 띄 위아래 빈 공간에 고르게 앉힌다 */
+    if (phoneBand && _phoneCards.length) {
+      var topMost = Infinity;
+      _phoneCards.forEach(function (o) { if (o.top < topMost) topMost = o.top; });
+      var spare = topMost - phoneBand.top;
+      if (spare > 40) {
+        var shift = Math.min(spare / 2, 70);
+        _phoneCards.forEach(function (o) { o.el.style.top = (o.cy - shift).toFixed(1) + 'px'; });
+      }
+      _phoneCards = [];
+    }
     /* 카드 상승 애니메이션이 끝난 뒤 한 번 더 맞춘다 */
     clearTimeout(drawTails._t);
     drawTails._t = setTimeout(function () { if (mode === '3d') { retargetTails(); drawTails(_tailItems); } }, 480);
