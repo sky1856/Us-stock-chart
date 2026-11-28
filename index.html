@@ -18484,22 +18484,44 @@ var EDUFIG = (function () {
     hqRender();
     hqPull();
   }
-  /* 이름 후보를 서버 등록과 대조한다 */
+  /* 이름 후보를 서버 등록과 대조한다.
+     · 회의실이 이름 표기를 바꾸면('박지훈 회장' ↔ '박지훈') 예전 이름으로 저장된 지갑이 막히지 않도록
+       한 번 더 '직급을 뗀 이름'으로 찾고, 그래도 없으면 순위 목록에서 같은 사람 행을 찾는다. */
   function hqCheckName(name) {
     hqMsg('회의실 서버에서 내 지갑 등록을 확인하는 중…');
     hqRowByName(name, function (row, answered) {
       if (!answered) { hq.verified = false; hq.gateKind = 'offline'; hqRender(); hqMsg(''); return; }
-      if (row) { hqMsg(''); hqBindOwn(name, row); return; }
-      hq.verified = false; hq.gateKind = 'notreg'; hq.gateName = name; hqRender(); hqMsg('');
+      if (row) { hqMsg(''); hqBindOwn(String(row.name), row); return; }
+      var alt = hqPlainName(name);
+      if (alt && alt !== name) {
+        hqRowByName(alt, function (row2, answered2) {
+          if (!answered2) { hq.verified = false; hq.gateKind = 'offline'; hqRender(); hqMsg(''); return; }
+          if (row2) { hqMsg(''); hqBindOwn(String(row2.name), row2); return; }
+          hqGTwin(name);
+        });
+        return;
+      }
+      hqGTwin(name);
     });
+  }
+  function hqGTwin(name, retried) {
+    var mine = hqPlainName(name), hit = null;
+    if (mine) {
+      var found = (hq.rows || []).filter(function (r) { return hqPlainName(String(r.name || '')) === mine; });
+      if (found.length === 1) hit = found[0];
+    }
+    if (hit) { hqMsg(''); hqBindOwn(String(hit.name), hit); return; }
+    if (!retried) { hqPull(function () { hqGTwin(name, true); }); return; }   /* 순위 목록을 한 번 더 읽고 재시도 */
+    hq.verified = false; hq.gateKind = 'notreg'; hq.gateName = name; hqRender(); hqMsg('');
   }
   /* 탭을 열 때·새로고침할 때 — 이 브라우저의 내 지갑을 찾아 등록을 확인한다 */
   function hqBoot() {
     hqWallet = hqWalletLoad();
     if (!hqWallet) { hq.verified = false; hq.gateKind = 'nowallet'; hqRender(); hqPull(); return; }
     var nm = hqOwnName();
-    if (nm) { hqCheckName(nm); hqPull(); return; }
+    /* 순위 목록을 먼저 읽는다 — 이름 표기가 바뀌었을 때 같은 사람 행을 찾는 데 쓴다 */
     hqPull(function () {
+      if (nm) { hqCheckName(nm); return; }
       var row = hqFingerprint();
       if (row) hqCheckName(String(row.name));
       else { hq.verified = false; hq.gateKind = 'nomatch'; hqRender(); }
