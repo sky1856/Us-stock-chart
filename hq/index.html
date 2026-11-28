@@ -3556,6 +3556,12 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     });
     var uniq = [];
     who.forEach(function (k) { if (uniq.indexOf(k) < 0 && PEOPLE[k]) uniq.push(k); });
+    /* 2026-11-29 회장님 지시 — 딱 1명만 지목하고 '모두/전체/회의' 지시가 없으면 그 1명만 발언 */
+    var ALLTALK = /모두|전체|전원|다\s?같이|다\s?함께|각자|모든|회의|전\s?직원|다들/;
+    if (named.length === 1 && !ALLTALK.test(t)) {
+      var onlyOne = named[0] !== 'alba' ? named[0] : who[0];
+      if (PEOPLE[onlyOne]) return [onlyOne];
+    }
     if (!uniq.length) return ['choko'];
     /* 2026-11-29 회장님 결재 — 연속/동시 발표 인원 제한(2명) 해제: 관련 담당자 최대 6명 */
     uniq = uniq.slice(0, 6);
