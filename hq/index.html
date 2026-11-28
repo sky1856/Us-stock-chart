@@ -3452,27 +3452,75 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
      · analyst: 추세·안정형(QQQ 1배) · scout: 스윙·공격형(QQQ 2배) · guard: 현금 4% + 헷지(0.35배) */
   /* 팀원 얼굴 — 이미 만든 20종 실사 캐릭터 사진을 그대로 쓴다(추가 생성 없음) */
   var CREW_FACE = {
-    analyst: ['gm-navy', 'gf-navy', 'gm-glasses', 'gf-glasses'],
-    scout: ['gm-tux', 'gf-tux', 'gm-burgundy', 'gf-burgundy'],
-    guard: ['gm-silver', 'gf-silver', 'gm-crown', 'gf-crown']
+    analyst:  ['gm-navy', 'gf-navy', 'gm-glasses', 'gf-glasses'],
+    value:    ['gm-beige', 'gf-beige', 'gm-black', 'gf-black'],
+    candle:   ['gm-black', 'gf-black', 'gm-silver', 'gf-silver'],
+    scout:    ['gm-tux', 'gf-tux', 'gm-burgundy', 'gf-burgundy'],
+    elliott:  ['gm-burgundy', 'gf-burgundy', 'gm-navy', 'gf-navy'],
+    ichimoku: ['gm-glasses', 'gf-glasses', 'gm-tux', 'gf-tux'],
+    momentum: ['gm-tux', 'gf-tux', 'gm-gold', 'gf-gold'],
+    vcp:      ['gm-silver', 'gf-silver', 'gm-beige', 'gf-beige'],
+    guard:    ['gm-silver', 'gf-silver', 'gm-crown', 'gf-crown'],
+    macro:    ['gm-crown', 'gf-crown', 'gm-glasses', 'gf-glasses'],
+    factor:   ['gm-black', 'gf-black', 'gm-silver', 'gf-silver'],
+    pm:       ['gm-crown', 'gf-crown', 'gm-gold', 'gf-gold']
   };
   function crewFace(k, i) {
     var set = CREW_FACE[k] || CREW_FACE.analyst;
     return ASSETS[set[(i || 0) % set.length]] || '';
   }
+  /* ── AI 팀원 12종 전문가 라인업 (종류별 최대 50명 · 매일 1회 정산) ────────
+     · beta = 시장 등락에 대한 민감도(공격형일수록 큼, 가드·거시는 작음/방어)
+     · alloc = 1명이 굴리는 가상 자금 · pay = 기본 일급 */
   var CREW = [
-    { k: 'analyst', em: '📊', nm: '리서치 애널리스트', price: 2000, alloc: 1000, beta: 1.0,
+    { k: 'analyst', em: '📊', nm: '추세 애널리스트', price: 2000, alloc: 1000, beta: 1.0, pay: 40,
       cap: '운용 $1,000 · 안정 추세형 · 일급 $40',
-      pay: 40, skill: '이평선 정배열 · 일목균형표 · 추세 6ATR/10ATR',
+      skill: '이평선 정배열 · 일목균형표 · 추세 6ATR/10ATR',
       say: '리서치 노트 정리해 뒀습니다 — 오늘은 거래량이 붙은 돌파 종목부터 보시죠.' },
-    { k: 'scout', em: '⚡', nm: '스윙 스카우터', price: 3500, alloc: 2500, beta: 1.8,
+    { k: 'value', em: '🔍', nm: '실적·밸류 리서처', price: 2500, alloc: 1400, beta: 0.6, pay: 50,
+      cap: '운용 $1,400 · 저변동 가치주 · 일급 $50',
+      skill: '실적 서프라이즈 · PER/PBR 밸류 · 현금흐름',
+      say: '실적이 좋은데 아직 싼 종목부터 추렸습니다 — 변동성이 낮아 마음이 편합니다.' },
+    { k: 'candle', em: '🕯️', nm: '캔들 패턴 스캐너', price: 2800, alloc: 1600, beta: 1.3, pay: 55,
+      cap: '운용 $1,600 · 단기 패턴 · 일급 $55',
+      skill: '망치형 · 장악형 · 적삼병 · 갭 패턴',
+      say: '오늘 캔들 세 개가 장악형으로 잡혔습니다 — 다음 봉 시가가 관건입니다.' },
+    { k: 'scout', em: '⚡', nm: '스윙 스카우터', price: 3500, alloc: 2500, beta: 1.8, pay: 70,
       cap: '운용 $2,500 · 공격 스윙 · 일급 $70',
-      pay: 70, skill: 'RSI(2) · VCP · W쌍바닥 · 다이버전스 단기 반등',
+      skill: 'RSI(2) · VCP · W쌍바닥 · 다이버전스 단기 반등',
       say: '스윙 후보 3종 스캔했습니다 — 20일선 위, 거래량 1.5배 조건으로 추렸어요.' },
-    { k: 'guard', em: '🛡️', nm: '리스크 가드', price: 5000, alloc: 4000, beta: 0.3,
+    { k: 'elliott', em: '🌊', nm: '엘리어트 파동가', price: 4000, alloc: 2200, beta: 1.6, pay: 80,
+      cap: '운용 $2,200 · 3파 반등 포착 · 일급 $80',
+      skill: '엘리어트 1·3·5파 · ABC 조정 · 피보나치 되돌림',
+      say: '지금 2파 조정 끝자리로 보입니다 — 3파 진입 자리를 노려볼 만합니다.' },
+    { k: 'ichimoku', em: '☁️', nm: '일목균형표 마스터', price: 4200, alloc: 2000, beta: 1.2, pay: 85,
+      cap: '운용 $2,000 · 구름대 추세 · 일급 $85',
+      skill: '구름대 돌파 · 기준선/전환선 교차 · 삼역신호',
+      say: '구름대 위로 올라선 종목만 골랐습니다 — 삼역신호가 뜬 자리입니다.' },
+    { k: 'momentum', em: '📈', nm: '모멘텀 트레이더', price: 4500, alloc: 2600, beta: 2.0, pay: 90,
+      cap: '운용 $2,600 · 상승장 가속 · 일급 $90',
+      skill: '상대강도(RS) · 52주 신고가 · 거래량 폭발',
+      say: '상승장에서는 강한 놈이 더 강합니다 — 상대강도 상위로만 갑니다.' },
+    { k: 'vcp', em: '💎', nm: 'VCP·쌍바닥헌터', price: 4800, alloc: 2400, beta: 1.5, pay: 95,
+      cap: '운용 $2,400 · 수축 돌파 · 일급 $95',
+      skill: 'VCP 변동성 수축 · W쌍바둑 · 넥라인 돌파',
+      say: '변동성이 조여든 자리 세 곳 — 거래량 붙어 넥라인 넘으면 바로 갑니다.' },
+    { k: 'guard', em: '🛡️', nm: '리스크 가드', price: 5000, alloc: 4000, beta: 0.3, pay: 100,
       cap: '운용 $4,000 · 현금4%+헷지 · 일급 $100',
-      pay: 100, skill: 'QQQ 100/200일선 · 패닉 70% 비중 · MDD 방어 · 헷지',
-      say: '손절선과 비중 먼저 점검했습니다 — -10% 상한, 손절 후 10일 재진입 금지 유지 중입니다.' }
+      skill: 'QQQ 100/200일선 · 패닉 70% 비중 · MDD 방어 · 헷지',
+      say: '손절선과 비중 먼저 점검했습니다 — -10% 상한, 손절 후 10일 재진입 금지 유지 중입니다.' },
+    { k: 'macro', em: '🌐', nm: '거시·공포탐욕 매니저', price: 5500, alloc: 3000, beta: 0.8, pay: 110,
+      cap: '운용 $3,000 · 심리 역발상 · 일급 $110',
+      skill: 'CNN 공포탐욕 · 금리/연준 · 달러·원자재',
+      say: '공포탐욕 24.9, 극단적 공포 구간입니다 — 이 자리는 사는 자리로 봅니다.' },
+    { k: 'factor', em: '🤖', nm: '퀀트 팩터 엔지니어', price: 6000, alloc: 3200, beta: 1.1, pay: 120,
+      cap: '운용 $3,200 · 팀 시너지 · 일급 $120',
+      skill: '모멘텀·밸류·퀄리티 팩터 · 워크포워드 검증',
+      say: '팩터 조합을 다시 돌렸습니다 — 팀 전체 운용 효율이 올라갑니다.' },
+    { k: 'pm', em: '👑', nm: '수석 AI 포트폴리오 매니저', price: 8000, alloc: 5000, beta: 1.4, pay: 160,
+      cap: '운용 $5,000 · 전체 총괄 · 일급 $160',
+      skill: '자산배분 · 리밸런싱 · 팀 총괄 리스크',
+      say: '팀 전체 포지션을 정리했습니다 — 오늘은 현금 비중을 조금 늘려 두겠습니다.' }
   ];
   /* 시황 연동 — 차트분석기 스냅샷(QQQ 최근 종가 흐름)의 일간 등락 */
   function marketChg() {
@@ -3484,9 +3532,27 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     }
     return 0;
   }
+  /* 교본을 장착한 팀원은 그 기법이 '실제 하루 손익'에 반영된다.
+     · 공포탐욕 역발상: 공포(≤30) 하락일엔 오히려 사서 손실을 이익으로 뒤집는다
+     · ATR·켈리: 하락일 손실을 크게 줄인다(방어)
+     · 돌파·파동·VCP·이평·일목: 상승·반등일 수익을 가속한다 */
+  function crewBookMul(k) {
+    var b = bookOf(k), chg = marketChg();
+    if (!b) return 1;
+    var W = window.CKQ_WALL, score = (W && W.fg && W.fg.score != null) ? Number(W.fg.score) : null;
+    if (b === 'fg') {
+      if (score != null && score <= 30 && chg < 0) return -0.5;   /* 극단 공포 + 하락 = 역발상 매수 */
+      return chg >= 0 ? 1.10 : 0.85;
+    }
+    if (b === 'atr' || b === 'kelly') return chg < 0 ? 0.55 : 1.08;
+    if (b === 'ma' || b === 'ichimoku') return chg > 0 ? 1.18 : 0.90;
+    if (b === 'volume' || b === 'vcp' || b === 'wb') return chg > 0 ? 1.22 : 0.92;
+    if (b === 'elliott' || b === 'rsi') return chg > 0 ? 1.25 : 0.95;
+    return 1.15;
+  }
   function crewOneDay(c) {
     var lv = crewLevel(c.k);
-    return c.alloc * (1 + 0.1 * (lv - 1)) * bookEff(c.k) * c.beta * marketChg();   /* 레벨 반영 · 음수 가능 */
+    return c.alloc * (1 + 0.1 * (lv - 1)) * c.beta * marketChg() * crewBookMul(c.k);   /* 레벨·교본 반영 · 음수 가능 */
   }
   function crewShield() { return crewHave('guard') > 0 ? 0.6 : 1; }   /* 가드가 있으면 하락일 손실 40% 감면 */
   function myLookKey() {
@@ -3547,7 +3613,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     var c = low[0], me = lbName();
     var line = '[이력서 투척 · ' + c.em + ' ' + c.nm + '] ' + crewRank(c.k) + ' Lv.' + crewLevel(c.k) + ' ' + c.em + ' ' + c.nm
       + ' | 누적수익 ' + hqSigned((SHOP.crewPnl || {})[c.k]) + ' | 현재 일급 ' + hqUSD(crewSalary(c.k))
-      + ' | 전공: ' + c.skill + ' | ' + me + ' 회사 충성도 ' + crewLoyal(c.k)
+      + ' | 전공: ' + c.skill + (bookOf(c.k) ? ' + ' + ((bookInfo(bookOf(c.k)) || {}).nm || '') : '') + ' | ' + me + ' 회사 충성도 ' + crewLoyal(c.k)
       + '% — 정가 ' + hqUSD(crewValue(c.k)) + '에 프리미엄 없이 이적 가능합니다.';
     if (typeof liveInsertRow === 'function') liveInsertRow(line, 'question', me);
     var key = (typeof livePerson === 'function') ? livePerson(c.nm, 'AI 팀원') : 'me';
@@ -3633,7 +3699,8 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
         + '<button type="button" class="crew-gate-b" data-cogoto="1">🏢 회사 설립하고 채용하기</button></div>' + html;
     }
     html += '<div class="crew-sum">👥 내 팀원 ' + n + '명 · 오늘 손익 ' + hqSigned(crewDaily())
-      + ' (시황 연동 · 수익도 손실도 실시간) · 1명당 ' + hqUSD(CREW[0].price) + '~' + hqUSD(CREW[2].price) + '</div>';
+      + ' (시황 연동 · 수익도 손실도 실시간) · 1명당 ' + hqUSD(Math.min.apply(null, CREW.map(function (c) { return c.price; })))
+      + '~' + hqUSD(Math.max.apply(null, CREW.map(function (c) { return c.price; }))) + ' · 전문가 12종</div>';
     Array.prototype.forEach.call(document.querySelectorAll('[data-crew]'), function (el) { el.innerHTML = html; });
     /* hq-ai 컨텍스트 — 내가 채용한 팀원과 전공 기법 */
     var mine = CREW.filter(function (c) { return crewHave(c.k) > 0; }).map(function (c) {
@@ -4334,9 +4401,16 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
 
   /* ── 📘 투자 기법 교본 — 사서 팀원에게 장착하면 운용 효율 +15% ─────────── */
   var BOOKS = [
-    { k: 'trend', nm: '추세 돌파 기법서', price: 1200, tag: '추세 돌파' },
-    { k: 'vcp', nm: 'VCP·W쌍바닥 비급', price: 1500, tag: 'VCP·쌍바닥' },
-    { k: 'atr', nm: 'ATR·리스크 교본', price: 1800, tag: 'ATR 리스크' }
+    { k: 'ma',       nm: '📘 이평선 정배열 교본',        price: 1000, tag: '이평선 정배열' },
+    { k: 'ichimoku', nm: '☁️ 일목균형표 구름돌파 비급',   price: 1200, tag: '일목 구름돌파' },
+    { k: 'volume',   nm: '📈 거래량 돌파 매수법',        price: 1300, tag: '거래량 돌파' },
+    { k: 'rsi',      nm: '📉 RSI 과매도 저점 포착',      price: 1400, tag: 'RSI 과매도' },
+    { k: 'vcp',      nm: '⚡ VCP 변동성 축소 비급',      price: 1500, tag: 'VCP·쌍바닥' },
+    { k: 'wb',       nm: '💎 W쌍바닥 반등 전략서',        price: 1600, tag: 'W쌍바닥' },
+    { k: 'elliott',  nm: '🌊 엘리어트 3파동 정석',       price: 1800, tag: '엘리어트 3파' },
+    { k: 'atr',      nm: '🛡️ ATR 트레일링 스탑 교본',    price: 2000, tag: 'ATR 트레일링' },
+    { k: 'fg',       nm: '😨 공포·탐욕 역발상 투자',     price: 2200, tag: '공포탐욕 역발상' },
+    { k: 'kelly',    nm: '👑 켈리 비중·리스크 마스터',    price: 2800, tag: '켈리·리스크' }
   ];
   function bookInfo(k) { for (var i = 0; i < BOOKS.length; i++) if (BOOKS[i].k === k) return BOOKS[i]; return null; }
   function bookHave(k) { return !!(SHOP.booksOwn && SHOP.booksOwn[k]); }
@@ -7201,18 +7275,19 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     closePinModal();
     if (cb) cb();
   }
-  ['pinClose', 'pinCancel'].forEach(function (id) {
-    var b = document.getElementById(id);
-    if (b) b.addEventListener('click', function (e) { e.preventDefault(); closePinModal(); });
+  /* PIN·모닝 모달은 스크립트 블록 뒤 HTML 에 있으므로 위임(delegation)으로 연결한다 */
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('#pinGo')) { e.preventDefault(); pinSubmit(); return; }
+    if (e.target.closest('#pinClose') || e.target.closest('#pinCancel')) { e.preventDefault(); closePinModal(); return; }
+    if (e.target.closest('#mrClose')) { e.preventDefault(); closeMorning(); return; }
+    if (e.target.id === 'pinModal') { closePinModal(); return; }
+    if (e.target.id === 'morningModal') { closeMorning(); return; }
   });
-  (function () {
-    var go = document.getElementById('pinGo');
-    if (go) go.addEventListener('click', function (e) { e.preventDefault(); pinSubmit(); });
-    var inp = document.getElementById('pinIn');
-    if (inp) inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); pinSubmit(); } });
-    var m = document.getElementById('pinModal');
-    if (m) m.addEventListener('click', function (e) { if (e.target === m) closePinModal(); });
-  })();
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    var a = document.activeElement;
+    if (a && a.id === 'pinIn') { e.preventDefault(); pinSubmit(); }
+  });
 
   ['resetBtn', 'resetBtnM', 'minReset'].forEach(function (id) {
     var b = document.getElementById(id);
@@ -7266,13 +7341,6 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     send = function (text) { prevSend(text); try { crewSpeak(text); } catch (e) {} };
   })();
 
-  /* ☀️ 모닝 리포트 닫기 */
-  (function () {
-    var b = document.getElementById('mrClose');
-    if (b) b.addEventListener('click', function (e) { e.preventDefault(); closeMorning(); });
-    var m = document.getElementById('morningModal');
-    if (m) m.addEventListener('click', function (e) { if (e.target === m) closeMorning(); });
-  })();
 
   /* 📱 입력창 placeholder — 모바일은 한 줄로 짧게(2줄 잘림 방지) */
   (function () {
