@@ -7055,8 +7055,9 @@
          추세: 손절 평단 − 6 ATR · 진입가 +6 ATR 도달 후 고점 − 10 ATR 트레일
                QQQ 100일선 아래(시장 위험) → 전량 청산(최소 보유 3거래일 · 패닉일 보류)
      · 매수 기준은 종목마다 고른다 — item.rule: 'auto' | 'safe_trend' | 'aggr_trend' | 'safe_swing' | 'aggr_swing'
-         'auto' = 안정·공격 × 추세·스윙 4조합 5년 백테스트(engine.js 실제 함수) 누적수익 최고를 그 종목에 적용
-         직접 고른 기준이 최고와 1%p 이상 차이 나면 💡 추천 칩(누르면 그 기준으로 전환)
+         'auto' = 안정·공격 × 추세·스윙 4조합 백테스트(engine.js 실제 함수) 중 최고를 그 종목에 적용
+                  (추세 5Y · 스윙 1Y — 비교는 언제나 같은 기간 수익률끼리)
+         직접 고른 기준이 같은 기간 수익률로 1%p 이상 차이 나면 💡 추천 칩(누르면 그 기준으로 전환)
          상단 모드 '화면 기준 따르기'는 저장된 기준을 무시하고 성향·전략 버튼 규칙을 전 종목에 적용
      · 주문·결제 기능은 없다. 실제 계좌·증권사와 연동하지 않는 기록·진단 전용.
      · 저장: localStorage['apex.myhold.v1']
@@ -7135,53 +7136,87 @@
   }
 
   /* ============================================================
-     ⚡ 수익최적화 — 종목별 5년 백테스트 4조합 (2026-11-28)
+     ⚡ 수익최적화 — 종목별 4조합 백테스트 (2026-11-28)
      ------------------------------------------------------------
      · engine.js 의 실제 함수를 그대로 호출한다 (임의 추정 금지)
-         추세형: QE.backtest(a.series, a.ind, a.scoreSeries, QE.riskOpts(profile))
-         스윙형: QE.swingBacktest(a.series, a.ind, QE.riskOpts(profile), a.wsig)
-       기간은 analyze() 와 같은 1,255봉(5년) 창이다.
-     · 같은 종목·같은 기준일은 다시 돌리지 않는다 — 메모리 캐시
-         mhBtCache['티커|asOf|기준'] → { ret, cagr, sharpe, mdd, win, trades }
-         mhOptCache['티커|asOf']      → { best, all, asOf }
-     · 선택 규칙: 5년 누적수익 최고 → 동률(0.01%p 이내)이면 샤프 → MDD(덜 깊은 쪽)
+         추세형: QE.backtest(a.series, a.ind, a.scoreSeries, {...riskOpts, bars})
+         스윙형: QE.swingBacktest(a.series, a.ind, {...riskOpts, bars}, a.wsig)
+     · **기간은 전략 고유 기준** — 스윙 1Y(최근 252거래일) · 추세 5Y(1,255거래일)
+         스윙은 RSI(2) 과매도 진입 → 몇 주 안에 20일선 이탈로 끝나는 짧은 호흡이라,
+         5년 누적수익으로 추세형과 나란히 재면 기간이 긴 쪽이 늘 이겨 비교가 무의미하다.
+         배지·추천 숫자도 스윙 `1Y +XX%` · 추세 `5Y +XX%` 로 각각 적는다.
+     · **비교는 언제나 같은 기간 수익률끼리** (2026-11-28 지적)
+         스윙끼리 → 1Y vs 1Y · 추세끼리 → 5Y vs 5Y · 추세 ↔ 스윙 → 둘 다 1Y로 재서 비교
+         (스윙에는 5Y 라벨을 붙이지 않는다)
+         → 그래서 추세형은 5Y(표시·추세끼리 비교)와 1Y(스윙과 비교)를 함께 계산해 둔다.
+     · 같은 종목·같은 기준일·같은 기간은 다시 돌리지 않는다 — 메모리 캐시
+         mhBtCache['티커|asOf|기준|기간'] → { ret, cagr, sharpe, mdd, win, trades, period }
+         mhOptCache['티커|asOf']          → { best, all, asOf }
      · 계산은 16ms 타임슬라이스로 2종목씩 — 첫 렌더에서 화면이 멈추지 않게
      ============================================================ */
   var mhBtCache = Object.create(null);
   var mhOptCache = Object.create(null);
   var mhOptQueue = [];
   var mhOptTimer = 0;
+  /* 전략 고유 기간 — 추세형 5Y(엔진 기본 창) · 스윙형 1Y(252거래일) */
+  var MH_BARS = { trend: (QE.BT_BARS || 1255), swing: ((QE.BT_PERIODS && QE.BT_PERIODS['1Y']) || 252) };
+  var MH_PERIOD = { trend: '5Y', swing: '1Y' };
   function mhAsOf(t) {
     var a = A[t];
     return (a && a.dates && a.close && a.close.length) ? a.dates[a.close.length - 1] : '';
   }
-  function mhBacktestOf(t, rule) {
+  /* period 생략 = 그 전략의 고유 기간(추세 5Y · 스윙 1Y) */
+  function mhBacktestOf(t, rule, period) {
     var spec = MH_RULES[rule], a = A[t];
     if (!spec || spec.auto || !a || !a.series || !a.ind || !a.scoreSeries) return null;
-    var key = t + '|' + mhAsOf(t) + '|' + rule;
+    var per = (period === '1Y' || period === '5Y') ? period : MH_PERIOD[spec.strat];
+    var bars = per === '1Y' ? MH_BARS.swing : MH_BARS.trend;
+    var key = t + '|' + mhAsOf(t) + '|' + rule + '|' + per;
     if (key in mhBtCache) return mhBtCache[key];
     var out = null;
     try {
       var r = null, cur = a.strategy && a.strategy[spec.strat];
-      /* 화면 성향과 같은 조합이면 analyze() 가 이미 돌린 결과를 그대로 쓴다 — 같은 파라미터·같은 5년 창 */
-      if (cur && cur.stats && cur.stats.totalReturn != null && spec.profile === riskProfile()) r = cur;
-      else if (spec.strat === 'swing') r = QE.swingBacktest(a.series, a.ind, QE.riskOpts(spec.profile), a.wsig);
-      else r = QE.backtest(a.series, a.ind, a.scoreSeries, QE.riskOpts(spec.profile));
+      /* 화면 성향·같은 기간으로 analyze() 가 이미 돌린 결과가 있으면 그대로 쓴다 */
+      if (cur && cur.stats && cur.stats.totalReturn != null && spec.profile === riskProfile() && btBars() === bars) r = cur;
+      else {
+        var o = QE.riskOpts(spec.profile) || {};
+        o.bars = bars;                                   /* 스윙 1Y · 추세 5Y — 전략 고유 기간 */
+        if (spec.strat === 'swing') r = QE.swingBacktest(a.series, a.ind, o, a.wsig);
+        else r = QE.backtest(a.series, a.ind, a.scoreSeries, o);
+      }
       if (r && r.stats) out = { ret: r.stats.totalReturn, cagr: r.stats.cagr, sharpe: r.stats.sharpe,
-        mdd: r.stats.mdd, win: r.stats.winRate, trades: r.stats.trades, bars: a.close.length - r.startIdx };
+        mdd: r.stats.mdd, win: r.stats.winRate, trades: r.stats.trades, bars: bars, period: per };
     } catch (e) { out = null; }
     mhBtCache[key] = out;
     return out;
   }
+  /* 한 조합의 행 — 표시 기간(고유) 수익률 ret 과, 스윙과 만날 때 쓰는 1Y 수익률 ret1y 를 함께 담는다 */
+  function mhComboRow(t, rule) {
+    var own = mhBacktestOf(t, rule);
+    if (!own) return null;
+    var strat = MH_RULES[rule].strat, r1 = own;
+    if (strat === 'trend') r1 = mhBacktestOf(t, rule, '1Y') || own;   /* 스윙과 비교할 1Y 창 */
+    return { rule: rule, ko: MH_RULES[rule].tag, strat: strat,
+      ret: own.ret, period: own.period,
+      ret1y: strat === 'swing' ? own.ret : r1.ret,
+      sharpe: own.sharpe, mdd: own.mdd, win: own.win, trades: own.trades };
+  }
+  /* 같은 기간 수익률 — 둘 다 추세면 5Y, 하나라도 스윙이면 1Y */
+  function mhCmpPeriod(a, b) { return (a.strat === 'trend' && b.strat === 'trend') ? '5Y' : '1Y'; }
+  function mhRetIn(row, period) {
+    return period === '5Y' ? (row.strat === 'trend' ? row.ret : row.ret1y) : row.ret1y;
+  }
+  /* a 가 b 보다 나은가 — 같은 기간 수익률로만 견준다 (동률이면 거래 유무 → 샤프 → 5Y 근거) */
   function mhBetter(a, b) {
     if (!b) return true;
-    if (a.ret > b.ret + 1e-4) return true;
-    if (b.ret > a.ret + 1e-4) return false;
+    var per = mhCmpPeriod(a, b), av = mhRetIn(a, per), bv = mhRetIn(b, per);
+    if (av > bv + 1e-4) return true;
+    if (bv > av + 1e-4) return false;
     if (a.trades > 0 && !(b.trades > 0)) return true;      /* 거래가 아예 없던 조합보다 실제로 매매한 조합 */
     if (b.trades > 0 && !(a.trades > 0)) return false;
     if (a.sharpe > b.sharpe + 1e-6) return true;
     if (b.sharpe > a.sharpe + 1e-6) return false;
-    return a.mdd > b.mdd;
+    return a.period === '5Y' && b.period !== '5Y';
   }
   function mhBestOf(t) {
     var asOf = mhAsOf(t);
@@ -7190,9 +7225,8 @@
     if (key in mhOptCache) return mhOptCache[key];
     var all = [], best = null;
     MH_COMBOS.forEach(function (rule) {
-      var r = mhBacktestOf(t, rule);
-      if (!r) return;
-      var row = { rule: rule, ko: MH_RULES[rule].tag, ret: r.ret, sharpe: r.sharpe, mdd: r.mdd, win: r.win, trades: r.trades };
+      var row = mhComboRow(t, rule);
+      if (!row) return;
       all.push(row);
       if (mhBetter(row, best)) best = row;
     });
@@ -7235,20 +7269,23 @@
     if (b === undefined) { mhOptAsk(it.t); return { mode: 'auto', rule: 'auto', pend: true }; }
     if (!b) return { mode: 'auto', rule: 'auto', pend: true };       /* 데이터 없음 → 진단도 없음 */
     return { mode: 'auto', rule: 'auto', best: b, profile: MH_RULES[b.best.rule].profile,
-      strat: MH_RULES[b.best.rule].strat, ko: b.best.ko, ret: b.best.ret };
+      strat: MH_RULES[b.best.rule].strat, ko: b.best.ko, ret: b.best.ret, period: b.best.period };
   }
-  /* 💡 추천 — 직접 고른 기준이 5년 최고와 1%p 이상 차이날 때만 (사실상 같다면 숨김) */
+  /* 💡 추천 — 4조합 중 1등이 지금 기준보다 같은 기간 수익률로 1%p 이상 앞설 때만.
+     스윙이 추천되면 1Y 끼리, 추세끼리면 5Y 끼리 재서 그 기간 라벨로 보여 준다. */
   function mhRecoOf(it) {
     var rule = mhRuleOf(it);
     if (rule === 'auto') return null;
     var opt = mhBestPeek(it.t);
     if (opt === undefined) { mhOptAsk(it.t); return null; }
     if (!opt || opt.best.rule === rule) return null;
-    var curRet = null;
-    opt.all.forEach(function (r) { if (r.rule === rule) curRet = r.ret; });
-    if (curRet == null) return null;
-    if (opt.best.ret - curRet < 0.01) return null;
-    return { rule: opt.best.rule, ko: opt.best.ko, best: opt.best.ret, cur: curRet };
+    var curRow = null;
+    opt.all.forEach(function (r) { if (r.rule === rule) curRow = r; });
+    if (!curRow) return null;
+    var per = mhCmpPeriod(opt.best, curRow);
+    var bv = mhRetIn(opt.best, per), cv = mhRetIn(curRow, per);
+    if (bv - cv < 0.01) return null;
+    return { rule: opt.best.rule, ko: opt.best.ko, best: bv, cur: cv, period: per };
   }
 
   /* 한 종목 진단 — 평단·수량·매수일 + 기준(성향·전략) 규칙 → 배지·자동 손절·청산 기준 */
@@ -7398,7 +7435,7 @@
     var basisS = auto ? '종목별 설정 (자동 포함)'
       : ((riskAggr() ? '공격형' : '안정형') + ' · ' + (stratKey() === 'swing' ? '스윙형' : '추세형'));
     var basisT = auto
-      ? ('⚡ 자동 ' + st.autoN + '종목 · 직접 지정 ' + st.pickN + '종목 — 자동은 종목별 5년 백테스트 4조합 최고 조합을 적용합니다')
+      ? ('⚡ 자동 ' + st.autoN + '종목 · 직접 지정 ' + st.pickN + '종목 — 자동은 4조합(추세 5Y · 스윙 1Y)을 같은 기간 수익률끼리 비교해 가장 앞선 조합을 적용합니다')
       : '상단 성향·전략 버튼의 규칙을 모든 종목에 똑같이 적용합니다 (카드에 저장된 매수 기준은 그대로 유지)';
     return '<div class="c"><div class="k">총 평가금액</div><div class="v">' + (have ? usd(st.mv, 2) : '—') + '</div>' +
       '<div class="s">' + (st.n ? '보유 ' + st.n + '종목 · 매입 ' + usd(st.cost, 2) : '아직 등록한 종목이 없습니다') + '</div></div>' +
@@ -7419,10 +7456,10 @@
   }
   function mhBasisCell(r) {
     var it = r.it, b = r.b, cur = mhRuleOf(it), cls2 = 'none', txt = '기준 없음', tip = '';
-    if (r.pend) { cls2 = 'pend'; txt = '⏳ 5년 백테스트 계산 중…'; tip = '4조합(안정·공격 × 추세·스윙) 5년 백테스트를 돌리는 중입니다'; }
+    if (r.pend) { cls2 = 'pend'; txt = '⏳ 4조합 계산 중…'; tip = '4조합(안정·공격 × 추세·스윙)을 돌리는 중입니다 — 추세 5Y · 스윙 1Y'; }
     else if (!b) { cls2 = 'none'; txt = '기준 없음'; }
     else if (b.mode === 'screen') { cls2 = 'screen'; txt = '🎛️ 화면 기준 · ' + b.ko; tip = '상단 성향·전략 버튼 규칙을 따릅니다 — 저장된 매수 기준: ' + MH_RULES[cur].ko; }
-    else if (b.mode === 'auto') { cls2 = 'auto'; txt = '⚡ 자동 → ' + b.ko + ' (5Y ' + pct(b.ret, 0) + ')'; tip = '이 종목의 5년 백테스트 4조합 중 누적수익 최고 — ' + b.ko + ' · 5Y ' + pct(b.ret, 2); }
+    else if (b.mode === 'auto') { cls2 = 'auto'; txt = '⚡ 자동 → ' + b.ko + ' (' + (b.period || '5Y') + ' ' + pct(b.ret, 0) + ')'; tip = '4조합 중 같은 기간 수익률 비교에서 가장 앞선 조합 — ' + b.ko + ' · ' + (b.period || '5Y') + ' ' + pct(b.ret, 2); }
     else { cls2 = 'pick'; txt = '매수 기준: ' + b.ko; tip = '직접 고른 기준 — ' + (b.strat === 'swing' ? '스윙형' : '추세형') + ' · ' + (b.profile === 'aggr' ? '공격형' : '안정형') + ' 규칙으로 진단합니다'; }
     return '<div class="mhbasis">' + mhRuleSelect(it.t, cur) +
       '<span class="mhb-badge ' + cls2 + '" title="' + mhEsc(tip) + '">' + txt + '</span></div>';
@@ -7437,7 +7474,7 @@
     var tk = '<div class="mhtk"><b>' + mhEsc(t) + '</b><i>' + mhEsc(meta.n || '') + ' · ' + qty2(it.qty) + '주' +
       (it.d ? ' · ' + it.d.slice(5) + ' 매수' : '') + '</i>' + (it.memo ? '<em>' + mhEsc(it.memo) + '</em>' : '') + '</div>';
     var basis = mhBasisCell(r);
-    /* 계산 대기 — 종목은 있는데 5년 4조합을 아직 돌리는 중 */
+    /* 계산 대기 — 종목은 있는데 4조합 백테스트를 아직 돌리는 중 */
     if (r.pend) {
       var pen = A[t] ? A[t].close[A[t].close.length - 1] : null;
       return head +
@@ -7445,8 +7482,8 @@
         '<div class="mhc mh-px"><span class="lbl">현재가</span><b>' + usd(pen) + '</b><i>평단 ' + usd(it.avg) + '</i></div>' +
         '<div class="mhc mh-pnl"><span class="lbl">평가손익</span><b>—</b><i>계산 중</i></div>' +
         '<div class="mhc mh-stp"><span class="lbl">자동 손절</span><b>—</b><i>—</i></div>' +
-        '<div class="mhrule"><span class="neu">⏳ 4조합 5년 백테스트 계산 중</span></div>' + act +
-        '<div class="mh-why">선택한 기준의 5년 백테스트를 돌려 손절·청산 기준을 계산하는 중입니다. 잠시 뒤 자동으로 채워집니다.</div>' +
+        '<div class="mhrule"><span class="neu">⏳ 4조합 백테스트 계산 중</span></div>' + act +
+        '<div class="mh-why">선택한 기준의 백테스트(추세 5Y · 스윙 1Y)를 돌려 손절·청산 기준을 계산하는 중입니다. 잠시 뒤 자동으로 채워집니다.</div>' +
         '</div>';
     }
     if (!d) {
@@ -7461,9 +7498,9 @@
     }
     var bd = { hold: ['hold', '🟢 홀드'], warn: ['warn', '🟡 손절 주의'], sell: ['sell', '🔴 매도·청산 신호'] }[d.badge] || ['hold', '🟢 홀드'];
     var chips = d.exit.map(function (c) { return '<span class="' + c.k + '">' + c.t + '</span>'; }).join('');
-    var reco = r.reco ? '<div class="mh-why-reco"><button type="button" class="mh-reco" data-mh="reco" data-rule="' + r.reco.rule + '" title="이 종목의 매수 기준을 ' + r.reco.ko + '으로 바꿉니다 — 5년 백테스트 누적수익 최고 조합">' +
-      '💡 추천: ' + r.reco.ko + ' (5Y ' + pct(r.reco.best, 0) + ' vs ' + pct(r.reco.cur, 0) + ') · 전환</button></div>' : '';
-    var why = (r.b && r.b.mode === 'auto' ? '⚡ 5Y 최고 조합(' + r.b.ko + ') 기준 — ' : '') + d.reason;
+    var reco = r.reco ? '<div class="mh-why-reco"><button type="button" class="mh-reco" data-mh="reco" data-rule="' + r.reco.rule + '" title="이 종목의 매수 기준을 ' + r.reco.ko + '으로 바꿉니다 — 같은 기간(' + r.reco.period + ') 수익률 비교에서 더 앞선 조합">' +
+      '💡 추천: ' + r.reco.ko + ' (' + r.reco.period + ' ' + pct(r.reco.best, 0) + ' vs ' + pct(r.reco.cur, 0) + ') · 전환</button></div>' : '';
+    var why = (r.b && r.b.mode === 'auto' ? '⚡ 4조합 중 최고(' + r.b.ko + ' · ' + (r.b.period || '5Y') + ') 기준 — ' : '') + d.reason;
     return head +
       '<div class="mhb"><span class="mh-badge ' + bd[0] + '">' + bd[1] + '</span></div>' + tk + basis +
       '<div class="mhc mh-px"><span class="lbl">현재가</span><b>' + usd(d.price) + '</b><i>평단 ' + usd(it.avg) + '</i></div>' +
@@ -7481,7 +7518,7 @@
       : '화면 기준 · ' + (riskAggr() ? '공격형' : '안정형') + ' · ' + (stratKey() === 'swing' ? '스윙형' : '추세형')) +
       '</b>으로 ' + M.asOf + ' 종가 기준 계산 — ';
     var body = auto
-      ? '<b>⚡ 수익최적 자동</b>은 안정·공격 × 추세·스윙 <b>4조합 5년 백테스트</b>에서 누적수익이 가장 높은 조합(동률 시 샤프 → MDD)을 그 종목에 적용합니다. 카드의 <b>기준 선택</b>으로 직접 고르면 그 규칙을 따르고, 더 나은 조합이 <b>1%p 이상</b> 앞서면 <b>💡 추천</b> 칩이 뜹니다.'
+      ? '<b>⚡ 수익최적 자동</b>은 <b>추세형 5Y(최근 5년) · 스윙형 1Y(최근 1년)</b> 백테스트를 돌려, 언제나 <b>같은 기간 수익률끼리</b> 비교해 가장 앞선 조합을 그 종목에 적용합니다 (스윙끼리 1Y · 추세끼리 5Y · 추세↔스윙은 둘 다 1Y). 카드의 <b>기준 선택</b>으로 직접 고르면 그 규칙을 따르고, 1등이 <b>같은 기간 수익률로 1%p 이상</b> 앞서면 <b>💡 추천</b> 칩이 뜹니다.'
       : '상단 성향·전략 버튼의 규칙을 모든 종목에 똑같이 적용합니다 — 카드에 저장된 매수 기준은 그대로 남아 있어 <b>⚡ 수익최적화 자동</b>으로 돌아오면 다시 쓰입니다.';
     return head + body + ' <b>매수·매도 주문은 하지 않고</b> 실제 계좌·증권사와 연동하지 않는 참고용 진단입니다.';
   }
@@ -7494,7 +7531,7 @@
       b.setAttribute('aria-pressed', b.getAttribute('data-mbmode') === myhold.mode ? 'true' : 'false');
     });
     var nt = $('#mhBasisNote');
-    if (nt) nt.textContent = myhold.mode === 'auto' ? '종목별 5Y 최고' : '성향·전략 버튼 그대로';
+    if (nt) nt.textContent = myhold.mode === 'auto' ? '종목별 4조합 최고' : '성향·전략 버튼 그대로';
   }
 
   function mhRender() {
@@ -7702,7 +7739,7 @@
       { q: '🟢·🟡·🔴 판단 기준은 뭔가요?',
         a: '종목마다 고른 기준의 <b>실제 백테스트 규칙</b>으로 마지막 종가 기준 진단합니다.<br>· <b>스윙형</b>: 손절 max(평단 − ' + stopAtr + ' ATR, 평단 −' + capS + '%/공격형 −' + capA + '%) · 이익 +' + gate + '% 이상에서 20일선 아래 ' + need + '거래일 연속 마감 → 청산<br>· <b>추세형</b>: 손절 평단 − ' + tStop + ' ATR · 평단 +' + tStart + ' ATR 도달 후 고점 − ' + tTrail + ' ATR 트레일 · QQQ 100일선 아래면 전량 청산<br>· 🟢 여유 · 🟡 주의(청산선 3% 이내 또는 20일선 1일 이탈) · 🔴 규칙상 손절·청산 신호' },
       { q: '⚡ 수익최적 자동 vs 직접 선택 차이는?',
-        a: '내가 산 의도(스윙/추세·안정/공격)가 있으면 <b>직접 고르고</b>, 잘 모르겠으면 <b>⚡ 수익최적 자동</b>이 그 종목의 최근 5년 백테스트 4조합(안정·공격 × 추세·스윙) 중 누적수익이 가장 높은 조합(동률이면 샤프 → MDD)을 골라 줍니다. 직접 고른 경우에도 더 높은 조합이 <b>1%p 이상</b> 앞서면 카드에 <b>💡 추천 · 전환</b> 칩이 떠서 한 번에 바꿀 수 있습니다. 공격형은 <b>스윙 손절 상한(−' + capA + '%)·손절 후 재진입 금지(0일)</b>만 바꾸므로, 추세형 두 조합은 5년 성과가 같아 자동에서는 <b>안정·추세</b>로 표시됩니다.' },
+        a: '내가 산 의도(스윙/추세·안정/공격)가 있으면 <b>직접 고르고</b>, 잘 모르겠으면 <b>⚡ 수익최적 자동</b>이 4조합(안정·공격 × 추세·스윙)을 돌려 가장 앞선 조합을 골라 줍니다. 기간은 전략에 맞춰 <b>스윙은 1Y(최근 1년)·추세는 5Y(최근 5년)</b>이고, 비교는 <b>언제나 같은 기간 수익률끼리</b> 합니다 — 스윙끼리 1Y · 추세끼리 5Y · 추세와 스윙을 견줄 때는 둘 다 1Y로 재서 비교합니다(스윙에는 5Y를 붙이지 않음). 직접 고른 경우에도 1등이 <b>같은 기간 수익률로 1%p 이상</b> 앞서면 카드에 <b>💡 추천 · 전환</b> 칩이 떠서 한 번에 바꿀 수 있습니다. 공격형은 <b>스윙 손절 상한(−' + capA + '%)·손절 후 재진입 금지(0일)</b>만 바꾸므로, 추세형 두 조합은 5년 성과가 같아 자동에서는 <b>안정·추세</b>로 표시됩니다.' },
       { q: '매수일은 왜 입력하나요?',
         a: '추세형의 <b>최소 ' + tHold + '거래일 보유 예외</b>와 <b>매수 후 최고가</b>(트레일 손절선: 고점 − ' + tTrail + ' ATR)를 정확히 계산하기 위해서입니다. 비워 두어도 진단은 되지만, 이 두 가지가 빠져 규칙보다 일찍 청산 신호가 보일 수 있습니다. 휴장일에 매수했다면 그 다음 거래일 종가 기준으로 계산하고 화면에 그 사실을 적습니다.' },
       { q: '다른 기기(폰↔PC)로 옮기려면?',
@@ -7752,7 +7789,7 @@
     if (fromReco && myhold.mode !== 'auto') myhold.mode = 'auto';   /* 추천을 받아들면 자동 모드로 */
     mhSave(); mhRender();
     mhMsg(t + ' 매수 기준을 ' + MH_RULES[rule].ko + '으로 바꿨습니다' +
-      (rule === 'auto' ? ' — 5년 백테스트 최고 조합을 자동 적용합니다' : ' — 이 규칙으로 바로 다시 진단했습니다'), 'ok');
+      (rule === 'auto' ? ' — 4조합(추세 5Y·스윙 1Y) 중 최고 조합을 자동 적용합니다' : ' — 이 규칙으로 바로 다시 진단했습니다'), 'ok');
   }
   function mhMode(m) {
     m = m === 'screen' ? 'screen' : 'auto';

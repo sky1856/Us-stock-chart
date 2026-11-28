@@ -343,15 +343,17 @@ scripts/ui.css  scripts/engine.js  scripts/ui.js  scripts/edufig.js ─┘
 - 값: `auto` · `safe_trend` · `aggr_trend` · `safe_swing` · `aggr_swing` (`MH_RULES`). 표시 문구는 `MH_RULES[k].ko`, 진단 파라미터는 `.profile`(`safe|aggr`)·`.strat`(`trend|swing`).
 - 등록·수정 폼의 `#mhRule` select, 카드 안 인라인 select(`select.mh-rsel[data-mhr="티커"]`) 두 곳에서 바꾼다. 어느 쪽이든 `mhSetRule()` 하나를 거쳐 저장 → `mhRender()` 즉시 재진단.
 
-### 9-2-2. 수익최적화 (engine.js 실제 호출)
-- 4조합 = `MH_COMBOS`(`safe_trend`·`aggr_trend`·`safe_swing`·`aggr_swing`).
-- `mhBacktestOf(t, rule)`:
-  - 추세형 `QE.backtest(a.series, a.ind, a.scoreSeries, QE.riskOpts(profile))`
-  - 스윙형 `QE.swingBacktest(a.series, a.ind, QE.riskOpts(profile), a.wsig)`
-  - 기간은 `analyze()`와 같은 1,255봉(5년) 창. **화면 성향과 같은 조합**은 `analyze()`가 이미 계산한 `a.strategy[strat].stats`를 그대로 재사용한다(같은 파라미터·같은 창 — 재계산 낭비 제거).
-- 선택 규칙 `mhBetter()`: 5년 누적수익 최고 → 동률(0.01%p 이내)이면 거래가 있는 조합 → 샤프 → MDD(덜 깊은 쪽).
-  - 공격형 프로필은 스윙의 `coolLoss`(10→0)·`stopCap`(0.10→0.15)만 바꾸므로 **추세형 두 조합은 5년 성과가 같다** → 자동은 항상 `안정·추세`를 고른다(가짜 차이를 만들지 않는다). FAQ에도 같은 문장을 넣었다.
-- 캐시: `mhBtCache['티커|asOf|기준']`(백테스트 1회) · `mhOptCache['티커|asOf']`(`{best, all, asOf}`). 기준일 `asOf`가 바뀌면(데이터 갱신) 자동으로 새로 계산한다.
+### 9-2-2. 수익최적화 (engine.js 실제 호출) — 2026-11-28 기간 정정 반영
+- 4조합 = `MH_COMBOS`(`safe_trend`·`aggr_trend`·`safe_swing`·`aggr_swing`). **성향 제한 없이 4조합 전체에서 고른다** (안정형 기준에도 공격형이 추천될 수 있음 — 2026-11-28 확정).
+- **기간은 전략 고유 기준**: **스윙 1Y = 252거래일 · 추세 5Y = 1,255거래일**. `QE.riskOpts(profile)` 사본에 `o.bars`를 넣어 엔진 `btFirst()` 창을 그대로 줄인다(엔진 함수는 수정하지 않음). `MH_BARS`·`MH_PERIOD`가 단일 소스이고 `QE.BT_BARS`/`QE.BT_PERIODS`에서 읽는다.
+  - 이유: 스윙은 RSI(2) 과매도 진입 → 몇 주 안에 20일선 이탈로 끝나는 짧은 호흡이라, 5년 누적수익으로 추세형과 나란히 재면 기간이 긴 쪽이 늘 이긴다.
+- `mhBacktestOf(t, rule, period)` — `period` 생략 시 그 전략의 고유 기간. 추세형은 표시용 5Y와 **비교용 1Y**를 함께 계산한다(`mhComboRow()`의 `ret1y`).
+  - 추세형 `QE.backtest(a.series, a.ind, a.scoreSeries, o)` · 스윙형 `QE.swingBacktest(a.series, a.ind, o, a.wsig)`
+  - **화면 성향·같은 기간으로 이미 돌린 조합**은 `analyze()`의 `a.strategy[strat].stats`를 재사용한다(`spec.profile === riskProfile() && btBars() === bars`일 때만 — 기간이 다르면 반드시 다시 계산).
+- 선택 규칙 `mhBetter()` — **같은 기간 수익률끼리만 비교**: 스윙끼리 `1Y vs 1Y` · 추세끼리 `5Y vs 5Y` · **추세↔스윙은 둘 다 1Y**(`mhCmpPeriod()`). 누적수익 우선, 동률이면 거래가 있는 조합 → 샤프 → 5Y 근거가 긴 쪽.
+  - 공격형 프로필은 스윙의 `coolLoss`(10→0)·`stopCap`(0.10→0.15)만 바꾸므로 **추세형 두 조합은 5년 성과가 같다** → 동률이면 `안정·추세`로 표시된다(가짜 차이를 만들지 않는다). FAQ에도 같은 문장을 넣었다.
+- **표기**: 배지·추천 숫자는 그 조합의 고유 기간 — 스윙 `1Y +XX%` · 추세 `5Y +XX%`. **스윙에 5Y 라벨을 붙이지 않는다.**
+- 캐시: `mhBtCache['티커|asOf|기준|기간']`(백테스트 1회) · `mhOptCache['티커|asOf']`(`{best, all, asOf}`). 기준일 `asOf`가 바뀌면(데이터 갱신) 자동으로 새로 계산한다.
 - 성능: `mhOptAsk()` → `setTimeout(16ms)` 타임슬라이스로 **2종목씩** 계산하며 `mhRender()`를 다시 부른다. 계산 전 카드는 `⏳ 계산 중` 플레이스홀더. 30종목 실측: 첫 페인트 후 **약 1.6~2.6초**에 전부 확정, 탭·모드 전환 재진단 **0회**(캐시 116건 유지).
 
 ### 9-2-3. 적용 기준 모드 (`myhold.mode`)
@@ -360,9 +362,9 @@ scripts/ui.css  scripts/engine.js  scripts/ui.js  scripts/edufig.js ─┘
 - 요약 `적용 기준` 칸: 자동이면 `⚡ 수익최적화 자동` / `종목별 설정 (자동 포함)`, 화면 기준이면 `🎛️ 화면 기준 따르기` / `안정형 · 추세형`.
 
 ### 9-2-4. 카드 표시
-- 기준 배지(`.mhb-badge`): `매수 기준: 🛡️ 안정·추세` · `⚡ 자동 → 🔥 공격·추세 (5Y +248%)` · `🎛️ 화면 기준 · …` · `⏳ 5년 백테스트 계산 중…`
+- 기준 배지(`.mhb-badge`): `매수 기준: 🛡️ 안정·추세` · `⚡ 자동 → 🛡️ 안정·스윙 (1Y +68%)` / `⚡ 자동 → 🔥 공격·추세 (5Y +248%)` · `🎛️ 화면 기준 · …` · `⏳ 4조합 계산 중…`
 - 진단(`mhDiag(it, basis)`): `basis.profile`·`basis.strat`로 `riskParams(profile)`을 읽어 손절·트레일·청산을 그 기준의 실제 규칙으로 계산한다(화면 성향과 무관).
-- 💡 추천 칩: 직접 고른 기준(`rule !== 'auto'`)이 5년 최고보다 **1%p 이상** 낮을 때만 `.mh-why` 줄에 표시 — `💡 추천: 🔥 공격·스윙 (5Y +653% vs +436%) · 전환`. 누르면 `item.rule`을 그 조합으로 바꾸고 저장·재진단(화면 기준 모드였다면 `⚡ 자동`으로 복귀).
+- 💡 추천 칩: 4조합 1등이 지금 기준보다 **같은 기간 수익률로 1%p 이상** 앞설 때만 `.mh-why` 줄에 표시 — `💡 추천: 🔥 공격·스윙 (1Y +653% vs +436%) · 전환`(스윙이 끼면 양쪽 다 1Y, 추세끼리면 5Y). 누르면 `item.rule`을 그 조합으로 바꾸고 저장·재진단(화면 기준 모드였다면 `⚡ 자동`으로 복귀).
 
 ### 9-2-5. ❓ 도움말 (FAQ 5문 5답)
 - 카드 헤더 `#mhHelp`(`❓ 도움말`) → `#mhFaq` 펼침/접힘(기본 접힘, `aria-expanded` 동기화). 모의투자 탭에서도 같은 자리에 있다.
@@ -370,7 +372,7 @@ scripts/ui.css  scripts/engine.js  scripts/ui.js  scripts/edufig.js ─┘
 - 맨 아래 안내 배너: `💬 더 궁금한 점이나 개선 건의가 있으신가요?` + `🏢 초코퀀트 회의실에 말하기 →` (`https://sky1856.github.io/Us-stock-chart/hq/`, `target="_blank" rel="noopener"`). **질문 입력칸·질문 복사 UI는 두지 않는다**(2026-11-28 확정).
 
 ### 9-2-6. 불변 규칙 추가
-  29. **수익최적화는 엔진 함수 호출로만** — 4조합 수익률을 임의 추정·상수로 만들지 않는다. 화면 성향과 같은 조합은 `a.strategy` 재사용(같은 파라미터일 때만).
+  29. **수익최적화는 엔진 함수 호출로만** — 4조합 수익률을 임의 추정·상수로 만들지 않는다. 기간은 `opts.bars`로 넘긴다(**스윙 252 · 추세 1,255**). 화면 성향·같은 기간의 조합만 `a.strategy`를 재사용한다.
   30. **종목별 기준이 진단의 단일 소스** — `mhDiag()`는 `basis`(profile·strat)를 인자로 받는다. `stratKey()`/`riskProfile()`을 함수 안에서 직접 읽지 않는다(읽으면 모드·기준 선택이 무시된다).
-  31. **추천 칩은 1%p 이상 차이일 때만** — 사실상 같은 전략을 "추천"으로 띄우지 않는다. 칩을 누르면 `rule` 변경·저장·재진단이 한 번에 일어난다.
+  31. **추천 칩은 같은 기간 수익률 1%p 차이일 때만** — 다른 기간 수익률을 나란히 견주거나, 스윙에 `5Y` 라벨을 붙이지 않는다(스윙끼리 1Y · 추세끼리 5Y · 이종끼리 1Y). 칩을 누르면 `rule` 변경·저장·재진단이 한 번에 일어난다.
   32. **카드 폭 3단** — ≥1600px 8열 한 줄, 761~1599px 4열(기준·티커·상태·버튼 / 가격·손익·손절 / 규칙 / 사유), ≤760px 3열(상태·티커 / 기준 / 가격·손익·손절 / 규칙 / 버튼 / 사유). `.mf-fields`는 ≤1279px에서 3열 — 1024·1180px에서 폼이 카드를 넘던 문제(2026-11-28 이전부터 존재)를 함께 해소했다.
