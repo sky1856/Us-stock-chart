@@ -586,7 +586,8 @@ body.mode3d .sidembtn{display:grid}
 .seat.boss .pod.pod-chair .cfig{scale:.90; transform-origin:50% 100%}
 @media (max-width:900px){
   .seat.guest .pod-bust .cfig{scale:none}
-  .seat.boss .pod.pod-chair .cfig{scale:none}
+  /* 모바일 — 상석 실루엔이 주변 직원보다 과하게 커 보임 → 골드 의자 등받이 폭에 맞춰 약 66% */
+  .seat.boss .pod.pod-chair .cfig{scale:.66; transform-origin:50% 100%}
 }
 .seat .pod .pav.mono{display:grid; place-items:center; font-size:15px; font-weight:800; color:#2A1A02;
   background:linear-gradient(160deg,#F9D68C,#D99B3C)}
@@ -1188,39 +1189,119 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
   .lv-row{font-size:11.5px; gap:6px} .lv-row span{white-space:normal; display:-webkit-box;
     -webkit-line-clamp:1; -webkit-box-orient:vertical} }
 
-/* ── ⑩ 테이블 명패 — 대리석 위 작은 3D 명패 ───────────────────────────── */
+/* ── ⑩ 테이블 명패 — 대리석 위 입체 스모크 유리 프리즘 웨지 ─────────────
+   앞면(스모크 유리 + 무지개 홀로그램 시어) · 상단/측면 베벨(네온 시안, 회장석 샴페인골드)
+   · 삼각 받침 + 대리석 접지 그림자/반사. 좌석마다 perspective·rotateX/Y/Z 를 달리 준다.     */
 .plates{position:absolute; inset:0; z-index:2; pointer-events:none}
-.tplate{position:absolute; left:var(--px); top:var(--py);
-  transform:translate(-50%,-50%) perspective(140px) rotateX(46deg);
-  pointer-events:auto; cursor:pointer; width:3.4%; height:1.9%; min-width:36px; min-height:12px;
-  display:flex; align-items:center; justify-content:center; border-radius:3px; padding:0 3px;
-  background:linear-gradient(180deg, rgba(14,28,46,.78), rgba(8,18,32,.84));
-  -webkit-backdrop-filter:blur(8px) saturate(1.2); backdrop-filter:blur(8px) saturate(1.2);
-  border:1px solid rgba(130,228,255,.58);
-  box-shadow:0 0 10px rgba(88,210,255,.42), inset 0 0 9px rgba(88,210,255,.16), 0 3px 7px rgba(0,0,0,.5);
-  font:inherit; font-size:max(6.5px,.46vw); font-weight:700; letter-spacing:.02em; color:#F4F8FF;
-  text-shadow:0 1px 2px rgba(0,0,0,.85), 0 0 6px rgba(4,10,18,.9);
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  transition:box-shadow .25s, border-color .25s, color .25s, background .25s}
-.tplate::before{content:""; position:absolute; left:10%; right:10%; top:0; height:1px;
-  background:linear-gradient(90deg, transparent, rgba(220,240,255,.55), transparent)}
-.tplate::after{content:""; position:absolute; left:6%; right:6%; bottom:-3px; height:3px; border-radius:50%;
-  background:rgba(0,0,0,.55); filter:blur(2px)}
-.tplate.boss{border-color:rgba(246,220,170,.78); color:#FFF4DC;
-  background:linear-gradient(180deg, rgba(40,31,16,.80), rgba(20,15,7,.86));
-  box-shadow:0 0 11px rgba(246,214,150,.42), inset 0 0 9px rgba(246,214,150,.16), 0 3px 7px rgba(0,0,0,.5)}
-.tplate.boss::before{background:linear-gradient(90deg, transparent, rgba(255,226,168,.75), transparent)}
-.tplate.speaking{border-color:rgba(170,244,255,.96); color:#fff;
-  box-shadow:0 0 20px rgba(99,210,255,.85), inset 0 0 12px rgba(99,210,255,.42), 0 3px 7px rgba(0,0,0,.5);
-  animation:tpGlow 1.9s ease-in-out infinite}
-.tplate.boss.speaking{border-color:rgba(255,232,180,.98); color:#FFFBF0;
-  box-shadow:0 0 22px rgba(246,205,122,.9), inset 0 0 12px rgba(246,205,122,.45), 0 3px 7px rgba(0,0,0,.5);
-  animation:tpGlowGold 1.9s ease-in-out infinite}
-.tplate:hover{border-color:rgba(200,242,255,.95); color:#fff}
-@keyframes tpGlow{0%,100%{box-shadow:0 0 13px rgba(99,210,255,.62), inset 0 0 9px rgba(99,210,255,.28), 0 3px 7px rgba(0,0,0,.5)}
-  50%{box-shadow:0 0 24px rgba(120,225,255,.95), inset 0 0 14px rgba(120,225,255,.5), 0 3px 7px rgba(0,0,0,.5)}}
-@keyframes tpGlowGold{0%,100%{box-shadow:0 0 14px rgba(246,205,122,.66), inset 0 0 9px rgba(246,205,122,.3), 0 3px 7px rgba(0,0,0,.5)}
-  50%{box-shadow:0 0 26px rgba(255,226,168,.95), inset 0 0 14px rgba(255,226,168,.5), 0 3px 7px rgba(0,0,0,.5)}}
+.tplate{position:absolute; left:var(--px); top:var(--py); z-index:1;
+  width:5.6%; height:3.35%; min-width:66px; min-height:21px; max-width:108px; max-height:32px;
+  border:0; padding:0; margin:0; background:none; font:inherit; color:#F2FAFF;
+  transform:translate(calc(-50% + var(--dx,0px)),-50%)
+            perspective(240px) rotateX(var(--rx,28deg)) rotateY(var(--ry,0deg)) rotateZ(var(--rz,0deg));
+  transform-origin:50% 58%;
+  pointer-events:auto; cursor:pointer; -webkit-tap-highlight-color:transparent}
+.tplate.boss{width:6.4%; min-width:74px; max-width:128px; height:3.62%; min-height:23px}
+
+/* 웨지 본체 — 유리 실루엣 전체에 접지 그림자 */
+.tpw{position:absolute; inset:0; display:block;
+  filter:drop-shadow(0 3px 3px rgba(0,0,0,.78)) drop-shadow(0 9px 12px rgba(0,0,0,.55));
+  transition:filter .25s ease}
+
+/* 대리석 위 은은한 유리 반사 */
+.tpr{position:absolute; left:2%; right:2%; top:100%; height:46%; display:block;
+  background:
+    linear-gradient(180deg, rgba(190,242,255,.55) 0 .8px, rgba(190,242,255,0) .8px),
+    linear-gradient(180deg, rgba(120,208,255,.26), rgba(90,170,230,.08) 38%, rgba(60,130,190,0) 78%);
+  clip-path:polygon(3% 0, 97% 0, 88% 100%, 12% 100%);
+  filter:blur(1.6px); opacity:.72}
+.tplate.boss .tpr{background:
+    linear-gradient(180deg, rgba(255,238,200,.55) 0 .8px, rgba(255,238,200,0) .8px),
+    linear-gradient(180deg, rgba(255,214,150,.24), rgba(226,178,100,.08) 38%, rgba(140,100,40,0) 78%)}
+
+/* 받침 플린스 — 명패가 놓인 자리의 어두운 접지면 + 유리와 만나는 밝은 이음선 */
+.tpb{position:absolute; left:1.6%; right:1.6%; bottom:-8%; height:14%; display:block;
+  background:linear-gradient(180deg,
+    rgba(168,238,255,.55) 0 1.1px, rgba(9,22,38,.95) 1.1px 52%, rgba(2,6,12,.94) 100%);
+  clip-path:polygon(1.5% 0, 98.5% 0, 100% 100%, 0 100%);
+  border-radius:0 0 2px 2px}
+.tplate.boss .tpb{background:linear-gradient(180deg,
+    rgba(255,226,168,.6) 0 1.1px, rgba(34,26,12,.95) 1.1px 52%, rgba(12,9,4,.94) 100%)}
+
+/* 상단 베벨 — 유리 두께가 빛을 받아 밝게 타는 띠 */
+.tpt{position:absolute; left:0; right:0; top:0; height:15%; display:block;
+  background:
+    linear-gradient(180deg, rgba(244,254,255,.98) 0 .9px, rgba(244,254,255,0) .9px),
+    linear-gradient(180deg, rgba(176,238,255,.62) 0%, rgba(96,192,238,.42) 46%, rgba(18,52,78,.55) 100%);
+  clip-path:polygon(4.2% 0, 95.8% 0, 98% 100%, 2% 100%);
+  filter:drop-shadow(0 -1px 2px rgba(108,230,255,.42));
+  transition:filter .25s}
+
+/* 앞면 — 스모크 유리 */
+.tpf{position:absolute; left:0; right:0; top:14%; bottom:0; display:block;
+  background:
+    linear-gradient(0deg, rgba(128,230,255,.44) 0 1.1px, rgba(128,230,255,0) 3px),
+    radial-gradient(130% 190% at 32% -30%, rgba(110,190,238,.19), rgba(56,132,190,.07) 44%, rgba(0,0,0,0) 72%),
+    linear-gradient(180deg, rgba(26,50,78,.93) 0%, rgba(12,25,42,.955) 26%,
+                    rgba(6,14,26,.97) 66%, rgba(3,8,16,.98) 100%);
+  clip-path:polygon(2% 0, 98% 0, 100% 100%, 0 100%)}
+
+/* 좌·우 측면 베벨 — 유리 모서리 두께 */
+.tpe{position:absolute; left:0; right:0; top:14%; bottom:0; display:block; pointer-events:none;
+  background:
+    linear-gradient(90deg, rgba(206,246,255,.72), rgba(120,220,255,.22) 1.1%, rgba(120,220,255,0) 4%),
+    linear-gradient(270deg, rgba(206,246,255,.72), rgba(120,220,255,.22) 1.1%, rgba(120,220,255,0) 4%),
+    linear-gradient(0deg, rgba(150,236,255,.32) 0 1.1px, rgba(150,236,255,0) 2.6px);
+  clip-path:polygon(2% 0, 98% 0, 100% 100%, 0 100%)}
+
+/* 무지개 홀로그램 시어 — 천천히 흐르는 스펙트럼 */
+.tph{position:absolute; left:0; right:0; top:14%; bottom:0; display:block; pointer-events:none;
+  mix-blend-mode:screen; opacity:.32; background-size:230% 100%; background-repeat:no-repeat;
+  background-image:linear-gradient(102deg,
+    rgba(120,230,255,0) 4%, rgba(120,235,255,.36) 22%, rgba(190,148,255,.32) 38%,
+    rgba(255,190,150,.26) 52%, rgba(120,255,222,.26) 66%, rgba(120,230,255,0) 84%);
+  clip-path:polygon(2% 0, 98% 0, 100% 100%, 0 100%);
+  animation:tpSheen 11s ease-in-out infinite}
+@keyframes tpSheen{0%,100%{background-position:-70% 0} 50%{background-position:170% 0}}
+
+/* 이름 각인 */
+.tpl{position:absolute; left:0; right:0; top:15%; bottom:1%; display:flex; align-items:center; justify-content:center;
+  padding:0 5.5%; font-size:max(8.8px,.67vw); font-weight:800; letter-spacing:.055em; line-height:1;
+  color:#F3FAFF; text-shadow:0 1px 2px rgba(0,0,0,.92), 0 0 8px rgba(70,190,255,.4);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+
+/* 회장석 — 샴페인골드 베벨 */
+.tplate.boss .tpt{background:linear-gradient(180deg,
+    rgba(255,248,228,.98) 0%, rgba(255,222,158,.82) 38%, rgba(176,124,52,.66) 74%, rgba(46,32,12,.72) 100%);
+  filter:drop-shadow(0 -1px 3px rgba(255,214,140,.55))}
+.tplate.boss .tpf{background:
+    linear-gradient(0deg, rgba(255,222,160,.5) 0 1.1px, rgba(255,222,160,0) 3.4px),
+    linear-gradient(180deg, rgba(74,58,32,.94) 0%, rgba(40,30,14,.95) 20%,
+                    rgba(22,15,6,.96) 58%, rgba(10,7,3,.975) 100%)}
+.tplate.boss .tpe{background:
+    linear-gradient(90deg, rgba(255,238,198,.94), rgba(255,206,130,.32) 1.6%, rgba(255,206,130,0) 5.2%),
+    linear-gradient(270deg, rgba(255,238,198,.94), rgba(255,206,130,.32) 1.6%, rgba(255,206,130,0) 5.2%),
+    linear-gradient(0deg, rgba(255,222,164,.38) 0 1.1px, rgba(255,222,164,0) 3px)}
+.tplate.boss .tph{background-image:linear-gradient(102deg,
+    rgba(255,226,168,0) 4%, rgba(255,232,180,.36) 22%, rgba(255,196,140,.3) 38%,
+    rgba(214,190,255,.24) 52%, rgba(255,236,190,.26) 66%, rgba(255,226,168,0) 84%)}
+.tplate.boss .tpl{color:#FFF6E2; font-size:max(9.2px,.71vw); text-shadow:0 1px 2px rgba(0,0,0,.92), 0 0 9px rgba(255,210,130,.45)}
+
+/* 발언자 — 네온 엣지가 한 단계 더 환하게 점등 */
+.tplate.speaking{z-index:3}
+.tplate.speaking .tpw{animation:tpSpeak 1.9s ease-in-out infinite}
+.tplate.speaking .tpt{filter:drop-shadow(0 -1px 4px rgba(150,242,255,.95)) brightness(1.22)}
+.tplate.speaking .tpe{filter:brightness(1.25)}
+@keyframes tpSpeak{
+  0%,100%{filter:drop-shadow(0 1px 1px rgba(0,0,0,.55)) drop-shadow(0 0 5px rgba(108,230,255,.6))}
+  50%{filter:drop-shadow(0 1px 1px rgba(0,0,0,.55)) drop-shadow(0 0 12px rgba(158,244,255,.98))}}
+.tplate.boss.speaking .tpw{animation:tpSpeakGold 1.9s ease-in-out infinite}
+.tplate.boss.speaking .tpt{filter:drop-shadow(0 -1px 4px rgba(255,226,168,.95)) brightness(1.22)}
+@keyframes tpSpeakGold{
+  0%,100%{filter:drop-shadow(0 1px 1px rgba(0,0,0,.55)) drop-shadow(0 0 5px rgba(255,214,140,.62))}
+  50%{filter:drop-shadow(0 1px 1px rgba(0,0,0,.55)) drop-shadow(0 0 13px rgba(255,232,180,.98))}}
+
+.tplate:hover .tpt{filter:brightness(1.2) drop-shadow(0 -1px 3px rgba(150,240,255,.7))}
+.tplate:hover .tpl{color:#fff}
 @media (max-width:900px){ .plates{display:none} }
 @media (min-width:901px){ .seat.boss .pnm, .seat.guest .pnm{display:none} }
 /* 인물 정보 팝오버 */
@@ -1250,8 +1331,6 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
 @media (max-width:760px){ .pm-stage{width:100%} }
 /* 결재 버튼 글자 크기 통일 (반려만 작게 보이던 문제) */
 .dec-btn.ok, .dec-btn.re, .dec-btn.rj{font-size:12.5px}
-/* 명패 이름·직함 가독성 한 단계 */
-.tplate{width:3.8%; font-size:max(7px,.5vw)}
 .dec-save{white-space:nowrap}
 @media (max-width:520px){.dec-row{flex-wrap:nowrap}.dec-save{flex:0 0 auto; min-width:56px; padding:10px 12px}.dec-note{min-width:0}}
 </style>
@@ -2580,7 +2659,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     planeEl.insertAdjacentHTML('beforeend', anchorMarkup(s));
     holoLayer.insertAdjacentHTML('beforeend', holoMarkup(s));
     var platesEl2 = document.getElementById('plates');
-    if (platesEl2) platesEl2.insertAdjacentHTML('beforeend', plateMarkup(s));
+    if (platesEl2) { platesEl2.insertAdjacentHTML('beforeend', plateMarkup(s)); layoutPlates(); }
     var el = seatsEl.querySelector('[data-seat="' + g.key + '"]');
     seatEls[g.key] = el;
     if (el) el.classList.add('g' + (i % 4));
@@ -2803,6 +2882,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     var platesEl = document.getElementById('plates');
     if (platesEl) platesEl.innerHTML = plateHtml;
     seatsEl.innerHTML = seatHtml;
+    if (platesEl) { layoutPlates(); setTimeout(layoutPlates, 60); }
     planeEl.insertAdjacentHTML('beforeend', anchorHtml);
     holoLayer.innerHTML = holoHtml;
     Array.prototype.forEach.call(seatsEl.querySelectorAll('.seat'), function (el) {
@@ -2886,8 +2966,10 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     });
     order.sort(function (a, b) { return latest[b].i - latest[a].i; });
     var narrow = window.innerWidth <= 900;
-    var shown = order.slice(0, narrow ? 3 : 4);
-    if (order.indexOf('me') >= 0 && shown.indexOf('me') < 0) shown.unshift('me');
+    var phone = window.innerWidth <= 760;
+    /* 모바일(≤760px) 3D — 공간이 좁아 지금 말하는 사람 1명의 말풍선만 띄운다 */
+    var shown = order.slice(0, phone ? 1 : (narrow ? 3 : 4));
+    if (!phone && order.indexOf('me') >= 0 && shown.indexOf('me') < 0) shown.unshift('me');
     var shownSet = {};
     shown.forEach(function (k) { shownSet[k] = !latest[k].m.photo; });
     var speakerKey = order.length ? order[0] : null;
@@ -2977,21 +3059,9 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
         tipX = ax + HEAD_OFF[k][0] * sc;
         tipY = ay + HEAD_OFF[k][1] * sc;
       }
-      /* 지시선 끝은 얼굴이 아니라 이름표 위로 내린다 — 모바일에서 얼굴을 가로지르지 않게 */
-      var pnmEl = el ? el.querySelector('.pnm') : null;
-      var tgt = null;
-      if (pnmEl) {
-        var pr = pnmEl.getBoundingClientRect();
-        if (pr.width > 6) tgt = pr;
-      }
-      if (!tgt) {
-        var tpEl = document.querySelector('.tplate[data-tp="' + k + '"]');
-        if (tpEl) {
-          var tr = tpEl.getBoundingClientRect();
-          if (tr.width > 6) tgt = tr;
-        }
-      }
-      if (tgt) { tipX = tgt.left + tgt.width / 2 - hr.left; tipY = tgt.top - hr.top - 2; }
+      /* 회장님 지시 — 지시선 끝은 테이블 명패가 아니라 실제 사람 머리/어깨에 그대로 둔다.
+         (명패를 키운 만큼 예전처럼 명패 rect 로 끝점을 내리면 선이 테이블 위로 떨어진다) */
+      tipX = ax; tipY = ay + 3;
       var pos = findSpot(ax, ay, CW, CH, taken, W, H, 50, 30);
       if (!pos) { if (screenRect) screenHidden.push(item.m); return; }
       if (screenRect && overlaps(pos.rect, [screenRect], 2)) { screenHidden.push(item.m); return; }
@@ -3125,6 +3195,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     card.click();
   });
   window.addEventListener('resize', function () {
+    layoutPlates();
     if (mode !== '3d') return;
     fitPlane(); measureCards(); render3D();
   });
@@ -3397,12 +3468,67 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     /* 명패에는 이름(직함)을 그대로 — '개발 · 개발' 같은 중복 표기 금지 */
     return String(s.name || s.short || s.k).slice(0, 7);
   }
+  /* 좌석 위치에 따라 명패가 놓인 타원 테이블 방향으로 살짝 돌아가게 —
+     좌측 좌석은 오른쪽 모서리가 멀어지며 왼쪽으로, 우측 좌석은 그 반대로. */
+  function plateTilt(s) {
+    var dx = s.x - 53.45;
+    var rx = s.boss ? 21 : (s.y > 79 ? 30 : 27) + Math.min(3.5, Math.abs(dx) * 0.055);
+    var ry = Math.max(-8, Math.min(8, -dx * 0.42));
+    var rz = Math.max(-2, Math.min(2, -dx * 0.11));
+    return { rx: +rx.toFixed(1), ry: +ry.toFixed(1), rz: +rz.toFixed(1) };
+  }
   function plateMarkup(s) {
-    var p = platePos(s);
+    var p = platePos(s), t = plateTilt(s);
     var nm = plateLabel(s).slice(0, 10);
-    return '<button type="button" class="tplate' + (s.boss ? ' boss' : '') + '" data-tp="' + s.k + '"'
-      + ' style="--px:' + p.px + '%;--py:' + p.py + '%" aria-label="' + escAttr(s.name || s.k) + ' 명패 — 발언 보기">'
-      + esc(nm) + '</button>';
+    return '<button type="button" class="tplate' + (s.boss ? ' boss' : '') + (s.guest ? ' guest' : '') + '" data-tp="' + s.k + '"'
+      + ' style="--px:' + p.px + '%;--py:' + p.py + '%;--rx:' + t.rx + 'deg;--ry:' + t.ry + 'deg;--rz:' + t.rz + 'deg"'
+      + ' aria-label="' + escAttr(s.name || s.k) + ' 명패 — 발언 보기">'
+      + '<span class="tpw" aria-hidden="true">'
+      +   '<span class="tpr"></span><span class="tpb"></span>'
+      +   '<span class="tpf"></span><span class="tph"></span>'
+      +   '<span class="tpe"></span><span class="tpt"></span>'
+      + '</span>'
+      + '<span class="tpl">' + esc(nm) + '</span>'
+      + '</button>';
+  }
+
+  /* 명패가 커진 만큼 서로 겹치지 않게 좌우로만 살짝 밀어 배치 (좌표 % 는 그대로 두고 --dx 픽셀 보정) */
+  function layoutPlates() {
+    var host = document.getElementById('plates');
+    if (!host) return;
+    var HW = host.getBoundingClientRect().width, HH = host.getBoundingClientRect().height;
+    if (!HW || !HH) return;
+    var items = [];
+    Array.prototype.forEach.call(host.querySelectorAll('.tplate'), function (el) {
+      var px = parseFloat(el.style.getPropertyValue('--px')) || 50;
+      var py = parseFloat(el.style.getPropertyValue('--py')) || 50;
+      items.push({ el: el, px: px, py: py, dx: 0,
+                   w: el.offsetWidth || 60, h: (el.offsetHeight || 20) * 0.86 });
+    });
+    for (var it = 0; it < 10; it++) {
+      var changed = false;
+      for (var i = 0; i < items.length; i++) {
+        for (var j = i + 1; j < items.length; j++) {
+          var A = items[i], B = items[j];
+          var ax = A.px / 100 * HW + A.dx, bx = B.px / 100 * HW + B.dx;
+          var ay = A.py / 100 * HH, by = B.py / 100 * HH;
+          var needX = (A.w + B.w) / 2 + 12, needY = (A.h + B.h) / 2 + 3;
+          if (Math.abs(ax - bx) < needX && Math.abs(ay - by) < needY) {
+            var dir = ax <= bx ? -1 : 1;
+            var push = (needX - Math.abs(ax - bx)) / 2 + 0.5;
+            A.dx += dir * push; B.dx -= dir * push;
+            changed = true;
+          }
+        }
+      }
+      if (!changed) break;
+    }
+    items.forEach(function (o) {
+      /* 테이블 밖으로 밀리지 않게 px 좌표를 2~98% 안으로 제한 */
+      var minDx = (2 - o.px) / 100 * HW, maxDx = (98 - o.px) / 100 * HW;
+      var dx = Math.max(minDx, Math.min(maxDx, o.dx));
+      o.el.style.setProperty('--dx', dx.toFixed(1) + 'px');
+    });
   }
   var tpK = null;
   function openTPop(k) {
