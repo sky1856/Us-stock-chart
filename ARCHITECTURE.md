@@ -1,6 +1,6 @@
 # ARCHITECTURE — ChoKo QUANT 미국주식 차트분석기
 
-> 최종 갱신 2026-11-28 2단계 (상단 로딩 진행바 · 계좌 보유·체결·QQQ 벤치 · 화이트 QUANT 명도 · 태블릿/모바일 공포시계 정리) · 저장소 `sky1856/Us-stock-chart` · 라이브 `https://sky1856.github.io/Us-stock-chart/`
+> 최종 갱신 2026-11-28 3단계 (**실전 내 보유 관리 라이브 반영** · **화이트 모드 `QUANT` 검은 사각 박스 수정** · 상단 로딩 진행바 · 계좌 보유·체결·QQQ 벤치 · 태블릿/모바일 공포시계 정리) · 저장소 `sky1856/Us-stock-chart` · 라이브 `https://sky1856.github.io/Us-stock-chart/`
 > 이 문서는 **화면·데이터·규칙이 어떻게 연결되어 있는지**와 **깨뜨리면 안 되는 불변 규칙**을 정리한 연결 구조표입니다.
 > 빌드 산출물은 저장소 루트 `index.html` 한 파일입니다(모든 CSS·데이터·엔진·UI 인라인).
 
@@ -23,8 +23,8 @@ scripts/ui.css  scripts/engine.js  scripts/ui.js  scripts/edufig.js ─┘
 | `scripts/update_data.py` | Yahoo 10년 일봉 수집 → 최근 1,505봉 유지, 펀더멘털·^VIX·^TNX·DXY·CNN 공포탐욕·거시지표 수집 → `data.js` | 실패 시 기존 `data.js` 유지(exit 2). 95% 미만 수집이면 폐기. 마지막 봉 종가 결측은 `regularMarketPrice`로 보완, `staleN`·`miss10`(결측 봉 수) 기록 + `WARN 데이터 결측` 로그 |
 | `scripts/data.js` | `window.MARKET` — `asOf`,`updatedAt`,`dates[]`,`tickers[]`(meta),`series{}`(`off`,`o/h/l/c/v`,`staleN`,`miss10`,`lastReal`),`fundamentals`,`fearGreed`,`macro` | meta의 `r`(시총 순위)이 **전략별 유니버스 판정 기준** |
 | `scripts/engine.js` | 기술적 분석·전략 시뮬레이션(순수 JS, DOM 없음) | 추세 C2 / 스윙 A 규칙. 성향 프로필은 파라미터만 바꾼다 |
-| `scripts/ui.js` | 화면 전체(스캐너·차트·백테스트·리플레이·모의투자) + **3축 컨트롤러·계좌 포트폴리오 시뮬레이터(`acctRun`)·운영 원칙 탭·상단 로딩 진행바(`bootProgress`)** | 유니버스 필터는 `uniList()` 한 곳, 계좌 수치는 `acctStats()` 한 곳, 진행률은 `bootProgress()` 한 곳 |
-| `scripts/ui.css` | 디자인 시스템 + 테마(다크/화이트 × 안정형/공격형) | 브랜딩·성향 스위치 블록은 파일 끝(2026-11-28) |
+| `scripts/ui.js` | 화면 전체(스캐너·차트·백테스트·리플레이·모의투자) + **3축 컨트롤러·계좌 포트폴리오 시뮬레이터(`acctRun`)·운영 원칙 탭·상단 로딩 진행바(`bootProgress`)·실전 보유 관리(`mhRender`/`mhDiag`)** | 유니버스 필터는 `uniList()` 한 곳, 계좌 수치는 `acctStats()` 한 곳, 진행률은 `bootProgress()` 한 곳, 보유 진단은 `mhDiag()` 한 곳 |
+| `scripts/ui.css` | 디자인 시스템 + 테마(다크/화이트 × 안정형/공격형) + 실전 보유 관리(`.mh-*`) | 브랜딩·성향 스위치 블록은 파일 끝(2026-11-28). 그라디언트 글자는 `background` 축약 금지(불변 규칙 28) |
 | `scripts/template.html` | 문서 골격(헤더·사이드바·메인·차트) + `<body>` 첫 줄 **로딩 진행바 `#bootLoad`·`#bootTip`** | `__CSS__ __DATA__ __ENGINE__ __EDUFIG__ __UI__ __UPDATED__` 토큰 |
 | `scripts/build.py` | 위 조각을 `index.html`로 합침 | `</script>` 포함 파일은 빌드 거부 |
 | `/workspace/work/stock_daily_update.sh` | 예약 실행(매일 07:15 KST) — pull → update_data → build → 커밋·푸시 | 종목 수는 `top150.json`을 따라 자동으로 152종목 |
@@ -303,3 +303,31 @@ scripts/ui.css  scripts/engine.js  scripts/ui.js  scripts/edufig.js ─┘
 23. **첫 분석 전에는 집계·계좌 계산을 시작하지 않는다** — `bootReady` 게이트 + `deferJob`/`drainJobs`. 부분 데이터로 계산한 계좌 결과가 캐시(`acctCache`)에 남으면 안 된다(입력 종목 수 `rowN` = 추세 100 · 스윙 150).
 24. **계좌는 같은 기간 QQQ와 나란히** — `#acBench` 는 `qqqBench(btBars())` 계산값만 쓰고, `#acHold`/`#acFill` 은 `acctRun()` 의 `holds`/`fills` 만 옮겨 쓴다(보유 비중 + 현금 = 100%). 고정 수치 금지.
 25. **진입 금액은 트레이드 `w` 를 곱하고 현금을 넘기지 않는다** — `min(목표×w, 패닉 잔여, cash/(1+수수료))`, 현금 하한 0, 이자는 현금 > 0 일 때만. `w` 는 엔진 트레이드의 값(추세 caution 0.5 · 스윙 1)을 그대로 쓴다.
+
+---
+
+## 9. 💼 실전 내 보유 관리 (MY HOLD) — 2026-11-28 라이브 반영
+
+> `scripts/template.html`·`ui.css`·`ui.js` 3개 파일에 구현되어 `build.py` → `index.html` → GitHub Pages 라이브에 반영되었습니다. 검증은 테스트 사본 `/workspace/work/hold_test/`에서 먼저 마쳤고, 이식은 사본과 100% 동일(빌드 산출물 md5까지 일치)합니다.
+
+- **위치**: 모의투자 카드(`#paperCard`) 안의 탭 `#mhTabs` — `💼 내 실전 보유 관리`(`#mhPane`) | `🧪 모의투자`(`#ptPane`). 첫 화면 기본 탭은 **실전 보유**(마지막 선택은 `apex.myhold.v1.tab`에 저장).
+- **저장**: `localStorage['apex.myhold.v1']` = `{v:1, tab:'hold'|'paper', items:[{t, avg, qty, d, memo}]}` (최대 30종목 · 티커 중복 없음 — 같은 종목을 다시 등록하면 평단 가중평균으로 합산). 백업(`bkExport`)은 `apex.*` 전체를 담으므로 자동 포함되고, 복원 시 `mhLoad()`가 다시 읽는다.
+- **계산 `mhDiag(it)`** — 성향·전략의 **실제 파라미터**(`riskParams()`)만 쓴다. 숫자를 화면에 박지 않는다.
+  - `atr0` = 매수일 봉의 **직전 봉 ATR(14)**(엔진 `openPos`와 동일), 없으면 최근 봉. 매수일이 휴장일이면 다음 거래일 기준으로 계산하고 화면에 그 사실을 적는다.
+  - **스윙**: 자동 손절 `max(평단 − 4.5 ATR, 평단 × (1 − 손절상한))` · 이익 `+5%` 이상에서 **20일선 2거래일 연속 이탈** → 🔴 · 1일째 → 🟡
+  - **추세**: 자동 손절 `평단 − 6 ATR` + 진입가 `+6 ATR` 도달 후 `고점 − 10 ATR` 트레일(매 봉 갱신 — 엔진 `trendSim`과 같은 방식) · **QQQ 100일선 아래**면 전량 청산(최소 보유 3거래일 · RSI(2) 패닉일 보류)
+  - 매수일을 비우면 **최소 보유 예외를 적용하지 않는다** — 예외가 영구히 걸려 청산 신호를 가리는 것보다 규칙대로 보여 주는 편이 정직하다.
+- **검증(2026-11-28)**: 라이브 포지션 122건(추세 40 · 스윙 82)에서 자동 손절이 엔진 `live.stop`(추세는 `max(stop, trailStop)`)과 **오차 0**, 트레일 6건 독립 재계산 오차 0.
+- **불변 규칙 추가**
+  26. **보유 진단 수치는 엔진 규칙 계산값만** — 손절 %·거리·판단 배지를 하드코딩하지 않는다. 성향·전략을 바꾸면 `renderRisk()`·`renderStrategy()`가 `mhRender()`를 다시 부른다.
+  27. **카드 제목·배지(`#pcTitle`·`#ptBadge`·`#ptAcct`)는 `mhTab()`이 관리** — `ptRender()`는 실전 탭에서 배지를 덮어쓰지 않는다(덮어쓰면 'LIVE DAY'가 남는다).
+  28. **그라디언트 글자에 `background` 축약 금지** — 축약은 `background-clip`을 `border-box`로 리셋해 글자 대신 배경 사각형이 칠해진다(2026-11-28 화이트 모드 `QUANT` 검은 박스의 원인). 브랜드 그라디언트 글자는 `background-image` + `-webkit-background-clip:text`/`background-clip:text`/`-webkit-text-fill-color:transparent`를 함께 쓴다.
+
+---
+
+## 9-1. 화이트 모드 `QUANT` 검은 사각 박스 수정 — 2026-11-28
+
+- **증상**: 화이트 테마에서 상단 브랜드 `QUANT`가 글자가 아니라 **어두운 사각형**으로 보임(1600px에서는 정상, 폰 390px에서 항상).
+- **원인**: `ui.css`의 `@media (max-width:1023px)` 안 라이트 테마 `.bw` 규칙이 `background:linear-gradient(...)` **축약**만 선언 → `background-clip`이 `border-box`로 리셋되어(글자색은 `transparent`) 그라디언트가 글자 뒤 사각형으로 칠해짐. 실측: 1600px `backgroundClip=text` / 390px `backgroundClip=border-box`.
+- **수정**: 해당 규칙을 `background-image` + 클립·채움 재선언으로 바꾸고, 브랜드 그라디언트 글자 3종(`.brand-name`·`.ck`·`.bw`) 전체 규칙의 `background:`도 `background-image:`로 통일. 파일 끝에 "어떤 폭·테마에서도 배경 박스가 아니라 글자로만 칠한다" 최종 방어 규칙(`clip:text`·`fill:transparent` 고정)을 추가.
+- **확인**: 다크/화이트 × 안정형/공격형 × 1600·1024·768·390px에서 `backgroundClip=text`이고 사각형 0.

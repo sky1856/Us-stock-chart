@@ -425,6 +425,7 @@
     renderAggrCard();
     renderNotice();                                 /* 투자 운영 원칙 탭의 규칙·검증 수치도 새 성향 기준으로 */
     renderAcct();                                   /* 성향이 바뀌면 계좌 시뮬레이션도 새 규칙으로 */
+    mhRender();                                     /* 실전 보유도 새 성향(손절 상한)으로 다시 계산 */
   }
   /* 공격형 카드 — 추세형은 50:50 블렌드 가이드 + 오늘의 모멘텀 Top5, 스윙형은 S2 파라미터 요약 */
   function renderAggrCard() {
@@ -870,6 +871,7 @@
     bootReady = true;           /* 이제부터 기간 집계·계좌 계산을 실제로 시작한다 */
     drainJobs();
     renderAcct();               /* 대기 중이던 계좌 계산이 시작되면 카드도 그 상태로 다시 */
+    mhRender();                 /* 실전 보유 관리 — 분석이 끝나면 내 보유 종목 진단을 계산 */
     bootFinish();               /* 진행바 100% → 페이드아웃 */
     prefetchPeriods();          /* 3M·6M·1Y·2Y 기간 집계를 백그라운드에서 미리 계산 */
   }
@@ -2481,6 +2483,7 @@
     renderPresetGuide();          /* 전략을 바꾸면 스캐너 3줄 가이드도 그 전략 것으로 */
     renderStratBlend(info.key);   /* 🔥 공격형 — 추세는 50:50 모멘텀 블렌드 성과를 전략 바에 함께 */
     renderAcct();                 /* 2️⃣ 투자방식(집중1/분산3/분산10) 계좌 시뮬레이션 — 이 전략·기간 기준 */
+    mhRender();                   /* 💼 실전 보유 진단도 이 전략(스윙/추세) 규칙으로 다시 */
     renderNotice();               /* 운영 원칙 탭의 '지금 기간 성과'도 이 기간 기준 */
   }
   /* 전략 버튼(추세형 ↔ 스윙형) — 누를 때마다 그 전략의 추천 1위 종목으로 자동 전환한다.
@@ -5922,8 +5925,11 @@
     var st = ptStats();
 
     var badge = $('#ptBadge');
-    badge.textContent = replay ? 'REPLAY' : 'LIVE DAY';
-    badge.classList.toggle('replay', replay);
+    /* 실전 보유 탭에서는 카드 제목·배지를 mhTab 이 관리한다 — select()→ptRender() 가 덮어쓰지 않도록 */
+    if (myhold.tab !== 'hold') {
+      badge.textContent = replay ? 'REPLAY' : 'LIVE DAY';
+      badge.classList.toggle('replay', replay);
+    }
 
     $('#ptSum').innerHTML =
       cell('\uCD1D \uD3C9\uAC00\uC790\uC0B0', usd(st.total, 2), pct(st.totalRet, 2) + ' (\uC2DC\uB4DC \uB300\uBE44)', cls(st.totalRet)) +
@@ -6526,7 +6532,7 @@
     ['fundCard', '기업 펀더멘털'],
     ['seCard', '종합 기술점수 산출 근거'],
     ['ewCard', '엘리어트 파동 분석'],
-    ['paperCard', '가상투자 · 모의매매'],
+    ['paperCard', '보유 관리 · 모의투자'],
     ['logCard', '트레이드 로그']
   ];
   var accState = {};
@@ -6894,11 +6900,14 @@
     try { p = JSON.parse(data['apex.paper.v1'] || 'null'); } catch (e) {}
     try { w = JSON.parse(data['apex.watchlist.v1'] || 'null'); } catch (e) {}
     try { dr = JSON.parse(data['apex.draw.v1'] || '{}'); } catch (e) {}
+    var mh = null;
+    try { mh = JSON.parse(data['apex.myhold.v1'] || 'null'); } catch (e) {}
     var fills = (p && Array.isArray(p.fills)) ? p.fills.length : 0;
     var nw = Array.isArray(w) ? w.length : ((w && Array.isArray(w.t)) ? w.t.length : 0);
     var nd = 0;
     if (dr && typeof dr === 'object') Object.keys(dr).forEach(function (t) { if (Array.isArray(dr[t])) nd += dr[t].length; });
-    return { fills: fills, watch: nw, draw: nd };
+    var nh = (mh && Array.isArray(mh.items)) ? mh.items.length : 0;
+    return { fills: fills, watch: nw, draw: nd, hold: nh };
   }
   function backupExport() {
     var data = {};
@@ -6918,7 +6927,7 @@
       document.body.appendChild(a); a.click();
       setTimeout(function () { try { URL.revokeObjectURL(url); } catch (e) {} if (a.parentNode) a.remove(); }, 2000);
       var sm = bkSummary(data);
-      bkMsg('백업 내려받음 · ' + name + ' — 가상투자 체결 ' + sm.fills + '건 · 관심종목 ' + sm.watch + '개 · 작도 ' + sm.draw + '개 · 설정 ' + apexKeys().length + '항목', 'ok');
+      bkMsg('백업 내려받음 · ' + name + ' — 실전 보유 ' + sm.hold + '종목 · 가상투자 체결 ' + sm.fills + '건 · 관심종목 ' + sm.watch + '개 · 작도 ' + sm.draw + '개 · 설정 ' + apexKeys().length + '항목', 'ok');
     } catch (e) {
       bkMsg('백업 파일을 만들지 못했습니다 — ' + (e && e.message ? e.message : '브라우저 저장소 제한'), 'err');
     }
@@ -6952,6 +6961,7 @@
     watchRestore();
     drawStore = {};
     drawLoad();
+    mhLoad();                                    /* 백업에 담긴 실전 보유 기록도 되돌린다 */
     state.show = { ma: true, ichi: true, bb: true, sig: true, rsi: true, macd: true, ew: true, w: true, sar: false, env: false, tri: false };
     state.maOn = { 5: true, 20: true, 60: true, 120: true, 240: true };
     state.clean = false;
@@ -6964,6 +6974,7 @@
     wSyncToggle(); xtogSync(); cleanSync();
     drawCount();
     renderFavs(); renderScanner(); renderStrategy(); ptRender();
+    mhRender();
     /* 저장된 라이트 테마면 교육 도해(SVG) 색도 라이트 팔레트로 맞춘다 */
     if (isLightTheme()) {
       if (window.EDUFIG && EDUFIG.setTheme) EDUFIG.setTheme(true);
@@ -6996,6 +7007,7 @@
         var at = o.exportedAtKST ? (' (' + o.exportedAtKST + ' 백업)') : '';
         var ok = window.confirm(
           '백업 파일' + at + '을 복원합니다.\n\n' +
+          '· 실전 보유 종목 ' + sm.hold + '개\n' +
           '· 가상투자 체결 ' + sm.fills + '건\n' +
           '· 관심종목 ' + sm.watch + '개\n' +
           '· 차트 작도 ' + sm.draw + '개\n' +
@@ -7006,13 +7018,508 @@
         try {
           bkApply(o);
           bkReloadState();
-          bkMsg('복원 완료 — 가상투자 ' + sm.fills + '건 · 관심종목 ' + sm.watch + '개 · 작도 ' + sm.draw + '개 · 설정 ' + Object.keys(o.data).length + '항목을 되돌렸습니다', 'ok');
+          bkMsg('복원 완료 — 실전 보유 ' + sm.hold + '종목 · 가상투자 ' + sm.fills + '건 · 관심종목 ' + sm.watch + '개 · 작도 ' + sm.draw + '개 · 설정 ' + Object.keys(o.data).length + '항목을 되돌렸습니다', 'ok');
         } catch (e) {
           bkMsg('복원 중 오류 — ' + (e && e.message ? e.message : '저장소에 쓸 수 없습니다'), 'err');
         }
       };
       rd.readAsText(f, 'utf-8');
     };
+  }
+
+  /* ============================================================
+     💼 내 실전 보유 관리 (MY HOLD) — 2026-11-28
+     ------------------------------------------------------------
+     · 내가 실제로 보유한 종목(평단·수량·매수일·메모)을 그대로 기록하면
+       지금 고른 성향(안정형/공격형) × 전략(추세형/스윙형)의 **실제 규칙**으로
+       오늘 판단·자동 손절가·청산 기준을 매일 장마감(최근 종가) 기준으로 계산한다.
+     · 계산은 백테스트와 같은 규칙에서만 나온다
+         스윙: 손절 max(평단 − 4.5 ATR, 평단 − 손절상한 −10%/−15%)
+               이익 +5% 이상 & 20일선 2거래일 연속 이탈 → 청산
+         추세: 손절 평단 − 6 ATR · 진입가 +6 ATR 도달 후 고점 − 10 ATR 트레일
+               QQQ 100일선 아래(시장 위험) → 전량 청산(최소 보유 3거래일 · 패닉일 보류)
+     · 주문·결제 기능은 없다. 실제 계좌·증권사와 연동하지 않는 기록·진단 전용.
+     · 저장: localStorage['apex.myhold.v1']
+     ============================================================ */
+  var MH_KEY = 'apex.myhold.v1';
+  var MH_MAX = 30;
+  var myhold = { v: 1, tab: 'hold', items: [] };
+  var mhEdit = '';
+
+  function mhEsc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function mhLoad() {
+    myhold = { v: 1, tab: 'hold', items: [] };
+    try {
+      var raw = localStorage.getItem(MH_KEY);
+      if (!raw) return;
+      var o = JSON.parse(raw);
+      if (!o || typeof o !== 'object' || Array.isArray(o)) return;
+      if (o.tab === 'paper' || o.tab === 'hold') myhold.tab = o.tab;
+      var seen = {};
+      myhold.items = (Array.isArray(o.items) ? o.items : []).map(function (it) {
+        if (!it || typeof it.t !== 'string') return null;
+        var t = it.t.toUpperCase().trim();
+        var avg = Number(it.avg), qty = Number(it.qty);
+        if (!t || !isFinite(avg) || !(avg > 0) || !isFinite(qty) || !(qty > 0)) return null;
+        if (seen[t]) return null;
+        seen[t] = 1;
+        return { t: t, avg: avg, qty: qty,
+          d: (typeof it.d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(it.d)) ? it.d : '',
+          memo: (typeof it.memo === 'string' ? it.memo.slice(0, 40) : '') };
+      }).filter(Boolean).slice(0, MH_MAX);
+    } catch (e) { /* 저장소가 막힌 환경에서는 메모리 상태로만 동작 */ }
+  }
+  function mhSave() {
+    try {
+      localStorage.setItem(MH_KEY, JSON.stringify({ v: 1, tab: myhold.tab, items: myhold.items }));
+    } catch (e) {}
+  }
+  function mhMsg(txt, kind) {
+    var el = $('#mhMsg');
+    if (!el) return;
+    el.textContent = txt || '';
+    el.className = 'mf-msg' + (kind ? ' ' + kind : '');
+  }
+  function mhItem(t) {
+    for (var i = 0; i < myhold.items.length; i++) if (myhold.items[i].t === t) return myhold.items[i];
+    return null;
+  }
+  /* 매수일 → 봉 인덱스 (휴장일이면 그 다음 거래일 · 없으면 마지막 봉) */
+  function mhBarIdx(a, d) {
+    var last = a.close.length - 1;
+    if (!d) return last;
+    var i = a.dates.indexOf(d);
+    if (i >= 0) return i;
+    for (var k = 0; k < a.dates.length; k++) if (a.dates[k] >= d) return k;
+    return last;
+  }
+
+  /* 한 종목 진단 — 평단·수량·매수일 + 지금 전략 규칙 → 배지·자동 손절·청산 기준 */
+  function mhDiag(it) {
+    var a = A[it.t];
+    if (!a || !a.close || a.close.length < 2 || !a.ind) return null;
+    var n = a.close.length, i = n - 1;
+    var price = a.close[i], asof = a.dates[i];
+    var rp = riskParams();
+    var sw = rp.swing || {}, tr = rp.trend || {};
+    var swing = stratKey() === 'swing';
+    var ei = mhBarIdx(a, it.d);
+    var atrS = a.ind.atr || [];
+    var atr0 = (ei > 0 && atrS[ei - 1] > 0) ? atrS[ei - 1] : (atrS[ei] > 0 ? atrS[ei] : price * 0.02);
+    var atrNow = atrS[i] > 0 ? atrS[i] : atr0;
+    var avg = it.avg, qty = it.qty;
+    var val = price * qty, cost = avg * qty, pnlUsd = val - cost, pnl = price / avg - 1;
+    var holdDays = Math.max(0, i - ei);
+    var ma20 = a.ind.ma20 ? a.ind.ma20[i] : null;
+    var below = 0;                                    /* 20일선 아래 연속 종가 일수 */
+    if (ma20 != null && a.ind.ma20) {
+      for (var k = i; k >= 0; k--) {
+        var m = a.ind.ma20[k];
+        if (m == null || a.close[k] >= m) break;
+        below++;
+      }
+    }
+    var d = { price: price, asof: asof, val: val, cost: cost, pnlUsd: pnlUsd, pnl: pnl,
+      holdDays: holdDays, atr: atrNow, ma20: ma20, below: below, swing: swing,
+      dateGap: (it.d && a.dates.indexOf(it.d) < 0) ? ('매수일 ' + it.d + '은(는) 거래일이 아니어서 ' + a.dates[ei] + ' 종가 기준으로 계산했습니다') : '' };
+    var stopAtr = swing ? (sw.stopAtr == null ? 4.5 : sw.stopAtr) : (tr.stopAtr == null ? 6 : tr.stopAtr);
+    var stopCap = sw.stopCap == null ? 0.10 : sw.stopCap;
+
+    if (swing) {
+      /* 스윙 — 두 손절선 중 더 가까운(높은) 가격 */
+      var stop = Math.max(avg - stopAtr * atr0, avg * (1 - stopCap));
+      var gate = sw.ma20Gate == null ? 0.05 : sw.ma20Gate;
+      var need = sw.ma20Confirm > 0 ? sw.ma20Confirm : 2;
+      var gap = (price - stop) / price;
+      d.stop = stop;
+      d.exit = [
+        { k: pnl >= gate ? 'ok' : 'no', t: '+' + Math.round(gate * 100) + '% ' + (pnl >= gate ? '도달' : '미달') + (pnl >= gate ? '' : ' (' + pct(pnl, 1) + ')') },
+        { k: ma20 == null ? 'neu' : (price >= ma20 ? 'ok' : (below >= need ? 'no' : 'neu')),
+          t: ma20 == null ? '20일선 —' : (price >= ma20 ? '20일선 위' : '20일선 아래 ' + below + '일') }
+      ];
+      if (price <= stop) {
+        d.badge = 'sell';
+        d.reason = '현재가 ' + usd(price) + '가 자동 손절 <b>' + usd(stop) + '</b> 아래 — 평단 −' + stopAtr + ' ATR과 −' + Math.round(stopCap * 100) + '% 중 가까운 선에 닿았습니다. 규칙대로면 <b>다음 시가 청산</b>입니다.';
+      } else if (pnl >= gate && below >= need) {
+        d.badge = 'sell';
+        d.reason = '이익 ' + pct(pnl, 1) + '(＋' + Math.round(gate * 100) + '% 이상) 상태에서 <b>20일선 아래 ' + below + '거래일 연속</b> — 스윙 청산 조건(' + need + '일 확인)이 충족됐습니다.';
+      } else if (pnl >= gate && below >= 1) {
+        d.badge = 'warn';
+        d.reason = '이익 ' + pct(pnl, 1) + ' 상태에서 20일선 아래 <b>' + below + '거래일째</b> — 내일도 20일선 아래로 마감하면 청산 신호입니다.';
+      } else if (gap <= 0.03) {
+        d.badge = 'warn';
+        d.reason = '자동 손절 ' + usd(stop) + '까지 <b>' + (gap * 100).toFixed(1) + '%</b> — 손절선에 근접했습니다.';
+      } else {
+        d.badge = 'hold';
+        d.reason = '자동 손절 ' + usd(stop) + ' 위 <b>' + (gap * 100).toFixed(1) + '%</b> 여유' +
+          (pnl >= gate ? ' · 20일선도 위 — 청산 조건 미발동' : ' · 이익 +' + Math.round(gate * 100) + '% 미만이라 20일선 청산 규칙은 아직 적용 전') + '.';
+      }
+    } else {
+      /* 추세 — 평단 −6 ATR 손절 + (진입가 +6 ATR 도달 후) 고점 −10 ATR 트레일 */
+      var stop0 = avg - stopAtr * atr0;
+      var arm = avg + (tr.trailStartAtr == null ? 6 : tr.trailStartAtr) * atr0;
+      var trailAtr = tr.trailAtr == null ? 10 : tr.trailAtr;
+      var peak = a.series.h[ei] == null ? price : a.series.h[ei], trail = null;
+      for (var j = ei; j < n; j++) {
+        var hj = a.series.h[j]; if (hj > peak) peak = hj;
+        if (peak > arm) {
+          var an = atrS[j] > 0 ? atrS[j] : atr0, t2 = peak - trailAtr * an;
+          if (trail == null || t2 > trail) trail = t2;
+        }
+      }
+      var stop = trail != null ? Math.max(stop0, trail) : stop0;
+      var minHold = tr.minHold == null ? 3 : tr.minHold;
+      var tp = a.trendPlan || {};
+      var mktRisk = tp.tw === 0, mktCaution = tp.tw != null && tp.tw > 0 && tp.tw < 1;
+      var panicDay = tp.qqqRsi2 != null && tp.panicExitRsi != null && tp.qqqRsi2 < tp.panicExitRsi;
+      var gap2 = (price - stop) / price;
+      d.stop = stop;
+      d.exit = [
+        { k: trail == null ? 'neu' : 'ok', t: trail == null ? '트레일 대기 (고점 ' + usd(peak) + ')' : '트레일 ' + usd(trail) },
+        { k: tp.qqqMa == null ? 'neu' : (mktRisk ? 'no' : (mktCaution ? 'neu' : 'ok')),
+          t: tp.qqqMa == null ? 'QQQ 100일선 —' : ('QQQ 100일선 ' + (mktRisk ? '아래' : (mktCaution ? '이탈 주의' : '위'))) }
+      ];
+      if (price <= stop0) {
+        d.badge = 'sell';
+        d.reason = '현재가 ' + usd(price) + '가 손절 <b>' + usd(stop0) + '</b>(평단 −' + stopAtr + ' ATR) 아래 — 추세형 손절 조건입니다.';
+      } else if (trail != null && price <= trail) {
+        d.badge = 'sell';
+        d.reason = '현재가 ' + usd(price) + '가 트레일 스탑 <b>' + usd(trail) + '</b>(고점 ' + usd(peak) + ' − ' + trailAtr + ' ATR) 아래 — 추세형 청산 조건입니다.';
+      } else if (mktRisk) {
+        /* 매수일을 모르면 최소 보유 예외를 적용하지 않는다 — 예외가 영원히 걸려 청산 신호를
+           가리는 것보다, 규칙대로 청산 신호를 보여 주고 매수일 입력을 권하는 편이 정직하다. */
+        if (holdDays < minHold && it.d) {
+          d.badge = 'warn';
+          d.reason = 'QQQ가 100일선 아래(시장 위험)지만 보유 <b>' + holdDays + '/' + minHold + '거래일</b> — 최소 보유 규칙 때문에 청산은 아직 보류입니다.';
+        } else if (panicDay) {
+          d.badge = 'warn';
+          d.reason = 'QQQ 100일선 아래지만 QQQ RSI(2) <b>' + tp.qqqRsi2.toFixed(1) + '</b> 극단 공포일 — 규칙상 청산을 다음 날로 미룹니다.';
+        } else {
+          d.badge = 'sell';
+          d.reason = 'QQQ가 100일선 아래 — 추세형 시장 필터에 따라 <b>전량 청산</b> 규칙이 발동했습니다.';
+        }
+      } else if (gap2 <= 0.03) {
+        d.badge = 'warn';
+        d.reason = '손절·트레일 ' + usd(stop) + '까지 <b>' + (gap2 * 100).toFixed(1) + '%</b> — 청산선에 근접했습니다.';
+      } else {
+        d.badge = 'hold';
+        d.reason = '손절·트레일 ' + usd(stop) + ' 위 <b>' + (gap2 * 100).toFixed(1) + '%</b> 여유' +
+          (trail == null ? ' · 트레일은 진입가 +' + (tr.trailStartAtr == null ? 6 : tr.trailStartAtr) + ' ATR($' + arm.toFixed(2) + ') 도달 후 작동' : '') +
+          (mktCaution ? ' · 다만 시장은 주의(절반 비중) 단계입니다' : '') + '.';
+      }
+    }
+    return d;
+  }
+
+  function mhStats() {
+    var st = { n: myhold.items.length, dn: 0, mv: 0, cost: 0, pnl: 0, ret: 0, red: 0, yel: 0, grn: 0, rows: [] };
+    myhold.items.forEach(function (it) {
+      var d = mhDiag(it);
+      st.rows.push({ it: it, d: d });
+      if (!d) return;
+      st.dn++;
+      st.mv += d.val; st.cost += d.cost;
+      if (d.badge === 'sell') st.red++; else if (d.badge === 'warn') st.yel++; else st.grn++;
+    });
+    st.pnl = st.mv - st.cost;
+    st.ret = st.cost ? st.mv / st.cost - 1 : 0;
+    return st;
+  }
+
+  function mhSumHtml(st) {
+    var have = st.dn > 0;
+    var judge = have ? ('🟢 ' + st.grn + ' · 🟡 ' + st.yel + ' · 🔴 ' + st.red) : '—';
+    var rk = riskAggr() ? '공격형' : '안정형';
+    var sk = stratKey() === 'swing' ? '스윙형' : '추세형';
+    return '<div class="c"><div class="k">총 평가금액</div><div class="v">' + (have ? usd(st.mv, 2) : '—') + '</div>' +
+      '<div class="s">' + (st.n ? '보유 ' + st.n + '종목 · 매입 ' + usd(st.cost, 2) : '아직 등록한 종목이 없습니다') + '</div></div>' +
+      '<div class="c"><div class="k">총 손익</div><div class="v ' + (have ? cls(st.pnl) : '') + '">' + (have ? sgn(st.pnl) : '—') + '</div>' +
+      '<div class="s">' + (have ? pct(st.ret, 2) + ' (매입 대비)' : '평가손익 합계') + '</div></div>' +
+      '<div class="c"><div class="k">오늘 판단</div><div class="v sm">' + judge + '</div>' +
+      '<div class="s">' + (have ? '매도·청산 ' + st.red + ' · 주의 ' + st.yel + ' · 홀드 ' + st.grn : '등록하면 자동 계산') + '</div></div>' +
+      '<div class="c"><div class="k">적용 기준</div><div class="v sm">' + rk + ' · ' + sk + '</div>' +
+      '<div class="s">기준일 ' + M.asOf + ' 종가</div></div>';
+  }
+
+  function mhRowHtml(r) {
+    var it = r.it, t = it.t, d = r.d, meta = info(t) || {};
+    var head = '<div class="mh-row' + (state.cur === t ? ' on' : '') + '" data-t="' + t + '" role="button" tabindex="0" aria-label="' + t + ' 차트 열기">';
+    var act = '<div class="mhact"><button type="button" data-mh="chart" title="위 메인 차트를 이 종목으로 엽니다">차트</button>' +
+      '<button type="button" data-mh="edit" title="평단·수량·매수일·메모를 고칩니다">수정</button>' +
+      '<button type="button" data-mh="del" title="이 종목을 목록에서 지웁니다">삭제</button></div>';
+    var tk = '<div class="mhtk"><b>' + mhEsc(t) + '</b><i>' + mhEsc(meta.n || '') + ' · ' + qty2(it.qty) + '주' +
+      (it.d ? ' · ' + it.d.slice(5) + ' 매수' : '') + '</i>' + (it.memo ? '<em>' + mhEsc(it.memo) + '</em>' : '') + '</div>';
+    if (!d) {
+      return head +
+        '<div class="mhb"><span class="mh-badge warn">데이터 없음</span></div>' + tk +
+        '<div class="mhc mh-px"><span class="lbl">평단</span><b>' + usd(it.avg) + '</b><i>현재가 —</i></div>' +
+        '<div class="mhc mh-pnl"><span class="lbl">평가손익</span><b>—</b><i>계산 불가</i></div>' +
+        '<div class="mhc mh-stp"><span class="lbl">자동 손절</span><b>—</b><i>—</i></div>' +
+        '<div class="mhrule"><span class="neu">진단 없음</span></div>' + act +
+        '<div class="mh-why">이 종목은 분석기 데이터(Top 150)에 없어 손절·청산 기준을 계산할 수 없습니다. 목록에서 지우고 목록에 있는 종목으로 다시 등록해 주세요.</div>' +
+        '</div>';
+    }
+    var bd = { hold: ['hold', '🟢 홀드'], warn: ['warn', '🟡 손절 주의'], sell: ['sell', '🔴 매도·청산 신호'] }[d.badge] || ['hold', '🟢 홀드'];
+    var chips = d.exit.map(function (c) { return '<span class="' + c.k + '">' + c.t + '</span>'; }).join('');
+    return head +
+      '<div class="mhb"><span class="mh-badge ' + bd[0] + '">' + bd[1] + '</span></div>' + tk +
+      '<div class="mhc mh-px"><span class="lbl">현재가</span><b>' + usd(d.price) + '</b><i>평단 ' + usd(it.avg) + '</i></div>' +
+      '<div class="mhc mh-pnl ' + cls(d.pnlUsd) + '"><span class="lbl">평가손익</span><b>' + sgn(d.pnlUsd) + '</b><i>' + pct(d.pnl, 2) + ' · ' + usd(d.val) + '</i></div>' +
+      '<div class="mhc mh-stp"><span class="lbl">자동 손절</span><b>' + usd(d.stop) + '</b><i title="평단 대비 ' + pct(d.stop / it.avg - 1, 1) + ' · 현재가 대비 ' + pct(d.stop / d.price - 1, 1) + '">' +
+        (d.stop >= d.price ? '이탈 · ' : (d.stop >= it.avg ? '이익보호 · ' : '')) + '현재가 ' + pct(d.stop / d.price - 1, 1) + '</i></div>' +
+      '<div class="mhrule">' + chips + '</div>' + act +
+      '<div class="mh-why">' + d.reason + (d.dateGap ? ' <b>' + d.dateGap + '</b>' : '') + '</div>' +
+      '</div>';
+  }
+
+  function mhFootHtml() {
+    var sw = stratKey() === 'swing', rp = riskParams();
+    var swp = rp.swing || {}, trp = rp.trend || {};
+    var rule = sw
+      ? '손절 <b>max(평단 −' + (swp.stopAtr == null ? 4.5 : swp.stopAtr) + ' ATR, −' + Math.round((swp.stopCap == null ? 0.10 : swp.stopCap) * 100) + '%)</b> · 이익 <b>+' +
+        Math.round((swp.ma20Gate == null ? 0.05 : swp.ma20Gate) * 100) + '%</b> 이상에서 <b>20일선 ' + (swp.ma20Confirm == null ? 2 : swp.ma20Confirm) + '거래일 연속 이탈</b> 시 청산'
+      : '손절 <b>평단 −' + (trp.stopAtr == null ? 6 : trp.stopAtr) + ' ATR</b> · 평단 <b>+' + (trp.trailStartAtr == null ? 6 : trp.trailStartAtr) + ' ATR</b> 도달 후 <b>고점 −' +
+        (trp.trailAtr == null ? 10 : trp.trailAtr) + ' ATR 트레일</b> · <b>QQQ 100일선</b> 아래면 전량 청산(최소 ' + (trp.minHold == null ? 3 : trp.minHold) + '거래일)';
+    return '<b>' + (riskAggr() ? '공격형' : '안정형') + ' · ' + (sw ? '스윙형' : '추세형') + '</b> 규칙으로 ' + M.asOf + ' 종가 기준 계산 — ' + rule +
+      '. 성향·전략을 바꾸면 자동으로 다시 계산합니다. <b>매수·매도 주문은 하지 않고</b> 실제 계좌·증권사와 연동하지 않는 참고용 진단입니다.';
+  }
+
+  function mhRender() {
+    var host = $('#mhList');
+    if (!host) return;
+    var st = mhStats();
+    var sum = $('#mhSum');
+    if (sum) sum.innerHTML = mhSumHtml(st);
+    var tn = $('#mhTabN');
+    if (tn) tn.textContent = String(myhold.items.length);
+    var foot = $('#mhFoot');
+    if (foot) foot.innerHTML = mhFootHtml();
+    if (!bootReady) {
+      host.innerHTML = '<div class="mh-empty">데이터를 계산하는 중입니다…</div>';
+      return;
+    }
+    if (!myhold.items.length) {
+      host.innerHTML = '<div class="mh-empty">아직 등록한 종목이 없습니다.<br>위에서 <b>종목 · 평균단가 · 보유 수량</b>을 넣고 <kbd>＋ 추가</kbd>를 누르거나,<br><b>예시 채우기</b>로 먼저 둘러보세요. 등록한 종목은 이 브라우저에만 저장됩니다.</div>';
+      return;
+    }
+    host.innerHTML = st.rows.map(mhRowHtml).join('');
+  }
+
+  /* ---------------- 탭 전환 ---------------- */
+  function mhTab(which, persist) {
+    var tab = which === 'paper' ? 'paper' : 'hold';
+    myhold.tab = tab;
+    var hold = tab === 'hold';
+    var hp = $('#mhPane'), pp = $('#ptPane');
+    if (hp) hp.hidden = !hold;
+    if (pp) pp.hidden = hold;
+    $$('#mhTabs button[data-mtab]').forEach(function (b) {
+      var on = b.getAttribute('data-mtab') === tab;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    var ti = $('#pcTitle'), bp = $('#ptBadge'), s1 = $('#pcSubPaper'), s2 = $('#pcSubHold'), ac = $('#ptAcct'), note = $('#mhTabNote');
+    if (ti) ti.textContent = hold ? '실전 보유 관리' : '가상투자 · 모의매매';
+    if (bp && hold) { bp.textContent = 'MY HOLD'; bp.classList.remove('replay'); }
+    if (s1) s1.hidden = hold;
+    if (s2) s2.hidden = !hold;
+    if (ac) ac.hidden = hold;
+    if (note) note.textContent = hold ? '실전 기록 · 자동 진단' : '체결 시뮬레이션 · 실제 주문 아님';
+    if (!hold && bootReady) ptRender();
+    if (persist !== false) mhSave();
+  }
+
+  /* ---------------- 등록 · 수정 · 삭제 ---------------- */
+  function mhResetForm(clearMsg) {
+    mhEdit = '';
+    ['#mhSym', '#mhAvg', '#mhQty', '#mhDate', '#mhMemo'].forEach(function (s) { var el = $(s); if (el) el.value = ''; });
+    var add = $('#mhAdd'), cx = $('#mhCancel');
+    if (add) add.textContent = '＋ 추가';
+    if (cx) cx.hidden = true;
+    if (clearMsg) mhMsg('');
+  }
+  function mhEditStart(t) {
+    var it = mhItem(t);
+    if (!it) return;
+    mhEdit = t;
+    $('#mhSym').value = it.t;
+    $('#mhAvg').value = String(it.avg);
+    $('#mhQty').value = String(it.qty);
+    $('#mhDate').value = it.d || '';
+    $('#mhMemo').value = it.memo || '';
+    var add = $('#mhAdd'), cx = $('#mhCancel');
+    if (add) add.textContent = '수정 저장';
+    if (cx) cx.hidden = false;
+    mhMsg(t + ' 수정 중 — 값을 고치고 [수정 저장]을 누르세요');
+    var f = $('#mhForm');
+    if (f && f.scrollIntoView) f.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    var av = $('#mhAvg'); if (av) av.focus();
+  }
+  function mhSubmit(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    var t = String(($('#mhSym') || {}).value || '').trim().toUpperCase();
+    var avg = Number(($('#mhAvg') || {}).value);
+    var qty = Number(($('#mhQty') || {}).value);
+    var d = String(($('#mhDate') || {}).value || '').slice(0, 10);
+    var memo = String(($('#mhMemo') || {}).value || '').trim().slice(0, 40);
+    if (!t) return mhMsg('종목을 입력해 주세요 — 목록에서 고르거나 티커를 직접 넣습니다 (예: MSFT)', 'err');
+    if (!A[t] || !info(t)) return mhMsg('"' + mhEsc(t) + '"은(는) Top 150 목록에 없습니다 — 티커를 확인해 주세요', 'err');
+    if (!isFinite(avg) || !(avg > 0)) return mhMsg('매수 평균단가를 $0보다 크게 입력해 주세요', 'err');
+    if (!isFinite(qty) || !(qty > 0)) return mhMsg('보유 수량을 0보다 크게 입력해 주세요', 'err');
+    var cur = mhItem(mhEdit);
+    var dup = mhItem(t);
+    if (mhEdit && cur) {
+      if (dup && dup !== cur) {                      /* 티커까지 바뀌어 이미 있는 종목과 겹치면 합산 */
+        var nq0 = dup.qty + qty;
+        dup.avg = (dup.avg * dup.qty + avg * qty) / nq0;
+        dup.qty = nq0;
+        if (d && (!dup.d || d < dup.d)) dup.d = d;
+        if (memo) dup.memo = memo;
+        myhold.items = myhold.items.filter(function (x) { return x !== cur; });
+        mhSave(); mhRender(); mhResetForm(true);
+        return mhMsg(t + ' 기존 보유와 합산했습니다 — ' + qty2(dup.qty) + '주 · 평단 ' + usd(dup.avg), 'ok');
+      }
+      cur.t = t; cur.avg = avg; cur.qty = qty; cur.d = d; cur.memo = memo;
+      mhSave(); mhRender(); mhResetForm(true);
+      return mhMsg(t + ' 수정을 저장했습니다 — ' + qty2(qty) + '주 · 평단 ' + usd(avg), 'ok');
+    }
+    if (dup) {                                        /* 같은 종목을 또 등록하면 평단 가중평균으로 합산 */
+      var nq = dup.qty + qty;
+      var na = (dup.avg * dup.qty + avg * qty) / nq;
+      dup.avg = na; dup.qty = nq;
+      if (d && (!dup.d || d < dup.d)) dup.d = d;
+      if (memo) dup.memo = memo;
+      mhSave(); mhRender(); mhResetForm(true);
+      return mhMsg(t + ' 기존 보유와 합산 — ' + qty2(dup.qty) + '주 · 평단 ' + usd(dup.avg) + ' (가중평균)', 'ok');
+    }
+    if (myhold.items.length >= MH_MAX) return mhMsg('한 번에 ' + MH_MAX + '종목까지 등록할 수 있습니다 — 쓰지 않는 종목을 지우고 다시 시도해 주세요', 'err');
+    myhold.items.push({ t: t, avg: avg, qty: qty, d: d, memo: memo });
+    mhSave(); mhRender(); mhResetForm(true);
+    mhMsg(t + ' ' + qty2(qty) + '주 · 평단 ' + usd(avg) + ' 등록 완료 — 아래에서 오늘 진단을 확인하세요', 'ok');
+  }
+  function mhDelete(t) {
+    var it = mhItem(t);
+    if (!it) return;
+    if (!window.confirm(t + ' ' + qty2(it.qty) + '주 · 평단 ' + usd(it.avg) + ' 기록을 목록에서 지웁니다.\n(실제 계좌·증권사에는 아무 영향이 없습니다)')) return;
+    myhold.items = myhold.items.filter(function (x) { return x.t !== t; });
+    if (mhEdit === t) mhResetForm(true);
+    mhSave(); mhRender();
+    mhMsg(t + ' 기록을 지웠습니다', 'ok');
+  }
+  function mhResetAll() {
+    if (!myhold.items.length) return mhMsg('지울 기록이 없습니다');
+    if (!window.confirm('등록한 보유 종목 ' + myhold.items.length + '개를 모두 지웁니다. 계속할까요?')) return;
+    myhold.items = [];
+    mhResetForm(true); mhSave(); mhRender();
+    mhMsg('등록한 보유 종목을 모두 지웠습니다', 'ok');
+  }
+  /* 예시 채우기 — 시연용 2종목: 이익 중 1(🟢) + 손절선 아래 1(🔴).
+     실제 계산값으로 상태를 만들기 위해 평단을 현재 규칙의 손절선에서 역산한다. */
+  function mhSample() {
+    if (!bootReady) return mhMsg('데이터 계산이 끝난 뒤에 다시 눌러 주세요', 'err');
+    if (myhold.items.length && !window.confirm('지금 등록된 ' + myhold.items.length + '종목을 예시 2종목으로 바꿉니다. 계속할까요?')) return;
+    var cands = M.tickers.filter(function (x) { return x.r != null && x.r <= 12 && A[x.t] && A[x.t].close.length > 700 && A[x.t].ind; });
+    var good = null, bad = null, i;
+    for (i = 0; i < cands.length && !good; i++) {
+      var a = A[cands[i].t], li = a.close.length - 1, mm = a.ind.ma20[li];
+      if (mm != null && a.close[li] > mm * 1.02) good = a;
+    }
+    for (i = 0; i < cands.length && !bad; i++) {
+      var b = A[cands[i].t];
+      if (good && b.sym === good.sym) continue;
+      if (b.close.length > 700) bad = b;
+    }
+    var list = [];
+    var swingNow = stratKey() === 'swing';
+    if (good) {
+      var gi = good.close.length - 1;
+      /* 스윙은 40거래일 전 매수(🟢 홀드 예시), 추세는 1거래일 전 매수(최소 보유 3거래일 → 🟡 예시) */
+      list.push({ t: good.sym, avg: Math.round(good.close[gi] * 0.93 * 100) / 100, qty: 20,
+        d: good.dates[Math.max(0, gi - (swingNow ? 40 : 1))],
+        memo: swingNow ? '장기 보유 · 실적 발표 전 일부 매수' : '막 매수 — 최소 보유 규칙 확인용' });
+    }
+    if (bad) {
+      var bi = bad.close.length - 1, bei = Math.max(0, bi - 20);
+      var batr = (bad.ind.atr[bei > 0 ? bei - 1 : bei] > 0 ? bad.ind.atr[bei > 0 ? bei - 1 : bei] : bad.close[bi] * 0.02);
+      var bp = bad.close[bi], bavg;
+      if (stratKey() === 'swing') {
+        var capS = (riskParams().swing || {}).stopCap; capS = capS == null ? 0.10 : capS;
+        bavg = bp / 0.98 / (1 - capS);                 /* −상한 손절선의 2% 아래 현재가 */
+      } else {
+        var stA = (riskParams().trend || {}).stopAtr; stA = stA == null ? 6 : stA;
+        bavg = bp / 0.98 + stA * batr;                 /* −6 ATR 손절선의 2% 아래 현재가 */
+      }
+      list.push({ t: bad.sym, avg: Math.round(bavg * 100) / 100, qty: 10,
+        d: bad.dates[bei], memo: '고점 추격 매수 — 손절선 점검용' });
+    }
+    if (!list.length) return mhMsg('예시로 쓸 종목을 찾지 못했습니다', 'err');
+    myhold.items = list;
+    mhResetForm(true); mhSave(); mhRender();
+    mhMsg('예시 ' + list.length + '종목을 채웠습니다 — 진단은 실제 평단·종가로 계산한 값입니다', 'ok');
+  }
+  function mhGoChart(t) {
+    if (!A[t]) return;
+    select(t);
+    $$('#mhList .mh-row').forEach(function (r) { r.classList.toggle('on', r.getAttribute('data-t') === t); });
+    var hero = $('#hero');
+    if (hero && hero.scrollIntoView) hero.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function mhFillList() {
+    var dl = $('#mhSymList');
+    if (!dl) return;
+    dl.innerHTML = M.tickers.map(function (x) {
+      return '<option value="' + mhEsc(x.t) + '">' + mhEsc(x.n || '') + (x.r ? ' · 시총 ' + x.r + '위' : '') + '</option>';
+    }).join('');
+  }
+  function mhInit() {
+    mhLoad();
+    mhFillList();
+    var form = $('#mhForm');
+    if (!form) return;
+    form.addEventListener('submit', mhSubmit);
+    var tabs = $('#mhTabs');
+    if (tabs) tabs.onclick = function (e) {
+      var b = e.target.closest('button[data-mtab]');
+      if (b) mhTab(b.getAttribute('data-mtab'));
+    };
+    var cx = $('#mhCancel');
+    if (cx) cx.onclick = function () { mhResetForm(true); mhMsg('수정을 취소했습니다'); };
+    var sm = $('#mhSample'), rs = $('#mhReset');
+    if (sm) sm.onclick = mhSample;
+    if (rs) rs.onclick = mhResetAll;
+    var dt = $('#mhDate');
+    if (dt) { try { dt.max = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10); } catch (e) {} }
+    var list = $('#mhList');
+    if (list) {
+      list.onclick = function (e) {
+        var row = e.target.closest ? e.target.closest('.mh-row') : null;
+        if (!row) return;
+        var t = row.getAttribute('data-t');
+        var btn = e.target.closest ? e.target.closest('button[data-mh]') : null;
+        if (btn) {
+          e.stopPropagation();
+          var act = btn.getAttribute('data-mh');
+          if (act === 'edit') mhEditStart(t);
+          else if (act === 'del') mhDelete(t);
+          else mhGoChart(t);
+          return;
+        }
+        mhGoChart(t);
+      };
+      list.onkeydown = function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        var row = e.target.closest ? e.target.closest('.mh-row') : null;
+        if (!row) return;
+        e.preventDefault();
+        mhGoChart(row.getAttribute('data-t'));
+      };
+    }
+    mhTab(myhold.tab, false);
+    mhRender();
   }
 
   /* ---------------- go ---------------- */
@@ -7034,6 +7541,7 @@
     wire();
     cleanSync();                                     /* 깔끔 보기 버튼·툴바 상태 동기화 */
     backupInit();                                    /* 가상투자·관심종목·작도·설정 백업/복원 */
+    mhInit();                                        /* 💼 실전 보유 관리 — 저장된 보유 복원·탭 조립 */
     boot();
     xtogSync();                                       /* SAR · 엔벨로프 저장 상태 복원 */
     if (h) pendingDeep = h;                            /* bootAfter() 가 분석 뒤에 선택한다 */

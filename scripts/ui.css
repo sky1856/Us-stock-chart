@@ -4264,20 +4264,20 @@ html[data-brand="v1a"] .brand-text > span{ display:none }   /* 부제는 캡슐 
 html[data-brand="v1a"] .brand-text .brand-name{
   font-family:'ChoKo Manrope','Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
   font-size:19px; font-weight:800; letter-spacing:.010em; line-height:1; white-space:nowrap;
-  background:linear-gradient(180deg,#FFFFFF 0%,#F7F4EC 34%,#E6E1D6 60%,#FCFAF5 86%,#FFFFFF 100%);
+  background-image:linear-gradient(180deg,#FFFFFF 0%,#F7F4EC 34%,#E6E1D6 60%,#FCFAF5 86%,#FFFFFF 100%);
   -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent;
   filter:drop-shadow(0 1px 0 rgba(0,0,0,.18));
 }
 html[data-brand="v1a"] .brand-text .brand-name .ck{    /* 딥 루비 메탈릭 포인트 */
   font-weight:800; letter-spacing:inherit; text-shadow:none;
-  background:linear-gradient(180deg,#FF6E86 0%,#DD0A32 30%,#78051D 60%,#F2415C 100%);
+  background-image:linear-gradient(180deg,#FF6E86 0%,#DD0A32 30%,#78051D 60%,#F2415C 100%);
   -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent;
   filter:drop-shadow(0 0 5px rgba(255,40,80,.35));
 }
 html[data-brand="v1a"] .brand-text .brand-name .bw{    /* 플래티넘 브러시드 실버 */
   /* 끝 글자 뒤 자간(letter-spacing)이 남기는 빈 공간을 상쇄해 캡슐 우측 여백이 커 보이지 않게 한다 */
   margin-left:11px; margin-right:-.30em; font-weight:500; font-size:13.5px; letter-spacing:.30em;
-  background:linear-gradient(178deg,#FFFFFF 6%,#EDF2F8 30%,#A9B6C4 56%,#DDE6F0 78%,#FFFFFF 96%);
+  background-image:linear-gradient(178deg,#FFFFFF 6%,#EDF2F8 30%,#A9B6C4 56%,#DDE6F0 78%,#FFFFFF 96%);
   -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent;
   filter:drop-shadow(0 1px 0 rgba(0,0,0,.22));
 }
@@ -4307,26 +4307,38 @@ html[data-theme="light"][data-brand="v1a"] .brand{
 html[data-theme="light"][data-brand="v1a"] .brand-text::before{ box-shadow:0 0 8px rgba(200,16,56,.55) }
 html[data-theme="light"][data-brand="v1a"] .brand-text .brand-name{
   font-size:19px; letter-spacing:.010em;   /* 라이트에서도 다크와 같은 크기·자간 유지(베이스 규칙의 15px·.13em 덮어쓰기) */
-  background:linear-gradient(178deg,#101C2C 0%,#2A3C50 34%,#54677C 60%,#1C2C40 88%,#0B1420 100%);
+  background-image:linear-gradient(178deg,#101C2C 0%,#2A3C50 34%,#54677C 60%,#1C2C40 88%,#0B1420 100%);
   -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent;
   filter:none;
 }
 html[data-theme="light"][data-brand="v1a"] .brand-text .brand-name .ck{
-  background:linear-gradient(180deg,#F0536E 0%,#C81038 42%,#8A0822 70%,#E23A5E 100%);
+  background-image:linear-gradient(180deg,#F0536E 0%,#C81038 42%,#8A0822 70%,#E23A5E 100%);
   -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent;
   filter:none;
 }
 html[data-theme="light"][data-brand="v1a"] .brand-text .brand-name .bw{
-  /* 2026-11-28 2단계: 밝은 캡슐 위에서 #AEBECB 가 묻히던 문제 — 다크 슬레이트 메탈릭(#364656~#74889C)으로 명도 보강 */
-  background:linear-gradient(178deg,#2E3D4C 0%,#364656 30%,#4E6176 62%,#74889C 90%,#45576A 100%);
+  /* 2026-11-28 2단계: 밝은 캡슐 위에서 #AEBECB 가 묻히던 문제 — 다크 슬레이트 메탈릭(#364656~#74889C)으로 명도 보강
+     2026-11-28: background 축약은 clip 을 border-box 로 리셋하므로 background-image 로 바꾼다(검은 사각형 재발 방지) */
+  background-image:linear-gradient(178deg,#2E3D4C 0%,#364656 30%,#4E6176 62%,#74889C 90%,#45576A 100%);
   -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent;
   filter:none;
 }
-/* 좁은 화면에서도 같은 명도 유지(캡슐이 한 단계 작아져도 대비가 떨어지지 않게) */
+/* 좁은 화면에서도 같은 명도 유지(캡슐이 한 단계 작아져도 대비가 떨어지지 않게)
+   2026-11-28 수정: `background` 축약은 background-clip 을 border-box 로 되돌린다 → 이 규칙만 폭 1023px 이하에서
+   글자 대신 검은 사각형이 칠해졌다(아이폰 화이트 모드 QUANT). 축약 대신 background-image + 클립 재선언. */
 @media (max-width:1023px){
   html[data-theme="light"][data-brand="v1a"] .brand-text .brand-name .bw{
-    background:linear-gradient(178deg,#2E3D4C 0%,#364656 30%,#4E6176 62%,#6E8296 90%,#45576A 100%);
+    background-image:linear-gradient(178deg,#2E3D4C 0%,#364656 30%,#4E6176 62%,#6E8296 90%,#45576A 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent;
   }
+}
+/* 최종 방어 — 브랜드 그라디언트 글자는 어떤 폭·테마에서도 배경 박스가 아니라 글자로만 칠한다.
+   (background 축약이 다시 clip 을 리셋해도 사각형이 생기지 않게 클립·채움만 고정) */
+html[data-brand="v1a"] .brand-text .brand-name,
+html[data-brand="v1a"] .brand-text .brand-name .ck,
+html[data-brand="v1a"] .brand-text .brand-name .bw{
+  -webkit-background-clip:text !important; background-clip:text !important;
+  -webkit-text-fill-color:transparent !important;
 }
 html[data-theme="light"][data-brand="v1a"] .sig-badge{
   border-color:rgba(14,116,144,.26); background:linear-gradient(180deg,#FFFFFF,#F1F6FA);
@@ -4344,12 +4356,12 @@ html[data-risk="aggr"][data-brand="v1a"] .brand{
   box-shadow:0 0 0 1px rgba(20,6,10,.9) inset, 0 1px 0 rgba(255,226,208,.22) inset, 0 0 36px -16px rgba(255,120,80,.9);
 }
 html[data-risk="aggr"][data-brand="v1a"] .brand-text .brand-name{
-  background:linear-gradient(178deg,#FFFDFA 0%,#FFEFE0 34%,#E2C4AC 60%,#FFF6EC 86%,#FFFFFF 100%);
+  background-image:linear-gradient(178deg,#FFFDFA 0%,#FFEFE0 34%,#E2C4AC 60%,#FFF6EC 86%,#FFFFFF 100%);
   -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent;
   filter:drop-shadow(0 1px 0 rgba(40,10,15,.34));
 }
 html[data-risk="aggr"][data-brand="v1a"] .brand-text .brand-name .bw{
-  background:linear-gradient(178deg,#FFF3E6 6%,#EBD2BD 34%,#B79379 58%,#F8E6D6 84%,#FFFBF6 100%);
+  background-image:linear-gradient(178deg,#FFF3E6 6%,#EBD2BD 34%,#B79379 58%,#F8E6D6 84%,#FFFBF6 100%);
   -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent;
 }
 html[data-risk="aggr"][data-brand="v1a"] .sig-badge{
@@ -4364,7 +4376,7 @@ html[data-theme="light"][data-risk="aggr"][data-brand="v1a"] .brand{
 }
 /* 화이트+공격형도 같은 다크 슬레이트(웜 톤만 살짝) — 흰 배경에 QUANT 가 묻히지 않게 */
 html[data-theme="light"][data-risk="aggr"][data-brand="v1a"] .brand-text .brand-name .bw{
-  background:linear-gradient(178deg,#3A3438 0%,#443C42 26%,#5C4E54 58%,#7A6569 82%,#4A4145 100%);
+  background-image:linear-gradient(178deg,#3A3438 0%,#443C42 26%,#5C4E54 58%,#7A6569 82%,#4A4145 100%);
   -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent;
   filter:none;
 }
@@ -4502,3 +4514,154 @@ html[data-theme="light"] .acp-tb td b.pos{ color:#047857 }
   .ac-bench{ width:100% }
   .ac-open{ margin-left:0; width:100%; justify-content:center }
 }
+
+/* ============================================================
+   💼 내 실전 보유 관리 (MY HOLD) — 2026-11-28
+   · 모의투자 카드 안의 탭(#mhTabs) + 실전 보유 패널(#mhPane)
+   · 값은 모두 계산 결과(평단·현재가·전략 규칙)에서 나온다 — 장식 숫자 없음
+   ============================================================ */
+.mh-tabs{display:flex;align-items:center;gap:6px;padding:9px 15px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:rgba(255,255,255,.014)}
+.mh-tabs button{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--txt3);padding:6px 12px;border:1px solid transparent;border-radius:8px;transition:.14s;white-space:nowrap;letter-spacing:-.01em}
+.mh-tabs button:hover{color:var(--txt2);background:rgba(255,255,255,.035)}
+.mh-tabs button.on{color:var(--txt);background:rgba(56,189,248,.12);border-color:rgba(56,189,248,.30);box-shadow:0 0 0 1px rgba(56,189,248,.06) inset}
+.mh-tabs button>span{font-size:13px;line-height:1}
+.mh-tabs button em{font-style:normal;font-size:11px;font-weight:700;color:var(--txt4);border:1px solid var(--line);border-radius:99px;padding:0 5px;min-width:17px;text-align:center;line-height:15px}
+.mh-tabs button.on em{color:#7DD3FC;border-color:rgba(56,189,248,.35)}
+.mh-tabnote{margin-left:auto;font-size:11.5px;color:var(--txt4);white-space:nowrap}
+
+.mh-pane{display:block}
+.mh-sum{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-bottom:1px solid var(--line);background:rgba(255,255,255,.008)}
+.mh-sum .c{padding:11px 15px;border-left:1px solid var(--line2);min-width:0}
+.mh-sum .c:first-child{border-left:0}
+.mh-sum .k{font-size:12px;color:var(--txt3)}
+.mh-sum .v{font-size:19px;font-weight:700;font-family:var(--mono);margin-top:2px;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.mh-sum .s{font-size:12px;color:var(--txt3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mh-sum .v.pos{color:var(--up2)}
+.mh-sum .v.neg{color:var(--dn2)}
+.mh-sum .v.sm{font-size:15px;padding-top:2px}
+
+.mh-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;padding:12px 15px;border-bottom:1px solid var(--line)}
+.mf-fields{display:grid;grid-template-columns:minmax(140px,1.2fr) 112px 104px 134px minmax(130px,1fr);gap:8px;min-width:0}
+.mf{display:flex;flex-direction:column;gap:4px;min-width:0}
+.mf>span{font-size:11.5px;color:var(--txt3);white-space:nowrap}
+.mf>span i{font-style:normal;color:var(--txt4);margin-left:2px}
+.mf input{height:32px;border:1px solid var(--line);border-radius:8px;background:#0B1018;padding:0 9px;font-size:12.5px;color:var(--txt);min-width:0;font-variant-numeric:tabular-nums}
+.mf input::placeholder{color:var(--txt4)}
+.mf input:focus{outline:none;border-color:rgba(56,189,248,.5);box-shadow:0 0 0 3px rgba(56,189,248,.09)}
+.mf input::-webkit-calendar-picker-indicator{filter:invert(.6);cursor:pointer}
+.mf-side{display:flex;align-items:flex-end;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.mf-side button{height:32px;padding:0 12px;border-radius:8px;font-size:12.5px;font-weight:600;border:1px solid var(--line);color:var(--txt2);white-space:nowrap;transition:.14s}
+.mf-side button:hover{color:var(--txt);border-color:rgba(255,255,255,.22);background:rgba(255,255,255,.03)}
+.mf-side .mh-add{background:linear-gradient(180deg,rgba(56,189,248,.22),rgba(56,189,248,.10));border-color:rgba(56,189,248,.42);color:#E0F2FE}
+.mf-side .mh-add:hover{background:linear-gradient(180deg,rgba(56,189,248,.30),rgba(56,189,248,.16));color:#FFF}
+.mf-side .danger{color:#FDA4AF;border-color:rgba(244,63,94,.32)}
+.mf-side .danger:hover{background:rgba(244,63,94,.12);color:#FECDD3;border-color:rgba(244,63,94,.45)}
+.mf-msg{grid-column:1 / -1;font-size:11.5px;color:var(--txt3);line-height:1.5}
+.mf-msg:empty{display:none}
+.mf-msg.err{color:#FDA4AF}
+.mf-msg.ok{color:#6EE7B7}
+
+.mh-list{display:flex;flex-direction:column}
+.mh-row{display:grid;grid-template-columns:auto minmax(140px,1.1fr) minmax(112px,.82fr) minmax(108px,.78fr) minmax(132px,.95fr) minmax(168px,1.2fr) auto;
+  gap:9px 14px;align-items:center;padding:11px 15px;border-top:1px solid var(--line2);cursor:pointer;transition:background .12s}
+.mh-row:first-child{border-top:0}
+.mh-row:hover{background:rgba(255,255,255,.026)}
+.mh-row.on{background:rgba(56,189,248,.065);box-shadow:inset 2px 0 0 rgba(56,189,248,.75)}
+.mh-row:focus-visible{outline:2px solid rgba(56,189,248,.5);outline-offset:-2px}
+.mhb{display:flex}
+.mh-badge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:99px;border:1px solid;white-space:nowrap;letter-spacing:-.01em}
+.mh-badge b{font-weight:800}
+.mh-badge.hold{color:#6EE7B7;border-color:rgba(16,185,129,.36);background:rgba(16,185,129,.10)}
+.mh-badge.sell{color:#FDA4AF;border-color:rgba(244,63,94,.42);background:rgba(244,63,94,.13)}
+.mh-badge.warn{color:#FCD34D;border-color:rgba(245,158,11,.40);background:rgba(245,158,11,.11)}
+.mhtk{min-width:0;display:flex;flex-direction:column;line-height:1.35}
+.mhtk b{font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.01em}
+.mhtk i{font-style:normal;font-size:11.5px;color:var(--txt3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mhtk em{font-style:normal;font-size:11px;color:var(--txt4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mhc{min-width:0;display:flex;flex-direction:column;line-height:1.35}
+.mhc .lbl{font-size:10.5px;color:var(--txt4);margin-bottom:1px;white-space:nowrap}
+.mhc b{font-family:var(--mono);font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mhc i{font-style:normal;font-size:11.5px;color:var(--txt4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mhc.pos b{color:var(--up2)}
+.mhc.neg b{color:var(--dn2)}
+.mhrule{display:flex;flex-wrap:wrap;gap:4px;min-width:0}
+.mhrule span{font-size:11px;color:var(--txt3);border:1px solid var(--line);border-radius:6px;padding:2px 6px;white-space:nowrap;background:rgba(255,255,255,.02);line-height:1.4}
+.mhrule span.ok{color:#6EE7B7;border-color:rgba(16,185,129,.30)}
+.mhrule span.no{color:#FDA4AF;border-color:rgba(244,63,94,.32)}
+.mhrule span.neu{color:var(--txt2)}
+.mhact{display:flex;gap:4px;justify-self:end}
+.mhact button{font-size:11.5px;font-weight:600;color:var(--txt2);border:1px solid var(--line);border-radius:6px;padding:4px 8px;white-space:nowrap;transition:.12s}
+.mhact button:hover{color:var(--txt);border-color:rgba(255,255,255,.24)}
+.mhact button[data-mh=del]:hover{color:#FDA4AF;border-color:rgba(244,63,94,.42)}
+.mh-why{grid-column:1 / -1;font-size:11.5px;color:var(--txt3);line-height:1.55;padding-left:2px}
+.mh-why b{color:var(--txt2);font-weight:600}
+.mh-empty{padding:24px 15px;font-size:12.5px;color:var(--txt4);line-height:1.75;text-align:center}
+.mh-empty b{color:var(--txt2);font-weight:600}
+.mh-empty kbd{font-family:var(--mono);font-size:11.5px;color:var(--txt2);border:1px solid var(--line);border-radius:5px;padding:1px 5px;background:rgba(255,255,255,.03)}
+.mh-foot{padding:10px 15px 22px;border-top:1px solid var(--line2);font-size:11.5px;color:var(--txt4);line-height:1.65}
+.mh-foot b{color:var(--txt3);font-weight:600}
+
+html[data-theme="light"] .mh-tabs{background:rgba(15,23,42,.02)}
+html[data-theme="light"] .mh-tabs button:hover{background:rgba(15,23,42,.05)}
+html[data-theme="light"] .mh-tabs button.on{background:rgba(0,114,173,.08);border-color:rgba(0,114,173,.28);color:#0F172A}
+html[data-theme="light"] .mh-tabs button.on em{color:#0072AD;border-color:rgba(0,114,173,.3)}
+html[data-theme="light"] .mh-sum{background:rgba(15,23,42,.015)}
+html[data-theme="light"] .mh-sum .v.pos{color:#047857}
+html[data-theme="light"] .mh-sum .v.neg{color:#BE123C}
+html[data-theme="light"] .mf input{background:#FFFFFF;border-color:rgba(15,23,42,.14)}
+html[data-theme="light"] .mf input::-webkit-calendar-picker-indicator{filter:none}
+html[data-theme="light"] .mf-side .mh-add{background:#0B76A3;border-color:#0B76A3;color:#FFFFFF}
+html[data-theme="light"] .mf-side .mh-add:hover{background:#086189;border-color:#086189}
+html[data-theme="light"] .mf-side button{border-color:rgba(15,23,42,.14);color:#3B4A5E}
+html[data-theme="light"] .mf-side button:hover{background:rgba(15,23,42,.04);color:#0F172A}
+html[data-theme="light"] .mf-side .danger{color:#BE123C;border-color:rgba(190,18,60,.28)}
+html[data-theme="light"] .mh-row:hover{background:rgba(15,23,42,.03)}
+html[data-theme="light"] .mh-row.on{background:rgba(0,114,173,.06);box-shadow:inset 2px 0 0 #0B76A3}
+html[data-theme="light"] .mh-badge.hold{color:#047857;border-color:rgba(4,120,87,.3);background:rgba(4,120,87,.08)}
+html[data-theme="light"] .mh-badge.sell{color:#BE123C;border-color:rgba(190,18,60,.3);background:rgba(190,18,60,.07)}
+html[data-theme="light"] .mh-badge.warn{color:#B45309;border-color:rgba(180,83,9,.3);background:rgba(180,83,9,.07)}
+html[data-theme="light"] .mhrule span{background:rgba(15,23,42,.02)}
+html[data-theme="light"] .mhrule span.ok{color:#047857;border-color:rgba(4,120,87,.28)}
+html[data-theme="light"] .mhrule span.no{color:#BE123C;border-color:rgba(190,18,60,.28)}
+html[data-theme="light"] .mhc.pos b{color:#047857}
+html[data-theme="light"] .mhc.neg b{color:#BE123C}
+html[data-theme="light"] .mhact button:hover{border-color:rgba(15,23,42,.24);color:#0F172A}
+
+@media (max-width:1080px){
+  .mh-form{grid-template-columns:minmax(0,1fr)}
+  .mf-side{justify-content:flex-start}
+  .mh-row{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:
+    "b tk act"
+    "px pnl stp"
+    "rule rule rule"
+    "why why why";row-gap:8px}
+  .mhb{grid-area:b;align-self:start}
+  .mhtk{grid-area:tk}
+  .mhact{grid-area:act;align-self:start}
+  .mh-px{grid-area:px}
+  .mh-pnl{grid-area:pnl}
+  .mh-stp{grid-area:stp}
+  .mhrule{grid-area:rule}
+  .mh-why{grid-area:why}
+}
+@media (max-width:700px){
+  .mh-tabs{padding:8px 12px;flex-wrap:wrap;row-gap:6px}
+  .mh-tabs button{flex:1 1 0;justify-content:center;padding:7px 8px;font-size:12px}
+  .mhtk i,.mhtk em{white-space:normal;overflow:visible}
+  .mh-pnl i{white-space:normal}
+  .mh-tabnote{display:none}
+  .mh-sum{grid-template-columns:1fr 1fr}
+  .mh-sum .c{padding:9px 12px}
+  .mh-sum .v{font-size:17px}
+  .mh-form{padding:11px 12px}
+  .mf-fields{grid-template-columns:1fr 1fr}
+  .mf.f-sym,.mf.f-memo{grid-column:1 / -1}
+  .mf-side{justify-content:stretch}
+  .mf-side button{flex:1 1 auto;height:34px}
+  .mh-row{padding:12px}
+  .mh-foot{padding:10px 12px 22px}
+}
+
+/* hidden 속성이 display 규칙에 지지 않도록 (시드 컨트롤·탭 패널) */
+.paper-card .pt-acct[hidden],.paper-card #pcSubHold[hidden],.paper-card #pcSubPaper[hidden],
+.mh-pane[hidden],.pt-pane[hidden],.paper-card .pt-pane[hidden]{display:none!important}
