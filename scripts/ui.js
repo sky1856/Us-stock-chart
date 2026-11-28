@@ -355,8 +355,8 @@
   }
   /* 다크/화이트 × 성향 — 모바일 상단 상태바 색(theme-color)까지 함께 */
   function themeMetaColor() {
-    if (isLightTheme()) return riskAggr() ? '#FBEFEC' : '#EEF2F7';
-    return riskAggr() ? '#16090C' : '#0B0E14';
+    if (isLightTheme()) return riskAggr() ? '#F8F4F4' : '#EEF2F7';
+    return riskAggr() ? '#1C141A' : '#0B0E14';
   }
   function applyRiskClass() {
     var root = document.documentElement;
