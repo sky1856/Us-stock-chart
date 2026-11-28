@@ -181,7 +181,7 @@
     maOn: { 5: true, 20: true, 60: true, 120: true, 240: true },
     simIdx: 0, tool: 'cursor', ewMode: 0, clean: false,
     ewShow: { sub: true, ch: true, clu: true },
-    watch: [], strategy: 'trend', risk: 'safe', invest: 'div10'
+    watch: [], strategy: 'trend', risk: 'safe', invest: 'div10', asset: 'us'
   };
   watchRestore();
 
@@ -615,7 +615,17 @@
      ============================================================ */
   var UNIV_MAX_RANK = { trend: 100, swing: 150 };
   function uniMode(key) { return (key || stratKey()) === 'swing' ? 'swing' : 'trend'; }
-  function inUniv(x, mode) { return !x || x.r == null || x.r <= UNIV_MAX_RANK[mode || 'swing']; }
+  /* 가상화폐(meta.kind='crypto')는 시총 순위가 없지만 **전략 유니버스에는 넣지 않는다** —
+     그대로 두면 r==null 이라 Top 100/150 평균·계좌 시뮬레이션에 섞여 숫자가 달라진다.
+     BTC 차트·백테스트·회의실 가상투자는 별도 카테고리(state.asset='crypto')에서 그대로 동작한다. */
+  function inUniv(x, mode) {
+    if (!x) return true;
+    if (x.kind === 'crypto') return false;
+    return x.r == null || x.r <= UNIV_MAX_RANK[mode || 'swing'];
+  }
+  function cryptoList() { return M.tickers.filter(function (x) { return x.kind === 'crypto'; }); }
+  /* 스캐너·상태 탭·프리셋 카운트가 함께 보는 집합 — 자산군 카테고리(🇺🇸 미국주식 / 🪙 가상화폐) */
+  function scanBase() { return state.asset === 'crypto' ? cryptoList() : uniList(); }
   var uniListCache = {};
   function uniList(key) {
     var mode = uniMode(key);
@@ -1250,7 +1260,7 @@
   }
   function scanCounts(scoped) {
     var c = { all: 0, buy: 0, entryBuy: 0, hold: 0, wait: 0, sell: 0, waitbuy: 0, entry: 0, held: 0, blocked: 0, cool: 0, fav: 0 };
-    uniList().forEach(function (x) {
+    scanBase().forEach(function (x) {
       var a = A[x.t]; if (!a) return;
       if (scoped && !presetMembers(a)) return;          /* 프리셋 안에서만 집계 */
       c.all++;
@@ -1509,7 +1519,7 @@
   /* 스캐너에 지금 보이는 종목(탭·프리셋·검색 적용, 정렬 전) — 자동 선택(topScoreT)도 같은 함수를 쓴다 */
   function scanRows() {
     var q = state.listQ.trim().toLowerCase();
-    return uniList().map(function (x) { return A[x.t]; }).filter(function (a) {
+    return scanBase().map(function (x) { return A[x.t]; }).filter(function (a) {
       if (!a) return false;
       var rv = rowOf(a);
       if (!matchesFilter(a, rv)) return false;
@@ -1565,6 +1575,7 @@
     var cBk = $('#cBk'); if (cBk) cBk.textContent = bkCounts().n;
     var cW70 = $('#cWin70'); if (cW70) cW70.textContent = win70Counts().n;   /* 0건이면 0 그대로 */
     var cM6 = $('#cMom6'); if (cM6) cM6.textContent = mom6Counts().n;
+    var cCr = $('#cCrypto'); if (cCr) cCr.textContent = String(cryptoList().length);
     var pn = $('#presetNote');
     if (pn) {
       pn.innerHTML = presetNoteHtml(rows.length);
@@ -2588,10 +2599,23 @@
     trend: { title: '시가총액 Top 100', logo: 'US Top 100 Analyzer' },
     swing: { title: '시가총액 Top 150', logo: 'US Top 150 Analyzer' }
   };
+  var UNIV_HEAD = {
+    trend: { title: '시가총액 Top 100', logo: 'US Top 100 Analyzer' },
+    swing: { title: '시가총액 Top 150', logo: 'US Top 150 Analyzer' },
+    crypto: { title: '🪙 가상화폐', logo: 'Crypto Analyzer' }
+  };
   function renderUnivHead() {
-    var m = uniMode(), h = UNIV_HEAD[m], n = uniList(m).length;
+    var crypto = state.asset === 'crypto';
+    var m = crypto ? 'crypto' : uniMode(), h = UNIV_HEAD[m];
+    var n = (crypto ? cryptoList() : uniList(m)).length;
     var t = $('#uniTitle'); if (t) t.textContent = h.title;
     var c = $('#uniCount'); if (c) c.textContent = String(n);
+    var sub = $('#uniSub');
+    if (sub) {
+      sub.innerHTML = crypto
+        ? '가상화폐 · 분석 <span id="uniCount">' + n + '</span>종목 · ' + M.asOf + ' 종가 기준'
+        : '미국 상장 시총순 · 분석 <span id="uniCount">' + n + '</span>종목 · 장마감 기준';
+    }
     var b = $('#brandSub'); if (b) b.textContent = h.logo;
     /* 캡슐 브랜드에는 부제 자리가 없으므로 'Top 100/150'은 캡슐 툴팁이 알린다(제목-집합 일치 유지) */
     var br = document.querySelector('.topbar .brand');
@@ -2599,7 +2623,16 @@
     /* 상단 통합 컨트롤 오른쪽 — 지금 무엇으로 보고 있는지 한 줄로 (제목·본문 일치 확인용) */
     var now = $('#tcNow');
     if (now) now.innerHTML = '<b>' + (riskAggr() ? '🔥 공격형' : '🛡️ 안정형') + '</b> · <b>' +
-      (m === 'swing' ? '⚡ 스윙형' : '📈 추세형') + '</b> · ' + h.title.replace('시가총액 ', '') + ' · 분석 ' + n + '종목';
+      (m === 'swing' ? '⚡ 스윙형' : (m === 'crypto' ? '🪙 가상화폐' : '📈 추세형')) + '</b> · ' +
+      h.title.replace('시가총액 ', '') + ' · 분석 ' + n + '종목';
+    $$('#assetTabs button').forEach(function (b2) {
+      var on = b2.getAttribute('data-a') === (crypto ? 'crypto' : 'us');
+      b2.classList.toggle('on', on);
+      b2.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    /* 가상화폐에는 시총·실적 프리셋이 없다 — 프리셋 줄을 잠시 감춘다(다시 미국주식으로 오면 그대로 돌아온다) */
+    var sb = document.querySelector('.sidebar');
+    if (sb) sb.setAttribute('data-asset', crypto ? 'crypto' : 'us');
   }
   function renderStrategy() {
     renderUnivHead();
@@ -3504,6 +3537,12 @@
       fmt: function (v) { return v.toFixed(2); },
       chgFmt: function (d) { return d.toFixed(2); },
       deltaTitle: function (d) { return (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(2) + 'pt'; }
+    });
+    mchipFill('Krw', indexSeries('KRW'), {
+      key: 'krw',
+      fmt: function (v) { return Math.round(v).toLocaleString('en-US') + '원'; },
+      chgFmt: function (d) { return Math.abs(d).toFixed(1) + '원'; },
+      deltaTitle: function (d) { return (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1) + '원'; }
     });
     var mc = M.macro || {}, rt = mc.rates || {};
     mchipFillData('U2', { key: 'u2', fmt: pct2, chgFmt: bpTxt, deltaTitle: bpTips, showPct: false }, rt.us2y);
@@ -6077,7 +6116,7 @@
 
     var badge = $('#ptBadge');
     /* 실전 보유 탭에서는 카드 제목·배지를 mhTab 이 관리한다 — select()→ptRender() 가 덮어쓰지 않도록 */
-    if (myhold.tab !== 'hold') {
+    if (myhold.tab === 'paper') {
       badge.textContent = replay ? 'REPLAY' : 'LIVE DAY';
       badge.classList.toggle('replay', replay);
     }
@@ -6589,6 +6628,30 @@
       var b = e.target.closest('button');
       if (!b || !b.dataset.f) return;
       toggleScanPreset(b.dataset.f);
+    };
+    /* 자산군 카테고리 — 🇺🇸 미국주식 ↔ 🪙 가상화폐 (BTC-USD) */
+    function setAsset(a) {
+      state.asset = (a === 'crypto') ? 'crypto' : 'us';
+      if (state.asset === 'crypto') {
+        var cr = cryptoList();
+        var cc = $('#cCrypto'); if (cc) cc.textContent = String(cr.length);
+        var cur = info(state.cur);
+        if ((!cur || cur.kind !== 'crypto') && cr.length) select(cr[0].t);
+      } else {
+        var ici = info(state.cur);
+        if (ici && ici.kind === 'crypto') {
+          var top = topScoreT();
+          if (top) select(top);
+        }
+      }
+      renderUnivHead();
+      renderScanner();
+    }
+    var aTabs = $('#assetTabs');
+    if (aTabs) aTabs.onclick = function (e) {
+      var b = e.target.closest('button');
+      if (!b || !b.dataset.a) return;
+      setAsset(b.dataset.a);
     };
     syncScanTabs();   /* 초기 상태(전체 · 프리셋 없음)를 aria·data 속성에도 반영 */
     /* 설명란(전략 가이드 · 프리셋 안내)은 종목 목록 아래 접기/펼치기 — 상태는 브라우저에 저장 */
@@ -7276,7 +7339,7 @@
       if (!raw) return;
       var o = JSON.parse(raw);
       if (!o || typeof o !== 'object' || Array.isArray(o)) return;
-      if (o.tab === 'paper' || o.tab === 'hold') myhold.tab = o.tab;
+      if (o.tab === 'paper' || o.tab === 'hold' || o.tab === 'room') myhold.tab = o.tab;
       if (o.mode === 'auto' || o.mode === 'screen') myhold.mode = o.mode;
       var seen = {};
       myhold.items = (Array.isArray(o.items) ? o.items : []).map(function (it) {
@@ -7848,27 +7911,430 @@
     host.innerHTML = st.rows.map(mhRowHtml).join('');
   }
 
+  /* ============================================================
+     🏢 회의실 가상투자 (ROOM WALLET) — 2026-11-29
+     ------------------------------------------------------------
+     · 회의실(가상사옥)과 **같은 지갑**을 쓴다 — localStorage 'ckq.hq.wallet.v1'
+       (같은 오리진이라 검색기와 /hq/ 가 같은 키를 본다) + Supabase hq_wallets.
+     · '🧪 모의투자'(apex.paper.v1)는 1바이트도 건드리지 않는다 — 완전 분리.
+     · 회계 — 회의실 코드를 고치지 않고도 잔액이 정확히 맞는 방식:
+         회의실 현금 = $10,000 + (prize − pnlCut) − spent + bonus + cashAdj + bank.cash
+         매수: spent += 원금      → 쓸 수 있는 현금이 원금만큼 줄어든다
+         매도: spent −= 원금, prize += 실현손익 → 원금은 돌아오고 손익만 총수익금에 더해진다
+         ∴ 잔액 변화 = 실현손익. 회의실 실시간 자산 순위(balance)·직급·창업 자금이 이 값을 읽는다.
+     · 보유·체결 내역은 'ckq.hq.invest.v1' 에 닉네임과 함께 저장한다.
+     ============================================================ */
+  var HQW_KEY = 'ckq.hq.wallet.v1';       /* 회의실 상점 지갑 (읽기·쓰기 공용) */
+  var HQI_KEY = 'ckq.hq.invest.v1';       /* 이 카드의 보유·체결 기록 */
+  var HQ_BASE = 10000;                    /* 회의실 최초 지급 $10,000 */
+  var HQ_SB_URL = 'https://ysetufmhcimqtpwvewmw.supabase.co';
+  var HQ_SB_KEY = 'sb_publishable_eQ0nKLJQIjJ2ZKNukvex3A_uMWUDADA';
+  var HQ_TABLE = 'hq_wallets';
+  var hq = { name: '', side: 'buy', rows: [], busy: false, at: 0 };
+  var hqWallet = null;
+  var hqInv = { v: 1, name: '', realized: 0, positions: {}, fills: [] };
+
+  function hqR2(v) { return Math.round((Number(v) || 0) * 100) / 100; }
+  function hqQ(v) {
+    var n = Number(v) || 0;
+    return (Math.round(n * 10000) / 10000).toLocaleString('en-US', { maximumFractionDigits: 4 });
+  }
+  function hqSgn(v) { var n = Number(v) || 0; return (n >= 0 ? '+' : '\u2212') + usd(Math.abs(n), 2); }
+  function hqKr(n) { return Math.round(Number(n) || 0).toLocaleString('en-US'); }
+
+  function hqInvLoad() {
+    hqInv = { v: 1, name: '', realized: 0, positions: {}, fills: [] };
+    try {
+      var o = JSON.parse(localStorage.getItem(HQI_KEY) || 'null');
+      if (!o || typeof o !== 'object') return;
+      hqInv.name = typeof o.name === 'string' ? o.name.slice(0, 14) : '';
+      hqInv.realized = hqR2(o.realized);
+      hqInv.fills = Array.isArray(o.fills) ? o.fills.filter(function (f) { return f && f.t && f.side && f.q > 0; }).slice(-300) : [];
+      var p = (o.positions && typeof o.positions === 'object') ? o.positions : {};
+      Object.keys(p).forEach(function (t) {
+        var v = p[t] || {}, q = Number(v.q), av = Number(v.avg);
+        if (isFinite(q) && q > 0 && isFinite(av) && av > 0) hqInv.positions[t] = { q: Math.round(q * 10000) / 10000, avg: av };
+      });
+    } catch (e) { /* 저장소 차단 */ }
+  }
+  function hqInvSave() {
+    try { localStorage.setItem(HQI_KEY, JSON.stringify(hqInv)); } catch (e) {}
+  }
+  function hqWalletLoad() {
+    try {
+      var o = JSON.parse(localStorage.getItem(HQW_KEY) || 'null');
+      if (o && typeof o === 'object') return o;
+    } catch (e) {}
+    return null;
+  }
+  function hqWalletSave() {
+    if (!hqWallet) return;
+    hqWallet.at = new Date().toISOString();
+    try { localStorage.setItem(HQW_KEY, JSON.stringify(hqWallet)); } catch (e) {}
+  }
+  /* 회의실 현금식 그대로 */
+  function hqCash(o) {
+    if (!o) return 0;
+    var bank = (o.bank && typeof o.bank === 'object') ? o.bank : {};
+    return hqR2(HQ_BASE + (Number(o.prize) || 0) - (Number(o.pnlCut) || 0) - (Number(o.spent) || 0)
+      + (Number(o.bonus) || 0) + (Number(o.cashAdj) || 0) + (Number(bank.cash) || 0));
+  }
+  function hqPnl(o) { return o ? hqR2((Number(o.prize) || 0) - (Number(o.pnlCut) || 0)) : 0; }
+  function hqPrice(t) {
+    var a = A[t];
+    if (!a || !a.close || !a.close.length) return null;
+    return a.close[a.close.length - 1];
+  }
+  function hqBook() {
+    var cash = hqCash(hqWallet), mv = 0, cost = 0, rows = [];
+    Object.keys(hqInv.positions).forEach(function (t) {
+      var p = hqInv.positions[t], px = hqPrice(t);
+      if (px == null) px = p.avg;
+      mv += p.q * px; cost += p.q * p.avg;
+      rows.push({ t: t, q: p.q, avg: p.avg, px: px, val: p.q * px,
+        pnl: p.q * (px - p.avg), ret: p.avg ? px / p.avg - 1 : 0 });
+    });
+    rows.sort(function (a, b) { return b.val - a.val; });
+    return { cash: cash, mv: mv, cost: cost, unreal: mv - cost, unrealPct: cost ? mv / cost - 1 : 0,
+      total: cash + mv, realized: hqInv.realized, rows: rows, pnl: hqPnl(hqWallet) };
+  }
+  function hqMsg(txt, kind) {
+    var el = $('#hqMsg');
+    if (!el) return;
+    el.textContent = txt || '';
+    el.className = 'hq-msg' + (kind ? ' ' + kind : '');
+  }
+  function hqStatus(txt) {
+    var el = $('#hqNameState');
+    if (el) el.innerHTML = txt;
+  }
+
+  /* ── Supabase hq_wallets — 회의실과 같은 테이블(name PK · balance · pnl · outfits_count …) ── */
+  function hqSrv(opts) {
+    opts = opts || {};
+    var url = HQ_SB_URL + '/rest/v1/' + HQ_TABLE + (opts.query || '');
+    var headers = { apikey: HQ_SB_KEY, Authorization: 'Bearer ' + HQ_SB_KEY };
+    if (opts.body) {
+      headers['Content-Type'] = 'application/json';
+      headers.Prefer = 'resolution=merge-duplicates,return=minimal';
+    }
+    return fetch(url, {
+      method: opts.body ? 'POST' : 'GET', headers: headers,
+      body: opts.body ? JSON.stringify(opts.body) : undefined
+    });
+  }
+  /* 내 행을 UPSERT — 다른 칸(의상 수·팀원·회사·사무실·룩)은 서버에 있던 값을 그대로 다시 써서 지우지 않는다 */
+  function hqPush() {
+    if (!hq.name || !hqWallet) return;
+    var b = hqBook();
+    var body = { name: hq.name, balance: b.cash, pnl: b.pnl, updated_at: new Date().toISOString() };
+    var row = null;
+    (hq.rows || []).forEach(function (r) { if (String(r.name) === hq.name) row = r; });
+    ['outfits_count', 'staff_count', 'company', 'office', 'look'].forEach(function (k) {
+      if (row && row[k] != null) body[k] = row[k];
+    });
+    try {
+      hqSrv({ query: '?on_conflict=name', body: body }).then(function (r) {
+        if (r && r.ok) { hqStatus(hqStatusHtml('서버 반영 완료')); hqPull(); }
+        else hqStatus(hqStatusHtml('서버 반영 실패'));
+      }).catch(function () { hqStatus(hqStatusHtml('로컬 저장됨 · 서버 연결 실패')); });
+    } catch (e) { hqStatus(hqStatusHtml('로컬 저장됨 · 서버 연결 실패')); }
+  }
+  function hqStatusHtml(note) {
+    if (!hqWallet) return '아직 연결하지 않았습니다';
+    var b = hqBook(), mine = null;
+    (hq.rows || []).forEach(function (r, i) { if (String(r.name) === hq.name) mine = { r: r, i: i }; });
+    var s = '🏢 <b>' + mhEsc(hq.name) + '</b> 지갑 연결됨 · 현금 <b>' + usd(b.cash) + '</b>';
+    if (mine) s += ' · 서버 잔액 <b>' + usd(mine.r.balance) + '</b> · 순위 <b>' + (mine.i + 1) + '위</b>';
+    /* 회의실에서 캐릭터를 삭제·잔액 리셋하면 spent 가 0 이 되어 보유 원금이 지갑에서 사라진다 — 자동 수정하지 않고 알린다 */
+    if (hqWallet && b.cost > 0.01 && (Number(hqWallet.spent) || 0) + 1 < b.cost) {
+      s += ' · <b class="hq-warn">⚠ 회의실 지갑 초기화 감지 — 보유 원금 ' + usd(b.cost) + ' 반영 안 됨</b>';
+    }
+    s += (note ? ' · ' + note : '');
+    return s;
+  }
+  function hqPull(cb) {
+    if (hq.busy) { if (cb) cb(); return; }
+    hq.busy = true;
+    try {
+      hqSrv({ query: '?select=name,balance,pnl,outfits_count,staff_count,company,office,look&order=balance.desc&limit=50' })
+        .then(function (r) { hq.busy = false; return r && r.ok ? r.json() : null; })
+        .then(function (rows) {
+          if (Array.isArray(rows)) {
+            hq.rows = rows; hq.at = Date.now();
+            var dl = $('#hqNameList');
+            if (dl) dl.innerHTML = rows.map(function (x) {
+              return '<option value="' + mhEsc(String(x.name || '')) + '">' + usd(x.balance) + ' · ' + hqSgn(x.pnl) + '</option>';
+            }).join('');
+            hqStatus(hqStatusHtml(''));
+            hqRankLine();
+          }
+          if (cb) cb();
+        })
+        .catch(function () { hq.busy = false; hqStatus(hqStatusHtml('서버 연결 실패 · 로컬 지갑으로만 동작')); if (cb) cb(); });
+    } catch (e) { hq.busy = false; if (cb) cb(); }
+  }
+  /* 실시간 자산 순위 미니 전광판 — 회의실과 같은 기준(balance) */
+  function hqRankLine() {
+    var box = $('#hqRank');
+    if (!box) return;
+    if (!hq.rows.length) { box.innerHTML = '<span class="hqr-l">회의실 순위</span><span class="hqr-e">서버에 연결된 지갑이 없습니다</span>'; return; }
+    box.innerHTML = '<span class="hqr-l">회의실 순위</span>' + hq.rows.slice(0, 5).map(function (r, i) {
+      var me = String(r.name) === hq.name;
+      return '<span class="hqr-i' + (me ? ' me' : '') + '"><b>' + (i + 1) + '</b>' + mhEsc(String(r.name || '—')) +
+        '<em>' + usd(r.balance) + '</em></span>';
+    }).join('');
+  }
+  /* 서버 잔액으로 지갑을 맞춘다 — 이 브라우저에 회의실 지갑이 없을 때만 */
+  function hqSeedFromServer(name, done) {
+    try {
+      hqSrv({ query: '?select=name,balance,pnl&name=eq.' + encodeURIComponent(name) })
+        .then(function (r) { return r && r.ok ? r.json() : null; })
+        .then(function (rows) {
+          var row = (Array.isArray(rows) && rows[0]) || null;
+          if (row && hqWallet) {
+            var pnl = hqR2(row.pnl), bal = hqR2(row.balance);
+            hqWallet.prize = pnl;
+            hqWallet.pnlCut = 0;
+            hqWallet.spent = 0;
+            hqWallet.cashAdj = hqR2(bal - HQ_BASE - pnl);
+          }
+          if (done) done(!!row);
+        })
+        .catch(function () { if (done) done(false); });
+    } catch (e) { if (done) done(false); }
+  }
+
+  /* ── 연결 ── */
+  function hqConnect(name) {
+    name = String(name == null ? (($('#hqName') || {}).value || '') : name).replace(/\s+/g, ' ').trim().slice(0, 14);
+    if (!name) return hqMsg('닉네임을 입력해 주세요 — 회의실에서 쓰는 이름 그대로', 'err');
+    hq.name = name;
+    hqInv.name = name;
+    var w = hqWalletLoad();
+    if (w) {
+      hqWallet = w;
+      hqMsg('회의실 지갑에 연결했습니다 — 이 브라우저의 회의실 지갑(잔액·수익)을 그대로 씁니다', 'ok');
+      hqInvSave(); hqRender(); hqPull(); hqPush();
+      return;
+    }
+    hqWallet = { v: 1, granted: true, spent: 0, bonus: 0, prize: 0, pnlCut: 0, cashAdj: 0,
+      owned: {}, crew: [], at: new Date().toISOString() };
+    hqInvSave(); hqRender();
+    hqSeedFromServer(name, function (found) {
+      hqWalletSave();
+      hqRender(); hqPull();
+      hqMsg(found
+        ? '회의실 서버의 잔액·총수익금으로 지갑을 맞췄습니다 (이 기기 첫 연결)'
+        : '이 닉네임의 회의실 지갑이 아직 없습니다 — 기본 $10,000 으로 시작합니다', 'ok');
+      if (found) hqPush();          /* 서버에 있던 지갑만 되쓴다 — 없는 닉네임으로 새 행을 만들지 않는다 */
+    });
+  }
+
+  /* ── 매수 · 매도 ── */
+  function hqTrade(side) {
+    if (!hq.name || !hqWallet) return hqMsg('먼저 회의실 지갑을 연결해 주세요 — 닉네임을 넣고 [연결]', 'err');
+    var t = String((($('#hqOrderSym') || {}).value || '')).trim().toUpperCase();
+    if (!t) t = state.cur;
+    var a = A[t];
+    if (!a || !info(t)) return hqMsg('종목을 찾을 수 없습니다 — BTC-USD 또는 검색기 종목 티커를 넣어 주세요', 'err');
+    var px = hqPrice(t);
+    if (!(px > 0)) return hqMsg(t + ' 현재가가 없습니다', 'err');
+    var qty = Number((($('#hqQty') || {}).value || ''));
+    if (!(qty > 0)) return hqMsg('수량을 입력해 주세요', 'err');
+    var amt = hqR2(qty * px);
+    var pos = hqInv.positions[t] || { q: 0, avg: 0 };
+    var realized = 0;
+    if (side === 'buy') {
+      if (amt > hqBook().cash + 1e-6) {
+        return hqMsg('회의실 지갑 현금이 부족합니다 — 필요 ' + usd(amt) + ' · 보유 ' + usd(hqBook().cash), 'err');
+      }
+      var nq = pos.q + qty;
+      hqInv.positions[t] = { q: Math.round(nq * 10000) / 10000, avg: (pos.q * pos.avg + amt) / nq };
+      hqWallet.spent = hqR2((Number(hqWallet.spent) || 0) + amt);
+    } else {
+      if (qty > pos.q + 1e-9) return hqMsg('보유 수량이 부족합니다 (' + hqQ(pos.q) + ')', 'err');
+      var basis = hqR2(pos.avg * qty);
+      realized = hqR2(amt - basis);
+      hqWallet.spent = hqR2((Number(hqWallet.spent) || 0) - basis);
+      hqWallet.prize = hqR2((Number(hqWallet.prize) || 0) + realized);
+      hqInv.realized = hqR2(hqInv.realized + realized);
+      var rem = Math.round((pos.q - qty) * 10000) / 10000;
+      if (rem <= 1e-9) delete hqInv.positions[t];
+      else hqInv.positions[t] = { q: rem, avg: pos.avg };   /* 평단은 그대로 — 남은 수량의 취득원가 불변 */
+    }
+    hqInv.fills.push({ t: t, side: side, q: Math.round(qty * 10000) / 10000, px: px,
+      amt: amt, rz: realized, d: M.asOf, at: new Date().toISOString() });
+    if (hqInv.fills.length > 300) hqInv.fills = hqInv.fills.slice(-300);
+    hqWalletSave(); hqInvSave();
+    hqMsg((side === 'buy' ? '매수 체결 · ' : '매도 체결 · ') + t + ' ' + hqQ(qty) + ' @ ' + usd(px) +
+      (side === 'sell' ? ' · 실현 ' + hqSgn(realized) + ' → 회의실 총수익금에 반영' : ' · 지갑에서 ' + usd(amt) + ' 차감'),
+      'ok');
+    hqRender();
+    hqPush();
+  }
+
+  /* ── 화면 ── */
+  function hqRender() {
+    if (!$('#hqSum')) return;
+    var b = hqBook();
+    var cell2 = function (k, v, s, c) {
+      return '<div class="c"><div class="k">' + k + '</div><div class="v ' + (c || '') + '">' + v +
+        '</div><div class="s">' + s + '</div></div>';
+    };
+    $('#hqSum').innerHTML =
+      cell2('회의실 총 자산', usd(b.total, 2), '현금 + 보유 평가', '') +
+      cell2('사용 가능 현금', usd(b.cash, 2), '회의실 지갑 잔액', '') +
+      cell2('평가손익 (미실현)', hqSgn(b.unreal), b.cost ? hqQ(b.rows.length) + '종목 · ' + pct(b.unrealPct, 2) : '보유 없음', cls(b.unreal)) +
+      cell2('실현손익', hqSgn(b.realized), '매도 확정 · 회의실 prize', cls(b.realized));
+    hqStatus(hqStatusHtml(''));
+    hqRankLine();
+
+    var rows = b.rows;
+    $('#hqHoldN').textContent = String(rows.length);
+    $('#hqHoldings').innerHTML = rows.length ? rows.map(function (r) {
+      return '<div class="hq-hrow">' +
+        '<div class="tk">' + r.t + '<i>' + hqQ(r.q) + '</i></div>' +
+        '<div class="vv"><b>' + usd(r.val) + '</b><span>평단 ' + usd(r.avg) + ' · 현재 ' + usd(r.px) + '</span></div>' +
+        '<div class="rp ' + cls(r.pnl) + '">' + pct(r.ret, 2) + '<i>' + hqSgn(r.pnl) + '</i></div>' +
+        '<div class="ac"><button data-hqsell="' + r.t + '">전량매도</button><button data-hqchart="' + r.t + '">차트</button></div>' +
+        '</div>';
+    }).join('') : '<div class="hq-empty">아직 회의실 지갑으로 산 종목이 없습니다.<br>BTC-USD 나 미국주식 티커를 넣고 <b>매수</b>를 눌러 보세요.</div>';
+
+    var fs = hqInv.fills.slice().reverse().slice(0, 40);
+    $('#hqFillN').textContent = String(hqInv.fills.length);
+    $('#hqFills').innerHTML = fs.length ? fs.map(function (f) {
+      return '<div class="hq-frow"><span class="d">' + String(f.d || '').slice(2) + '</span>' +
+        '<b class="tk">' + f.t + '</b>' +
+        '<span class="side ' + f.side + '">' + (f.side === 'buy' ? '매수' : '매도') + '</span>' +
+        '<span class="q">' + hqQ(f.q) + '</span><span class="p">' + usd(f.px) + '</span>' +
+        '<span class="r ' + cls(f.side === 'sell' ? f.rz : 0) + '">' + (f.side === 'sell' ? hqSgn(f.rz) : '—') + '</span></div>';
+    }).join('') : '<div class="hq-empty">체결 내역이 없습니다.</div>';
+
+    hqEst();
+    var sub = $('#hqSubmit');
+    if (sub) { sub.textContent = hq.side === 'buy' ? '매수' : '매도'; sub.className = 'hq-submit ' + hq.side; }
+    $$('#hqSide button').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-side') === hq.side); });
+  }
+  /* 주문 패널 — 지금 차트 종목의 실제 종가로 계산 */
+  function hqOrdSym() {
+    var v = String((($('#hqOrderSym') || {}).value || '')).trim().toUpperCase();
+    return (v && A[v]) ? v : state.cur;
+  }
+  function hqEst() {
+    var el = $('#hqEst');
+    if (!el) return;
+    var t = hqOrdSym(), px = hqPrice(t);
+    var sym = $('#hqSym'), pxe = $('#hqPx');
+    if (sym) sym.textContent = t || '—';
+    if (pxe) pxe.textContent = px ? usd(px) + ' · ' + M.asOf + ' 종가' : '—';
+    if (!px) { el.textContent = '—'; return; }
+    var qty = Number((($('#hqQty') || {}).value || '')) || 0;
+    var amt = qty * px, b = hqBook();
+    var pos = hqInv.positions[t] || { q: 0, avg: 0 };
+    var line = '주문금액 <b>' + usd(amt) + '</b><br>';
+    if (hq.side === 'buy') {
+      line += '지갑 현금 <b>' + usd(b.cash) + '</b> → 매수 후 <b>' + usd(Math.max(0, b.cash - amt)) + '</b><br>';
+    } else {
+      line += '매도 후 현금 <b>' + usd(b.cash + amt) + '</b> · 예상 실현 <b class="' + cls(amt - pos.avg * qty) + '">' +
+        hqSgn(amt - pos.avg * qty) + '</b><br>';
+    }
+    line += t + ' 보유 <b>' + hqQ(pos.q) + '</b>' + (pos.q > 0 ? ' · 평단 <b>' + usd(pos.avg) + '</b>' : '');
+    el.innerHTML = line;
+  }
+  function hqInit() {
+    hqInvLoad();
+    var name = hqInv.name || '';
+    var ni = $('#hqName');
+    if (ni && name) ni.value = name;
+    var dl = $('#hqSymList');
+    if (dl) dl.innerHTML = M.tickers.map(function (x) {
+      return '<option value="' + x.t + '">' + x.nk + ' · ' + (x.sk || '') + '</option>';
+    }).join('');
+    var tabs = $('#hqSide');
+    if (tabs) tabs.onclick = function (e) {
+      var b = e.target.closest('button[data-side]');
+      if (!b) return;
+      hq.side = b.getAttribute('data-side') === 'sell' ? 'sell' : 'buy';
+      hqRender();
+    };
+    var al = $('#hqAllocs');
+    if (al) al.onclick = function (e) {
+      var b = e.target.closest('button[data-pct]');
+      if (!b) return;
+      var px = hqPrice(hqOrdSym());
+      if (!px) return;
+      var bk = hqBook(), pctv = Number(b.getAttribute('data-pct')) || 0;
+      var q = hq.side === 'buy'
+        ? Math.floor((bk.cash * pctv) / px * 10000) / 10000
+        : Math.round((hqInv.positions[hqOrdSym()] || { q: 0 }).q * pctv * 10000) / 10000;
+      if (!(q > 0)) return hqMsg(hq.side === 'buy' ? '살 수 있는 현금이 부족합니다 (수량 0)' : '보유 수량이 없습니다', 'err');
+      var qi = $('#hqQty'); if (qi) qi.value = String(q);
+      hqEst();
+    };
+    var sub = $('#hqSubmit');
+    if (sub) sub.onclick = function () { hqTrade(hq.side); };
+    var link = $('#hqLink');
+    if (link) link.onclick = function () { hqConnect(); };
+    var pull = $('#hqPull');
+    if (pull) pull.onclick = function () { hqMsg('회의실·서버의 최신 잔액을 읽는 중…'); hqPull(); };
+    var qi2 = $('#hqQty');
+    if (qi2) qi2.oninput = hqEst;
+    var os = $('#hqOrderSym');
+    if (os) {
+      os.oninput = function () { os.value = os.value.toUpperCase(); hqEst(); };
+      os.onchange = hqEst;
+    }
+    var hold = $('#hqHoldings');
+    if (hold) hold.onclick = function (e) {
+      var s = e.target.closest('button[data-hqsell]');
+      if (s) { hq.side = 'sell'; var t = s.getAttribute('data-hqsell'); var p = hqInv.positions[t];
+        var oi = $('#hqOrderSym'); if (oi) oi.value = t; var qv = $('#hqQty');
+        if (qv && p) qv.value = String(p.q); hqRender(); hqMsg(t + ' 전량매도를 준비했습니다 — [매도]를 누르면 체결됩니다', ''); return; }
+      var c = e.target.closest('button[data-hqchart]');
+      if (c) { select(c.getAttribute('data-hqchart')); }
+    };
+    /* 다른 탭(회의실)에서 지갑이 바뀌면 즉시 반영 */
+    window.addEventListener('storage', function (e) {
+      if (!e || e.key !== HQW_KEY) return;
+      var w = hqWalletLoad();
+      if (w) { hqWallet = w; if (hq.name) hqRender(); }
+    });
+    if (name) hqConnect(name);
+    else hqRender();
+  }
+
   /* ---------------- 탭 전환 ---------------- */
   function mhTab(which, persist) {
-    var tab = which === 'paper' ? 'paper' : 'hold';
+    var tab = (which === 'paper' || which === 'room') ? which : 'hold';
     myhold.tab = tab;
-    var hold = tab === 'hold';
-    var hp = $('#mhPane'), pp = $('#ptPane');
+    var hold = tab === 'hold', room = tab === 'room';
+    var hp = $('#mhPane'), pp = $('#ptPane'), rp = $('#hqPane');
     if (hp) hp.hidden = !hold;
-    if (pp) pp.hidden = hold;
+    if (pp) pp.hidden = tab !== 'paper';
+    if (rp) rp.hidden = !room;
     $$('#mhTabs button[data-mtab]').forEach(function (b) {
       var on = b.getAttribute('data-mtab') === tab;
       b.classList.toggle('on', on);
       b.setAttribute('aria-selected', on ? 'true' : 'false');
     });
-    var ti = $('#pcTitle'), bp = $('#ptBadge'), s1 = $('#pcSubPaper'), s2 = $('#pcSubHold'), ac = $('#ptAcct'), note = $('#mhTabNote');
-    if (ti) ti.textContent = hold ? '실전 보유 관리' : '가상투자 · 모의매매';
+    var ti = $('#pcTitle'), bp = $('#ptBadge'), s1 = $('#pcSubPaper'), s2 = $('#pcSubHold'), s3 = $('#pcSubRoom'), ac = $('#ptAcct'), note = $('#mhTabNote');
+    if (ti) ti.textContent = hold ? '실전 보유 관리' : (room ? '회의실 가상투자' : '가상투자 · 모의매매');
     if (bp && hold) { bp.textContent = 'MY HOLD'; bp.classList.remove('replay'); }
-    if (s1) s1.hidden = hold;
+    if (bp && room) { bp.textContent = 'ROOM WALLET'; bp.classList.remove('replay'); }
+    if (s1) s1.hidden = hold || room;
     if (s2) s2.hidden = !hold;
-    if (ac) ac.hidden = hold;
-    if (note) note.textContent = hold ? '실전 기록 · 자동 진단' : '체결 시뮬레이션 · 실제 주문 아님';
-    if (!hold && bootReady) ptRender();
+    if (s3) s3.hidden = !room;
+    if (ac) ac.hidden = hold || room;
+    if (note) note.textContent = hold ? '실전 기록 · 자동 진단' : (room ? '회의실 지갑 · 실제 종가' : '체결 시뮬레이션 · 실제 주문 아님');
+    if (tab === 'paper' && bootReady) ptRender();
+    if (room) {
+      /* 주문 패널은 지금 보고 있는 종목으로 열린다 (차트와 어긋나지 않게) */
+      var os = $('#hqOrderSym');
+      if (os && !os.value) os.value = state.cur;
+      hqRender();
+      if (!hq.at) hqPull();
+    }
     if (persist !== false) mhSave();
   }
 
@@ -8151,6 +8617,7 @@
       };
     }
     mhFaqInit();
+    hqInit();          /* 🏢 회의실 가상투자 — 회의실 지갑 연결·보유 복원 */
     mhTab(myhold.tab, false);
     mhRender();
   }

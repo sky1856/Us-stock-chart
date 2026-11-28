@@ -69,7 +69,7 @@
     <div class="side-head">
       <div>
         <h2 id="uniTitle">시가총액 Top 100</h2>
-        <p>미국 상장 시총순 · 분석 <span id="uniCount">102</span>종목 · 장마감 기준</p>
+        <p id="uniSub">미국 상장 시총순 · 분석 <span id="uniCount">102</span>종목 · 장마감 기준</p>
       </div>
       <button class="icon-btn" id="closeSide" aria-label="닫기" style="width:30px;height:30px;border-radius:8px;place-items:center;color:var(--txt3)">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
@@ -94,6 +94,10 @@
       <button data-f="tri" title="삼각수렴 — 최근 45봉 안 피벗 고점 2·저점 2 수렴(대칭/상승/하락, 쐐기 제외) · 돌파(최근 5봉)/임박/진행 · 표시 전용 · 다시 누르면 해제">삼각수렴<span class="c" id="cTri">0</span></button>
       <button data-f="div" title="상승 다이버전스 — 10일 신저가인데 RSI(14)가 5~60봉 전 저점보다 높은 종목 · 최근 3거래일 내 발생 기준 · 참고용(매매 조건 미적용) · 다시 누르면 해제">다이버전스<span class="c" id="cDiv">0</span></button>
       <button data-f="mom6" class="mom" title="6M모멘텀 5 — 최근 126거래일(약 6개월) 수익률 상위 5종목만 표시 · 위성 10~15% 참고용 · 매매 규칙 불변 · 상단 탭과 교집합 · 다시 누르면 해제">6M모멘텀<span class="c" id="cMom6">5</span></button>
+    </div>
+    <div class="seg seg-asset" id="assetTabs" role="group" aria-label="자산군 카테고리">
+      <button data-a="us" class="on" aria-pressed="true" title="미국주식 — 시가총액 Top 100/150 유니버스. 아래 프리셋·계좌 시뮬레이션·백테스트 집계가 모두 이 집합 기준입니다">🇺🇸 미국주식</button>
+      <button data-a="crypto" aria-pressed="false" title="🪙 가상화폐 — 비트코인(BTC-USD) 차트·이평선·일목·엘리어트·백테스트·회의실 가상투자 매매. 시총 순위가 없어 Top 100/150 전략 평균에는 들어가지 않습니다">🪙 가상화폐<em id="cCrypto">1</em></button>
     </div>
     <div class="side-tools">
       <input id="listSearch" type="text" placeholder="목록 내 검색" autocomplete="off" spellcheck="false">
@@ -171,6 +175,12 @@
           <b class="mc-v" id="dxyVal">—</b>
           <span class="mc-c" id="dxyChg">—</span>
           <canvas class="mc-spark" id="dxySpark" width="76" height="26"></canvas>
+        </div>
+        <div class="mchip" id="mchipKrw" title="원/달러(USD/KRW) · 1달러를 사는 데 드는 원화. 상승(원화 약세)은 미국 자산 보유자에게 유리하고 수입 물가에는 부담">
+          <span class="mc-k">💱 원/달러<em>USD/KRW</em></span>
+          <b class="mc-v" id="krwVal">—</b>
+          <span class="mc-c" id="krwChg">—</span>
+          <canvas class="mc-spark" id="krwSpark" width="76" height="26"></canvas>
         </div>
         <div class="mchip" id="mchipU2" title="US 2Y · 미국 2년물 국채금리(美 재무부 일별 수익률) — 연준 금리 기대에 가장 민감한 구간">
           <span class="mc-k">US 2Y<em>미 2년물 금리</em></span>
@@ -720,7 +730,8 @@
       <div class="panel-h">
         <div><h3><span id="pcTitle">가상투자 · 모의매매</span> <span class="pt-badge" id="ptBadge">LIVE DAY</span></h3>
           <p id="pcSubPaper">실제 주문이 아닙니다 · <span id="ptBars">1,505</span>거래일 실제 종가로 체결·평가</p>
-          <p id="pcSubHold" hidden>내가 실제로 보유한 종목 그대로 — 주문·결제 없이 매일 장마감 기준 전략 진단만 합니다</p></div>
+          <p id="pcSubHold" hidden>내가 실제로 보유한 종목 그대로 — 주문·결제 없이 매일 장마감 기준 전략 진단만 합니다</p>
+          <p id="pcSubRoom" hidden>회의실(가상사옥) 지갑과 연결해 검색기의 실제 종가로 매수·매도 — 실현손익이 회의실 자산 순위·직급·창업 자금에 반영됩니다</p></div>
         <div class="pt-backup">
           <button id="mhHelp" type="button" aria-expanded="false" aria-controls="mhFaq" title="실전 보유 관리 도움말 — 자주 묻는 질문 5개와 질문 입력칸을 열고 닫습니다">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.4"/><path d="M12 17.2h.01"/></svg>
@@ -760,6 +771,7 @@
       <div class="mh-tabs" id="mhTabs" role="tablist" aria-label="보유 관리 화면">
         <button type="button" role="tab" id="mtabHold" data-mtab="hold" class="on" aria-selected="true" aria-controls="mhPane" title="내가 실제로 보유한 종목을 등록하면 매일 장마감 기준으로 손절가·청산 기준·오늘 판단을 계산합니다 — 주문 기능은 없습니다"><span aria-hidden="true">💼</span>내 실전 보유 관리<em id="mhTabN">0</em></button>
         <button type="button" role="tab" id="mtabPaper" data-mtab="paper" aria-selected="false" aria-controls="ptPane" title="가상 시드로 실제 종가를 따라 매매를 연습합니다 — 실제 주문이 아닙니다"><span aria-hidden="true">🧪</span>모의투자</button>
+        <button type="button" role="tab" id="mtabRoom" data-mtab="room" aria-selected="false" aria-controls="hqPane" title="회의실(가상사옥) 지갑과 연결해 검색기의 실제 종가로 매수·매도합니다 — 현금은 회의실과 같은 지갑(기본 $10,000), 매도 실현손익은 회의실 실시간 순위·직급·창업 자금에 반영됩니다"><span aria-hidden="true">🏢</span><span class="mtt-lo">회의실 가상투자</span><span class="mtt-sh">회의실</span></button>
         <span class="mh-tabnote" id="mhTabNote">실전 기록 · 자동 진단</span>
       </div>
 
@@ -874,6 +886,53 @@
       </div>
       </div>
     </section>
+
+      <!-- 🏢 회의실 가상투자 — 회의실 지갑(ckq.hq.wallet.v1 · Supabase hq_wallets)과 연결해 실제 종가로 매매 -->
+      <div class="hq-pane" id="hqPane" role="tabpanel" aria-labelledby="mtabRoom" hidden>
+        <div class="hq-top">
+          <div class="hq-wallet">
+            <span class="hqw-t">🏢 회의실 지갑</span>
+            <input id="hqName" type="text" list="hqNameList" maxlength="14" placeholder="닉네임 (예: 박지훈 회장)" autocomplete="off" spellcheck="false" aria-label="회의실 닉네임">
+            <datalist id="hqNameList"></datalist>
+            <button type="button" id="hqLink" title="이 브라우저의 회의실 지갑(ckq.hq.wallet.v1)에 연결합니다 — 없으면 회의실 서버(hq_wallets)의 잔액으로 맞춥니다">연결</button>
+            <button type="button" id="hqPull" title="회의실·서버의 최신 잔액·수익·순위를 다시 읽어 옵니다">↻ 새로고침</button>
+            <a class="hq-go" id="hqGoRoom" href="hq/" target="_blank" rel="noopener" title="가상사옥 회의실 열기">회의실 열기 →</a>
+          </div>
+          <div class="hq-state" id="hqNameState">아직 연결하지 않았습니다</div>
+          <div class="hq-rank" id="hqRank"></div>
+        </div>
+        <div class="hq-sum" id="hqSum"></div>
+        <div class="hq-body">
+          <div class="hq-order">
+            <div class="hq-ord-h"><b id="hqSym">—</b><span id="hqPx">—</span></div>
+            <label class="hq-f"><span>종목</span>
+              <input id="hqOrderSym" type="text" list="hqSymList" placeholder="BTC-USD · MSFT" autocomplete="off" spellcheck="false">
+              <datalist id="hqSymList"></datalist>
+            </label>
+            <div class="hq-tabs" id="hqSide" role="group" aria-label="매수 매도">
+              <button type="button" data-side="buy" class="on">매수</button><button type="button" data-side="sell">매도</button>
+            </div>
+            <label class="hq-f"><span>수량</span>
+              <input id="hqQty" type="number" min="0" step="0.0001" value="1" inputmode="decimal">
+            </label>
+            <div class="hq-allocs" id="hqAllocs">
+              <button type="button" data-pct="0.1">10%</button><button type="button" data-pct="0.25">25%</button>
+              <button type="button" data-pct="0.5">50%</button><button type="button" data-pct="1">100%</button>
+            </div>
+            <div class="hq-est" id="hqEst">—</div>
+            <button type="button" class="hq-submit buy" id="hqSubmit">매수</button>
+            <div class="hq-msg" id="hqMsg" aria-live="polite"></div>
+          </div>
+          <div class="hq-col">
+            <div class="hq-h">보유 종목 <em id="hqHoldN">0</em></div>
+            <div class="hq-hold" id="hqHoldings"></div>
+          </div>
+          <div class="hq-col">
+            <div class="hq-h">체결 내역 <em id="hqFillN">0</em></div>
+            <div class="hq-fills" id="hqFills"></div>
+          </div>
+        </div>
+      </div>
 
     <section class="lower">
       <div class="card">

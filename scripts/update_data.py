@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """미국주식 차트분석기 데이터 갱신 스크립트 (v3 — 5년 백테스트 + 워밍업 + 거시지표 + 펀더멘털).
 
-Yahoo Finance 에서 top150.json 에 정의된 152종목(시총 1~150위 + NKE, QQQ)의
+Yahoo Finance 에서 top150.json 에 정의된 152종목(시총 1~150위 + NKE, QQQ)과
+가상화폐 BTC-USD(비트코인), 원/달러 환율(KRW=X)의
 10년 일봉을 내려받아 그중 최근 KEEP_BARS(1,505)봉만 남기고,
 거시 지표(^VIX, ^TNX), 종목별 펀더멘털(quoteSummary)과 함께
 다음 실적 발표일(calendarEvents.earnings.earningsDate)까지 모아
@@ -13,7 +14,11 @@ scripts/data.js 를 다시 생성한다.
 
   window.MARKET = {asOf, updatedAt, dates[], tickers[], series{}, fundamentals{}, fearGreed{}, macro{}}
     updatedAt    : 데이터를 확인해 기록한 한국시간 'YYYY-MM-DD HH:MM' (휴장일 포함 매 실행 갱신)
-    series       : 종목 152 + ^VIX + ^TNX + DXY  (off,o,h,l,c,v — 거래일 캘린더 정렬)
+    series       : 종목 152 + BTC-USD + ^VIX + ^TNX + DXY + KRW  (off,o,h,l,c,v — 거래일 캘린더 정렬)
+                   ※ 거래일 캘린더는 **미국주식만**으로 만든다 — BTC는 주말에도 거래되므로 캘린더에 넣으면
+                     5년 창이 1,505 거래일이 아니라 1,505 '달력일'로 줄고 모든 종목에 주말 가짜봉이 생긴다.
+                     BTC-USD 는 같은 주식 거래일 캘린더에 정렬하고 주말 값은 직전값으로 이어 붙인다.
+                   ※ KRW = 원/달러(USD/KRW) 종가 — 상단 거시지표·시세 바의 '💱 원/달러' 칩이 쓴다.
     fundamentals : {asOf, fetchedAt, tickers{t:{...}}}   # t.earningsDate = 다음 실적 발표일 YYYY-MM-DD (없으면 생략)
     fearGreed    : CNN 공포·탐욕 지수 {score, rating, previousClose, previous1Week,
                    previous1Month, previous1Year, timestamp, fetchedAt, source}
@@ -142,6 +147,7 @@ KO = {
  'SBUX':('스타벅스','Consumer Discretionary'),'MRVL':('마벨 테크놀로지','Semiconductors'),
  'SCCO':('서던 코퍼','Materials'),'PH':('파커하니핀','Industrials'),'CME':('CME 그룹','Financials'),
  'NKE':('나이키','Consumer Discretionary'),'QQQ':('QQQ (나스닥100 ETF)','ETF'),
+ 'BTC-USD':('비트코인','Crypto'),
  # 시총 101~150위 — 스윙형(Top 150) 유니버스에서만 쓰는 구간
  'STX':('시게이트','Technology Hardware'),'BKNG':('부킹홀딩스','Consumer Discretionary'),
  'COF':('캐피털원','Financials'),'NEM':('뉴몬트','Materials'),'SO':('서던 컴퍼니','Utilities'),
@@ -173,14 +179,21 @@ SECTOR_KO = {
  'Consumer Staples':'필수소비재','Health Care':'헬스케어','Financials':'금융',
  'Industrials':'산업재','Energy':'에너지','Materials':'소재','Utilities':'유틸리티',
  'Real Estate':'부동산','Technology Hardware':'하드웨어','ETF':'ETF',
+ 'Crypto':'가상화폐',
 }
 EXTRA = ('NKE', 'QQQ')
+# 가상화폐 — 미국주식 시총 유니버스(Top 100/150)에는 넣지 않는다(meta.kind='crypto' 로 구분).
+#   차트·백테스트·회의실 가상투자 매매는 되지만, 전략 유니버스 평균·계좌 시뮬레이션 집계에서는 빠진다.
+CRYPTO = ('BTC-USD',)
+# 원/달러 환율 — 시계열 series['KRW'] 로 담아 상단 시세 바에 표시한다.
+KRW_SYMBOL = 'KRW=X'
+KRW_KEY = 'KRW'
 
 
 def ticker_list():
     base = json.load(open(TOP150, encoding='utf-8'))
     tickers = ['GOOGL' if d['ticker'] == 'GOOG' else d['ticker'] for d in base]
-    for extra in EXTRA:
+    for extra in EXTRA + CRYPTO:
         if extra not in tickers:
             tickers.append(extra)
     return base, tickers
@@ -806,9 +819,12 @@ def build_payload(base, tickers, charts_ok, prev, fg=None):
             except Exception as e:
                 print('index parse fail %s: %s' % (t, e))
 
-    # 거래일 캘린더 = 종목 152개의 합집합 (지수의 별도 휴장일은 캘린더에서 제외)
+    # 거래일 캘린더 = 종목 152개의 합집합 (지수·환율·가상화폐의 별도 휴장일은 캘린더에서 제외)
+    #   BTC-USD 는 주말에도 거래되므로 캘린더에 넣으면 5년 창이 달력일 기준으로 줄어든다 — 반드시 제외.
     alld = set()
     for t in tickers:
+        if t in CRYPTO:
+            continue
         if t in per:
             alld.update(per[t].keys())
     if not alld:
@@ -859,6 +875,16 @@ def build_payload(base, tickers, charts_ok, prev, fg=None):
         if s:
             series[DXY_KEY] = s
 
+    # 원/달러 환율(KRW) — Yahoo KRW=X · 상단 시세 바의 '💱 원/달러' 칩
+    if KRW_SYMBOL in per:
+        s = build_series(dates, per[KRW_SYMBOL], fill_forward=True)
+        if s:
+            series[KRW_KEY] = s
+    elif prev and KRW_KEY in (prev.get('series') or {}):
+        s = carry_series(prev, KRW_KEY, dates)
+        if s:
+            series[KRW_KEY] = s
+
     # 펀더멘털 (실패분은 None → UI 에서 —)
     funds = load_fundamentals(tickers)
     ok_f = sum(1 for v in funds.values() if v)
@@ -908,6 +934,14 @@ def build_payload(base, tickers, charts_ok, prev, fg=None):
         fmc = (slim_funds.get(t) or {}).get('marketCap')
         meta_list.append({'t': t, 'n': nm.strip(), 'nk': ko, 'r': None, 'mc': fmc,
                           'fav': 1, 's': sec, 'sk': SECTOR_KO.get(sec, sec)})
+    # 가상화폐 — 시총 순위(r) 없음 + kind='crypto' 로 전략 유니버스에서 제외
+    for t in CRYPTO:
+        if t not in series:
+            continue
+        ko, sec = KO.get(t, (t, 'Crypto'))
+        fmc = (slim_funds.get(t) or {}).get('marketCap')
+        meta_list.append({'t': t, 'n': ko, 'nk': ko, 'r': None, 'mc': fmc, 'fav': 0,
+                          's': sec, 'sk': SECTOR_KO.get(sec, sec), 'kind': 'crypto'})
 
     payload = {
         'asOf': dates[-1], 'updatedAt': kst_now_str(), 'dates': dates, 'tickers': meta_list, 'series': series,
@@ -990,7 +1024,7 @@ def main():
             fg.get('previous1Week'), fg.get('previous1Month'), fg.get('previous1Year')), flush=True)
     else:
         print('WARN fear&greed fetch failed: %s' % fg_err, flush=True)
-    res = download_charts(list(tickers) + list(INDICES) + [DXY_SYMBOL])
+    res = download_charts(list(tickers) + list(INDICES) + [DXY_SYMBOL, KRW_SYMBOL])
     bad = {k: v for k, v in res.items() if v != 'ok'}
     if bad:
         print('WARN: chart fetch failed for', bad, flush=True)
@@ -998,7 +1032,7 @@ def main():
     if len(charts_ok) < len(tickers) * 0.95:
         print('ERROR only %d/%d tickers fetched - keeping existing data.js' % (len(charts_ok), len(tickers)))
         return 2
-    charts_all = [t for t in list(tickers) + list(INDICES) + [DXY_SYMBOL] if res.get(t) == 'ok']
+    charts_all = [t for t in list(tickers) + list(INDICES) + [DXY_SYMBOL, KRW_SYMBOL] if res.get(t) == 'ok']
 
     payload, err = build_payload(base, tickers, charts_all, prev, fg)
     if err:

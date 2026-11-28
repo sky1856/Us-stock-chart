@@ -47,7 +47,10 @@ scripts/ui.css  scripts/engine.js  scripts/ui.js  scripts/edufig.js ─┘
   inUniv(x, mode) = x.r == null || x.r <= UNIV_MAX_RANK[mode]
   ```
   스캐너(`scanRows`)·상태 카운트(`scanCounts`)·프리셋(`presetData`,`wCounts`,`vcpCounts`,`divCounts`,`bkCounts`,`triCounts`,`win70Counts`,`mom6Counts`)·백테스트 평균(`computeUniNow`, `startUniJob`)·자동 선택(`topScoreT`)이 모두 이 함수를 거친다.
-- **검색(전역 검색·관심종목 추가)은 152종목 전체**를 대상으로 한다 — 차트 열람 자체는 유니버스와 무관.
+- **검색(전역 검색·관심종목 추가)은 전체 종목**을 대상으로 한다 — 차트 열람 자체는 유니버스와 무관.
+- **🪙 가상화폐(BTC-USD)는 유니버스에 들어가지 않는다**(2026-11-29) — `meta.kind='crypto'` 이고 `inUniv()` 가 먼저 걸러낸다.
+  시총 순위(`r`)가 없어서 그냥 두면 `r == null` 규칙으로 Top 100/150 평균·계좌 시뮬레이션에 섞인다. 차트·백테스트·회의실 가상투자는 별도
+  카테고리(좌측 `#assetTabs` → `state.asset='crypto'`, `cryptoList()`)에서 그대로 동작한다.
 
 ### 1-1. 제목·부제·카운트 연동 (본문-제목 일치 원칙)
 
@@ -281,6 +284,10 @@ scripts/ui.css  scripts/engine.js  scripts/ui.js  scripts/edufig.js ─┘
 - 휴장일: 값이 같으면 `NOCHANGE`(updatedAt만 기록).
 - 수집 실패: `exit 2` → 기존 `data.js` 유지(화면 깨지지 않음).
 - 시계열: 종목별 `off`(상장 전 오프셋) + `fill_forward` — 신규 상장(SNDK 등)도 캘린더에 정렬되고, 기간을 못 채운 종목은 유니버스 평균에서 제외된다.
+- **가상화폐·환율(2026-11-29)**: `update_data.py` 가 `BTC-USD`(비트코인)와 `KRW=X`(원/달러)를 함께 받아 `series['BTC-USD']`·`series['KRW']` 로 담는다.
+  · 거래일 캘린더는 **미국주식만**으로 만든다 — BTC 는 주말에도 거래되므로 캘린더에 넣으면 5년 창이 1,505 '거래일'이 아니라 1,505 '달력일'(약 4.1년)로 줄고
+    모든 종목에 주말 가짜봉이 생긴다. BTC 는 같은 주식 거래일 캘린더에 정렬하고 주말 값은 직전값으로 이어 붙인다(현재 1,505봉 전부 실제 봉).
+  · `KRW` 는 상단 거시지표 바의 `#mchipKrw`(`💱 원/달러 1,344원 (+0.1%)`)가 읽는다. 둘 다 수집 실패 시 기존 `data.js` 값을 이어 쓴다(`carry_series`).
 
 ## 8. 불변 규칙 (검수 체크리스트)
 
@@ -496,3 +503,50 @@ scripts/ui.css  scripts/engine.js  scripts/ui.js  scripts/edufig.js ─┘
 - **🛡️ 스트레스 버튼 옆 1줄 설명**(회장 요청): `악조건 버팀 시험 · 왕복 0.3% + −10% 갭하락` — 켜면 `켜짐 — …` 으로 바뀐다. 390px 에서는 버튼 아래 자기 줄로 내려간다(넘침 0).
 - **오타·문구**: `상향·전략` → 카드 독립 설명으로 교체, `리밸린싱` → `리밸런싱`.
 - **불변규칙 추가 41~46**(총 56개): 창 재사용 5Y 한정 · 캐시 키에 창·성향 · 엔진 단일 `strategyOf` · 계좌 카운터 창 내부 · 중앙값 0건 제외 · 표본외 전 창 웜업 250 · 데이터 시작 ≤2015 · 카드 전환 칩·독립 상태 · 스크롤 힌트 · 스트레스 1줄 설명.
+
+---
+
+## 10. 🏢 회의실 가상투자 · 🪙 가상화폐 · 💱 원/달러 — 2026-11-29
+
+### 10-1. `#paperCard` 3번째 탭 `🏢 회의실 가상투자`(`#hqPane`)
+
+| 항목 | 내용 |
+|---|---|
+| 탭 | `💼 내 실전 보유 관리`(`#mhPane`) \| `🧪 모의투자`(`#ptPane`) \| **`🏢 회의실 가상투자`(`#hqPane`)** — `mhTab('hold'\|'paper'\|'room')`, 마지막 탭은 `apex.myhold.v1.tab` |
+| 지갑 | 회의실과 **같은 키** `localStorage['ckq.hq.wallet.v1']`(같은 오리진이라 `/hq/` 와 공유) + Supabase `hq_wallets`(`name` PK · `balance` · `pnl` …) |
+| 분리 | 검색기 `🧪 모의투자`(`apex.paper.v1`)는 **읽지도 쓰지도 않는다** — 1바이트도 건드리지 않는다 |
+| 보유 기록 | `localStorage['ckq.hq.invest.v1']` = `{name, realized, positions{sym:{q,avg}}, fills[]}` |
+| 가격 | `A[t].close[마지막]` — 검색기가 이미 받아 둔 **실제 종가**(미국주식 + `BTC-USD`) |
+| 반영 | 매도 실현손익 → `prize` → `shopPnl()` → Supabase `pnl` / `balance` → 회의실 실시간 순위·직급·창업 자금 |
+
+**회계(회의실 코드를 고치지 않고 잔액이 정확히 맞는 방식)** — 회의실 현금식은
+`10,000 + (prize − pnlCut) − spent + bonus + cashAdj + bank.cash` (`shopCashRaw`).
+
+| 동작 | 지갑 변경 | 잔액 변화 |
+|---|---|---|
+| 매수 `q @ px` | `spent += q·px` | `−q·px` (원금만큼 현금이 줄어든다) |
+| 매도 `q @ px` | `spent −= q·평단`, `prize += (q·px − q·평단)` | `+(q·px − q·평단)` = **실현손익** |
+
+→ 보유 중에는 현금이 원금만큼 줄고, 매도하면 원금이 돌아오며 **손익만 총수익금에 더해진다**. 총 자산(현금+평가)은 화면의 `#hqSum` 이 보여준다.
+`spent` 는 회의실에서 '구매 누적'으로 표시되는 칸이라 주식 매수 원금도 그 합계에 들어간다(회의실 UI 문구는 그대로 — `hq/` 는 이 작업에서 손대지 않았다).
+`shopDelete`(캐릭터 삭제)·관리자 잔액 리셋으로 지갑이 초기화되면 `spent` 가 0 이 되어 원금이 사라지므로, 카드 상태줄이 `⚠ 회의실 지갑 초기화 감지 — 보유 원금 반영 안 됨` 을 띄운다(자동 수정은 하지 않는다).
+
+**연결 흐름**: 닉네임 입력/선택(`#hqName` + `#hqNameList` ← `hq_wallets` 상위 50) → `연결` → ①이 브라우저에 회의실 지갑이 있으면 그대로 사용
+②없으면 서버 행의 `balance`·`pnl` 로 지갑을 맞춘다(`prize = pnl`, `cashAdj = balance − 10,000 − pnl`).
+`hqPush()` 는 `balance`·`pnl` 만 UPSERT 하고 `outfits_count`·`staff_count`·`company`·`office`·`look` 은 서버 값을 다시 실어 지우지 않는다.
+다른 탭(회의실)에서 지갑이 바뀌면 `storage` 이벤트로 즉시 다시 그린다.
+
+### 10-2. 🪙 가상화폐 카테고리
+- 좌측 `#assetTabs` — `🇺🇸 미국주식`(기본) / `🪙 가상화폐`. `state.asset='crypto'` 이면 `scanRows()`·`scanCounts()` 가 `cryptoList()`(=`meta.kind==='crypto'`)를 본다.
+- 좌측 제목·부제(`#uniTitle`·`#uniSub`)도 `🪙 가상화폐 · 분석 1종목` 으로 바뀐다(`renderUnivHead`). 시총·실적 프리셋 줄은 가상화폐에서 숨긴다(`.sidebar[data-asset="crypto"] #presetTabs{display:none}`).
+- BTC-USD 메타: `{t:'BTC-USD', n:'비트코인', nk:'비트코인', r:null, s:'Crypto', sk:'가상화폐', kind:'crypto'}`.
+- 차트·이평선·일목·엘리어트·백테스트·트레이드 로그가 미국주식과 **같은 엔진**으로 동작한다(실측 6M 전략 +9.8% vs 보유 −16.1%, 거래 3건).
+
+### 10-3. 💱 원/달러 (USD/KRW)
+- `series['KRW']`(Yahoo `KRW=X`) → 상단 거시지표 바 `#mchipKrw` : `💱 원/달러 1,344원 ▲0.9원 (+0.1%)` + 66봉 스파크라인.
+- 칩 순서: VIX → US 10Y → DXY → **원/달러** → US 2Y → 10Y−2Y → FED. 모바일은 2열 그리드로 자동 흐른다(넘침 0).
+
+### 10-4. 검증 (2026-11-29)
+- 1440×900 · 390×844 로컬 `index.html`: **콘솔 에러 0 · 가로 넘침 0 · 카드 내부 넘침 0**.
+- `🪙 가상화폐` → `BTC-USD` 차트·KPI·자산곡선·트레이드 로그 렌더 확인 → `🇺🇸 미국주식` 복귀 시 `Top 100 · 102종목` 그대로.
+- `🏢 회의실 가상투자`: 서버 잔액 시드($15,420.50) → NVDA 3주 매수(현금 $14,969.03) → 잔액·`spent` 일치, `apex.paper.v1` 은 `null` 유지.
