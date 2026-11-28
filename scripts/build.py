@@ -28,9 +28,9 @@ def updated_stamp(data_js):
 
 def main():
     tpl = read('template.html')
-    for token, fname in (('__CSS__', 'ui.css'), ('__DATA__', 'data.js'),
-                         ('__ENGINE__', 'engine.js'), ('__EDUFIG__', 'edufig.js'),
-                         ('__UI__', 'ui.js')):
+    for token, fname in (('__CSS__', 'ui.css'), ('__DATA__', 'data.js'), ('__WFDATA__', 'wfdata.js'),
+                         ('__ENGINE__', 'engine.js'), ('__ACCT__', 'acct.js'),
+                         ('__EDUFIG__', 'edufig.js'), ('__UI__', 'ui.js')):
         body = read(fname)
         if '</script>' in body:
             print('ERROR: %s contains </script>' % fname)
@@ -46,6 +46,14 @@ def main():
     with open(OUT, 'w', encoding='utf-8') as f:
         f.write(tpl)
     print('wrote %s (%.2f MB)' % (OUT, len(tpl.encode()) / 1e6))
+    # 문서·화면·상수 드리프트 자동 대조 (실패하면 빌드 실패로 본다)
+    import subprocess
+    chk = os.path.join(HERE, 'check_invariants.py')
+    if os.path.exists(chk):
+        r = subprocess.run([sys.executable, chk, '--quiet'])
+        if r.returncode != 0:
+            print('ERROR: check_invariants 실패 — 배포하지 말 것')
+            return 1
     return 0
 
 

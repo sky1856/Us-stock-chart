@@ -2,3 +2,6 @@ scripts/raw/
 scripts/rawfund/
 __pycache__/
 *.pyc
+scripts/wf_src.js
+scripts/wf_harness.html
+scripts/wf_dbg.html

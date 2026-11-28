@@ -4552,6 +4552,19 @@ html[data-theme="light"] .boot-tip b{ color:#0E7490 }
 .ac-bench .ab-d b{ font-weight:700 }
 .ac-bench .ab-d b.pos{ color:#34D399 }
 .ac-bench .ab-d b.neg{ color:#FB7185 }
+/* 🛡️ 스트레스 토글 · 가정 1줄 · 스트레스 배지 (2026-11-28) */
+.ac-stress{ display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:800; letter-spacing:-.01em;
+  color:var(--txt3); border:1px solid var(--line); border-radius:99px; padding:3px 9px; background:var(--btn); transition:.12s; white-space:nowrap }
+.ac-stress:hover{ color:var(--txt); border-color:rgba(255,255,255,.26) }
+.ac-stress.on{ color:#FCD34D; border-color:rgba(245,158,11,.5); background:rgba(245,158,11,.12) }
+.ac-bench .ab-mode{ font-size:10px; font-weight:800; color:#FCD34D; border:1px solid rgba(245,158,11,.45); background:rgba(245,158,11,.12); border-radius:99px; padding:1px 7px }
+.ac-assume{ margin:6px 0 0; font-size:10.5px; line-height:1.65; color:var(--txt4); word-break:keep-all; overflow-wrap:anywhere }
+.ac-assume b{ color:var(--txt3); font-weight:700 }
+html[data-theme="light"] .ac-assume{ color:#64748B }
+html[data-theme="light"] .ac-assume b{ color:#334155 }
+html[data-theme="light"] .ac-stress{ color:#475569; background:rgba(15,23,42,.03); border-color:rgba(15,23,42,.12) }
+html[data-theme="light"] .ac-stress.on{ color:#B45309; border-color:rgba(180,83,9,.4); background:rgba(245,158,11,.14) }
+html[data-theme="light"] .ac-bench .ab-mode{ color:#B45309 }
 .ac-open{ display:inline-flex; align-items:center; gap:5px; flex:0 0 auto; margin-left:auto;
   height:24px; padding:0 9px; border-radius:8px; cursor:pointer; font-family:inherit;
   font-size:10.5px; font-weight:700; letter-spacing:-.01em; color:var(--txt3);
@@ -4817,8 +4830,16 @@ html[data-theme="light"] .mhf-more span{color:#475569}
 .mhb-badge.screen{color:#C4B5FD}
 .mhb-badge.pend{color:#FCD34D}
 .mh-badge.pend{color:#FCD34D;border-color:rgba(245,158,11,.40);background:rgba(245,158,11,.11)}
-.mh-reco{font-size:10.5px;font-weight:700;color:#7DD3FC;border:1px dashed rgba(56,189,248,.5);border-radius:99px;padding:2px 8px;
-  white-space:nowrap;background:rgba(56,189,248,.10);transition:.12s;line-height:1.5;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.mh-reco{font-size:10.5px;font-weight:700;color:#7DD3FC;border:1px dashed rgba(56,189,248,.5);border-radius:12px;padding:3px 9px;
+  white-space:normal;overflow-wrap:anywhere;text-align:left;background:rgba(56,189,248,.10);transition:.12s;line-height:1.5;max-width:100%;display:inline-block}
+.mh-reco::after{content:' ›';font-weight:800;opacity:.85}
+.mh-samp{font-style:normal;font-size:10px;font-weight:700;color:var(--txt4);border:1px solid var(--line);border-radius:99px;padding:1px 6px;white-space:nowrap;margin-left:2px}
+.mh-samp.short{color:#FCD34D;border-color:rgba(245,158,11,.42);background:rgba(245,158,11,.10)}
+html[data-theme="light"] .mh-samp{color:#64748B}
+html[data-theme="light"] .mh-samp.short{color:#B45309;border-color:rgba(180,83,9,.32);background:rgba(245,158,11,.12)}
+.mh-speed{display:block;font-size:10.5px;color:var(--txt4);line-height:1.5;margin-left:auto;max-width:52%}
+.mh-speed b{color:var(--txt3);font-weight:700}
+@media (max-width:760px){ .mh-speed{max-width:100%;margin-left:0;font-size:10px} }
 .mh-reco:hover{background:rgba(56,189,248,.2);color:#E0F2FE;border-style:solid}
 .mf select{height:32px;border:1px solid var(--line);border-radius:8px;background:#0B1018;padding:0 6px;font-size:12.5px;color:var(--txt);min-width:0;cursor:pointer}
 .mf select:focus{outline:none;border-color:rgba(56,189,248,.5);box-shadow:0 0 0 3px rgba(56,189,248,.09)}
@@ -4861,4 +4882,69 @@ html[data-theme="light"] .mf select{background:#FFFFFF;border-color:rgba(15,23,4
   .msearch-slot .search-pop{max-height:min(60vh, 380px)}
   html[data-theme="light"] .msearch-slot .search input{background:#FFFFFF;border-color:rgba(15,23,42,.14)}
   html[data-theme="light"] .msearch-slot .search input:focus{background:#FFFFFF;border-color:rgba(14,116,144,.45)}
+}
+
+/* ============================================================
+   🔬 표본외 워크포워드 · 연도별 성적표 (2026-11-28)
+   ============================================================ */
+.wf-card{ margin-top:14px; padding:0; overflow:hidden }
+.wf-head{ display:flex; align-items:center; gap:8px 12px; flex-wrap:wrap; padding:13px 16px 11px; border-bottom:1px solid var(--line2) }
+.wf-t{ display:flex; flex-direction:column; gap:2px; min-width:0; flex:1 1 auto }
+.wf-t b{ font-size:13.5px; letter-spacing:-.01em; color:var(--txt); display:flex; align-items:center; gap:6px }
+.wf-sub{ font-size:10.5px; color:var(--txt4); white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.wf-slot{ display:inline-flex; gap:4px; padding:3px; border:1px solid var(--line); border-radius:9px; background:rgba(255,255,255,.02) }
+.wf-slot button{ font-size:10.5px; font-weight:700; color:var(--txt3); border:1px solid transparent; border-radius:6px; padding:3px 8px; background:none; white-space:nowrap; transition:.12s }
+.wf-slot button:hover{ color:var(--txt); background:rgba(255,255,255,.05) }
+.wf-slot button.on{ color:#7DD3FC; border-color:rgba(56,189,248,.35); background:rgba(56,189,248,.12) }
+.wf-open{ font-size:10.5px; font-weight:700; color:var(--txt3); border:1px solid var(--line); border-radius:99px; padding:4px 10px; background:var(--btn); white-space:nowrap }
+.wf-open:hover{ color:var(--txt); border-color:rgba(255,255,255,.24) }
+.wf-blocks{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; padding:11px 16px 4px }
+.wf-bl{ border:1px solid var(--line2); border-radius:10px; padding:9px 11px; background:rgba(255,255,255,.015); min-width:0 }
+.wf-bl.oos{ border-color:rgba(56,189,248,.30); background:rgba(56,189,248,.06) }
+.wf-bl.crash{ border-color:rgba(251,113,133,.30); background:rgba(251,113,133,.06) }
+.wf-bl.now{ border-color:rgba(52,211,153,.26); background:rgba(52,211,153,.05) }
+.wf-bl-h{ font-size:10.5px; font-weight:800; color:var(--txt2); display:flex; flex-direction:column; gap:1px; line-height:1.35 }
+.wf-bl-h i{ font-style:normal; font-weight:600; color:var(--txt4); font-size:9.5px }
+.wf-bl-v{ display:flex; align-items:baseline; gap:5px; margin-top:4px }
+.wf-bl-v b{ font-size:16px; font-weight:800; letter-spacing:-.02em }
+.wf-bl-v span{ font-size:9.5px; color:var(--txt4) }
+.wf-bl-r{ display:flex; gap:9px; flex-wrap:wrap; font-size:10px; color:var(--txt4); margin-top:2px }
+.wf-bl-r b{ font-weight:800 }
+.wf-body{ padding:2px 16px 12px }
+.wf-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; margin-top:8px }
+.wf-tb{ width:100%; border-collapse:collapse; font-size:11px; font-variant-numeric:tabular-nums; min-width:430px }
+.wf-tb th{ font-size:9.5px; font-weight:700; color:var(--txt4); text-align:right; padding:5px 6px; border-bottom:1px solid var(--line); white-space:nowrap }
+.wf-tb th:first-child{ text-align:left }
+.wf-tb th:last-child,.wf-tb td:last-child{ padding-right:9px }
+.wf-tb td{ text-align:right; padding:5px 6px; border-bottom:1px solid var(--line2); color:var(--txt3); white-space:nowrap }
+.wf-tb td:first-child{ text-align:left; font-weight:800; color:var(--txt2) }
+.wf-tb td b{ font-weight:800 }
+.wf-tb td.neg{ color:#FB7185 }
+.wf-tb .pos{ color:#34D399 }
+.wf-tb .neg{ color:#FB7185 }
+.wf-tb tr.crash td{ background:rgba(251,113,133,.07) }
+.wf-tb tr.crash td:first-child{ color:#FDA4AF }
+.wf-tb .wf-y i{ font-style:normal; font-size:9px; font-weight:700; color:#FDA4AF; border:1px solid rgba(251,113,133,.38); border-radius:99px; padding:0 5px; margin-left:5px }
+.wf-foot{ margin:9px 0 0; font-size:10px; line-height:1.7; color:var(--txt4); word-break:keep-all; overflow-wrap:anywhere }
+.wf-foot b{ color:var(--txt3); font-weight:700 }
+html[data-theme="light"] .wf-slot{ background:rgba(15,23,42,.02) }
+html[data-theme="light"] .wf-slot button.on{ color:#0369A1; border-color:rgba(0,114,173,.3); background:rgba(0,114,173,.1) }
+html[data-theme="light"] .wf-open{ color:#475569; background:rgba(15,23,42,.03); border-color:rgba(15,23,42,.12) }
+html[data-theme="light"] .wf-bl{ background:rgba(15,23,42,.02) }
+html[data-theme="light"] .wf-bl-h{ color:#334155 }
+html[data-theme="light"] .wf-bl.oos{ background:rgba(0,114,173,.06) }
+html[data-theme="light"] .wf-bl.crash{ background:rgba(190,18,60,.05) }
+html[data-theme="light"] .wf-bl.now{ background:rgba(4,120,87,.05) }
+html[data-theme="light"] .wf-foot{ color:#64748B }
+html[data-theme="light"] .wf-tb td{ color:#475569; border-color:rgba(15,23,42,.08) }
+html[data-theme="light"] .wf-tb td:first-child{ color:#1E293B }
+@media (max-width:760px){
+  .wf-head{ padding:11px 13px 9px }
+  .wf-blocks{ grid-template-columns:1fr; padding:9px 13px 2px; gap:6px }
+  .wf-bl{ padding:8px 10px }
+  .wf-body{ padding:0 13px 11px }
+  .wf-t{ flex:1 1 100% }
+  .wf-sub{ white-space:normal }
+  .wf-slot button{ padding:3px 6px; font-size:10px }
+  .wf-open{ padding:3px 8px }
 }
