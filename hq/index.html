@@ -6642,6 +6642,9 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
   (function shopBoot() {
     var first = shopInit();
     paintShop();
+    lbLoad();
+    lbPush(true);
+    setInterval(function () { if (!document.hidden) { lbLoad(); lbPush(false); } }, 15000);
     if (first) {
       setTimeout(function () {
         hqToast('🎁 첫 입장 기념 — 지갑에 ' + hqUSD(HQ_BASE) + ' 지급! 상점에서 의상을 구매해 보세요', 'ok');
