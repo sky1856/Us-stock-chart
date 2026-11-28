@@ -346,6 +346,28 @@ body:not(.mode3d) .chat{padding-bottom:14px}
 .vst-map{flex:0 0 auto; font-size:9px; font-weight:800; color:#8FDEFB; text-decoration:none; white-space:nowrap;
   border:1px solid rgba(99,200,255,.34); border-radius:8px; padding:3px 7px; background:rgba(99,200,255,.09)}
 .vst-map:hover{color:#03121F; background:linear-gradient(180deg,#BFF0FF,#54BCEE); border-color:rgba(200,240,255,.85)}
+/* ── 🗺️ 지도 보기 팝업 — 회의실을 떠나지 않고 보는 부산 미니맵 ───────────────
+   map.naver.com 은 X-Frame-Options 로 iframe 이 막히므로 Google Maps embed(좌표)를 띄우고,
+   외부로 나갈 때만 네이버 지도를 새 창으로 연다. */
+#mapModal{z-index:130}
+.map-sheet{width:min(520px,100%)}
+.map-frame{position:relative; width:100%; aspect-ratio:16/11; border-radius:12px; overflow:hidden;
+  background:linear-gradient(180deg,#0b1a2c,#071220); border:1px solid rgba(146,190,255,.26)}
+.map-frame iframe{width:100%; height:100%; border:0; display:block; background:#0b1a2c}
+.map-frame::after{content:""; position:absolute; inset:0; pointer-events:none; border-radius:12px;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
+.map-addr{display:flex; align-items:center; gap:7px; padding:8px 10px; border-radius:10px;
+  background:rgba(246,205,122,.08); border:1px solid rgba(246,205,122,.3)}
+.map-addr span{flex:0 0 auto; font-size:12px}
+.map-addr b{font-size:11.5px; color:#FFE7B6; line-height:1.35; word-break:keep-all}
+.map-acts{display:flex; gap:6px; flex-wrap:wrap}
+.map-a{flex:1 1 0; min-width:132px; text-align:center; font:inherit; font-size:10.5px; font-weight:800;
+  text-decoration:none; border-radius:10px; padding:9px 10px; cursor:pointer; border:1px solid transparent}
+.map-a.naver{color:#03121F; background:linear-gradient(180deg,#B8F0C8,#4FCB86); border-color:rgba(180,240,200,.8)}
+.map-a.close{color:#DCEBFA; background:rgba(255,255,255,.06); border-color:rgba(146,190,255,.3)}
+.map-a:hover{filter:brightness(1.06)}
+.map-note{margin:0; font-size:9px; color:#8FA6C0; line-height:1.45}
+@media (max-width:560px){ .map-acts{flex-direction:column} .map-frame{aspect-ratio:4/3} }
 .vst-scout{padding:9px 12px 0; display:flex; flex-wrap:wrap; align-items:center; gap:5px; font-size:9.5px; font-weight:800; color:#FFE7B6}
 .vst-scout[hidden]{display:none !important}
 .vst-scout em{font-style:normal; font-size:8px; font-weight:600; color:#8FA6C0; margin-left:2px}
@@ -2124,7 +2146,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
   transform:translate(calc(-50% + var(--dx,0px)),-50%) rotateZ(var(--rz,0deg));
   transform-origin:50% 66%;
   pointer-events:auto; cursor:pointer; -webkit-tap-highlight-color:transparent}
-.tplate.boss{width:var(--pw,6.4%); min-width:64px; max-width:118px}
+.tplate.boss{width:var(--pw,6.4%); min-width:64px; max-width:132px}
 .tpi{position:absolute; inset:0; width:100%; height:100%; display:block; object-fit:fill;
   transform:scaleX(var(--flip,1));
   filter:drop-shadow(0 3px 4px rgba(0,0,0,.6)) drop-shadow(0 9px 14px rgba(0,0,0,.45));
@@ -2138,10 +2160,23 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
   font-size:max(8.2px,.62vw); font-weight:800; letter-spacing:.03em; line-height:1;
   color:#F2F6FB; text-shadow:0 1px 2px rgba(0,0,0,.95), 0 0 7px rgba(190,215,240,.55), 0 0 14px rgba(0,0,0,.6);
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.tplate .tpl{z-index:2}   /* 발언 글로우(::after) 위에 이름·배지가 또렷하게 남도록 */
 .tplate.boss .tpl{font-size:max(9px,.70vw); color:#FFE9BE;
   text-shadow:0 1px 2px rgba(0,0,0,.96), 0 0 9px rgba(255,206,120,.7), 0 0 16px rgba(0,0,0,.6)}
 .tplate[data-tp="choko"] .tpl{color:#FFDCE8;
   text-shadow:0 1px 2px rgba(0,0,0,.95), 0 0 8px rgba(255,150,185,.62), 0 0 14px rgba(0,0,0,.6)}
+/* ── 직급 배지 — 이름 옆에는 이름이 아니라 직급만 작은 금장 배지로 붙는다 ────────
+   상석 명패(.tpb) · 3D 말풍선 카드(.cbdg) — '박지훈 회장'처럼 이름 뒤에 직급을
+   다시 붙이지 않고, 이름은 순수 이름으로 남긴다. */
+.tpb{font-style:normal; font-size:max(7.2px,.5vw); font-weight:900; letter-spacing:.02em; line-height:1;
+  color:#FFE9BE; background:linear-gradient(180deg,rgba(34,22,6,.96),rgba(12,8,2,.98));
+  border:1px solid rgba(255,214,140,.95);
+  border-radius:999px; padding:.3em .54em .34em; margin-left:.5em; white-space:nowrap;
+  text-shadow:none;
+  box-shadow:0 1px 3px rgba(0,0,0,.85), 0 0 7px rgba(246,205,122,.4)}
+.cbdg{font-style:normal; font-size:7.6px; font-weight:900; letter-spacing:-.01em; line-height:1.4;
+  color:#221603; background:linear-gradient(180deg,#FFEDC6,#E8B45A); border-radius:999px; padding:0 4px;
+  align-self:center; flex:0 0 auto}
 /* ── 발언 중 — 명패 테두리(네온 림)가 한 단계 밝게 점등 ────────────────── */
 .tplate::after{content:""; position:absolute; inset:2% 2.4%; border-radius:2px; pointer-events:none;
   opacity:0; transition:opacity .3s ease; box-shadow:none;
@@ -2810,7 +2845,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
         <div class="gr-card">
           <div class="gr-prev" id="grPreview"></div>
           <div class="gr-who">
-            <b data-gr="name">박지훈 회장</b>
+            <b data-gr="name">박지훈</b>
             <span>대회의실 상석 캐릭터 · 이름은 입장 이름으로 저장됩니다</span>
             <span class="gr-wallet">🪙 내 지갑 <b data-wallet>—</b></span>
           </div>
@@ -3118,6 +3153,20 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     alba3:   { name: '알바 3호', role: '스윙 실전', accent: '#C7F08A', img: 'alba3' }
   };
 
+  /* ── 이름 표기 규칙 — 이름은 순수 이름(박지훈)만, 직급(회장)은 배지로만 ─────
+     · 회장님 지시: "이름만 남겨야 · 그럼 회의실도 수정"
+     · 예전에 저장된 '박지훈 회장' 표기(hq_wallets·hq_messages)는 '박지훈'으로 읽어
+       같은 사람으로 취급한다 — 잔액·수익·발언이 끊기지 않게. */
+  var MY_NAME = '박지훈', MY_ROLE = '회장';
+  var LEGACY_ME_RE = /^박지훈\s*회장$/;
+  function normName(n) {
+    var s = String(n == null ? '' : n).replace(/\s+/g, ' ').trim();
+    return LEGACY_ME_RE.test(s) ? MY_NAME : s;
+  }
+  function isMeName(n) {
+    return /^박지훈(\s*회장)?$/.test(String(n == null ? '' : n).replace(/\s+/g, ' ').trim());
+  }
+
   /* ── 오늘(11/28) 실제 작업·회의 타임라인 ──────────────────────────── */
   /* ── 첫 화면 시드 — '제1회 전 직원 회의 시작' 수준만 남긴다 ──────────────
      · 🗑️ 초기화를 누르면 이 시드로 정확히 되돌아간다(호출할 때마다 시각 새로).
@@ -3125,7 +3174,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
   function seedMsgs() {
     var t = nowLabel();
     return [
-      { type:'divider', t:t, title:'제1회 전 직원 전체 회의', sub:'대회의실 · 의장 박지훈 회장님 · 사회 CEO 초코' },
+      { type:'divider', t:t, title:'제1회 전 직원 전체 회의', sub:'대회의실 · 의장 박지훈 · 사회 CEO 초코' },
       { a:'choko', t:t, tag:'general', x:'제1회 전 직원 전체 회의 시작합니다! 👏\n아래에 한마디 남기시면 각자 답장합니다.' },
       { a:'me', t:t, tag:'general', x:'좋습니다. 그럼 시작하죠. 초코, 안건부터 진행해 주세요.' }
     ];
@@ -3527,7 +3576,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
       var m = all[i];
       if (!m || m.type) continue;
       var p = PEOPLE[m.a];
-      var who = m.a === 'me' ? '박지훈 회장' : (p ? p.name : '');
+      var who = m.a === 'me' ? MY_NAME : (p ? p.name : '');
       if (!who || !m.x) continue;
       out.unshift({ sender: who, text: String(m.x).slice(0, 220) });
     }
@@ -4348,11 +4397,13 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
      · 내 지갑을 UPSERT(merge-duplicates)하고, TOP 10을 읽어 전광판·랭킹 목록에 그린다.
      · 잔액 수정 권한은 관리자 UI 에만 있고, 여기서는 읽기/내 행 쓰기만 한다. */
   var LB_TABLE = 'hq_wallets';
-  var LB = { rows: [], busy: false, at: 0, pushedAt: 0, fails: 0 };
+  var LB = { rows: [], busy: false, at: 0, pushedAt: 0, fails: 0, ready: false, readyDone: false, waiters: [] };
 
-  function lbName() { return String((typeof LIVE !== 'undefined' && LIVE.myName) || '박지훈 회장').slice(0, 14); }
+  function lbName() { return String(normName((typeof LIVE !== 'undefined' && LIVE.myName) || MY_NAME)).slice(0, 14); }
   function lbPush(force) {
     if (typeof SB_URL === 'undefined' || typeof SB_KEY === 'undefined') return;
+    /* 이름 마이그레이션 확인 전에는 새 행을 만들지 않는다 — 옛 '박지훈 회장' 행과 겹치지 않게 */
+    if (!LB.ready) { lbReady(function () { lbPush(force); }); return; }
     if (!force && Date.now() - LB.pushedAt < 20000) return;   // 20초 스로틀
     LB.pushedAt = Date.now();
     try {
@@ -4387,6 +4438,77 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
         .catch(function () { LB.fails = 1; });
     } catch (e) { /* 오프라인 */ }
   }
+  /* ── 예전 표기 '박지훈 회장' → '박지훈' 마이그레이션 (hq_wallets name PK) ──
+     · 잔액(balance)·수익(pnl)·보유 옷·회사·사무실 정보는 그대로 두고 이름만 바꾼다 — 순위·잔액이 끊기지 않는다.
+     · 이미 '박지훈' 행이 있으면 잔액·수익이 큰 값을 '박지훈' 행으로 옮겨 한 줄로 합친다.
+     · 접속할 때 한 번만 확인한다. 서버가 막아도 화면 표기는 normName 이 '박지훈'으로 맞춘다. */
+  function lbNormalizeRows(rows) {
+    var out = [], at = {};
+    (rows || []).forEach(function (r) {
+      if (!r) return;
+      var nm = normName(r.name);
+      var c = {}; for (var k in r) c[k] = r[k];
+      c.name = nm;
+      var hit = at[nm];
+      if (hit == null) { at[nm] = out.length; out.push(c); return; }
+      var h = out[hit];
+      if (hqNum(c.balance) > hqNum(h.balance)) h.balance = c.balance;
+      if (Math.abs(hqNum(c.pnl)) > Math.abs(hqNum(h.pnl))) h.pnl = c.pnl;
+      h.outfits_count = Math.max(hqNum(h.outfits_count), hqNum(c.outfits_count));
+      h.staff_count = Math.max(hqNum(h.staff_count), hqNum(c.staff_count));
+      if (!h.company && c.company) h.company = c.company;
+      if (!h.look && c.look) h.look = c.look;
+    });
+    return out;
+  }
+  function lbReady(cb) {
+    cb = cb || function () {};
+    if (typeof SB_URL === 'undefined' || LB.readyDone) { cb(); return; }
+    LB.waiters.push(cb);
+    if (LB.ready) return;                             /* 이미 확인 중 — 끝나면 같이 호출 */
+    LB.ready = true;                                  /* 접속 1회만 확인 */
+    var H = { 'Content-Type': 'application/json', apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY };
+    var fired = false;
+    var done = function (changed) {
+      if (fired) return; fired = true;
+      LB.readyDone = true;
+      if (changed) { try { lbLoad(); } catch (e) {} }
+      var q = LB.waiters.slice(); LB.waiters = [];
+      q.forEach(function (f) { try { f(); } catch (e) {} });
+    };
+    var guard = setTimeout(function () { done(false); }, 4000);
+    try {
+      fetch(SB_URL + '/rest/v1/' + LB_TABLE + '?select=name,balance,pnl&or=(name.eq.'
+        + encodeURIComponent('박지훈 회장') + ',name.eq.' + encodeURIComponent(MY_NAME) + ')', { headers: H })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (rows) {
+          rows = Array.isArray(rows) ? rows : [];
+          var old = null, cur = null;
+          rows.forEach(function (r) {
+            var n = String(r.name == null ? '' : r.name);
+            if (LEGACY_ME_RE.test(n.trim())) old = r; else if (n === MY_NAME) cur = r;
+          });
+          if (!old) { clearTimeout(guard); done(false); return null; }
+          if (!cur) {
+            /* 한 행만 있으면 이름만 바꿔 끝 — 다른 컬럼은 건드리지 않는다 */
+            return fetch(SB_URL + '/rest/v1/' + LB_TABLE + '?name=eq.' + encodeURIComponent('박지훈 회장'), {
+              method: 'PATCH', headers: Object.assign({ Prefer: 'return=minimal' }, H),
+              body: JSON.stringify({ name: MY_NAME, updated_at: new Date().toISOString() })
+            }).then(function (r2) { clearTimeout(guard); done(!!(r2 && r2.ok)); });
+          }
+          /* 둘 다 있으면 — 잔액·수익이 큰 값을 '박지훈' 행으로 옮겨 합친다(옛 행은 지우지 않는다) */
+          var keep = {};
+          if (hqNum(old.balance) > hqNum(cur.balance)) keep.balance = old.balance;
+          if (Math.abs(hqNum(old.pnl)) > Math.abs(hqNum(cur.pnl))) keep.pnl = old.pnl;
+          if (!Object.keys(keep).length) { clearTimeout(guard); done(false); return null; }
+          keep.updated_at = new Date().toISOString();
+          return fetch(SB_URL + '/rest/v1/' + LB_TABLE + '?name=eq.' + encodeURIComponent(MY_NAME), {
+            method: 'PATCH', headers: Object.assign({ Prefer: 'return=minimal' }, H), body: JSON.stringify(keep)
+          }).then(function (r3) { clearTimeout(guard); done(!!(r3 && r3.ok)); });
+        })
+        .catch(function () { clearTimeout(guard); done(false); });
+    } catch (e) { clearTimeout(guard); done(false); }
+  }
   function lbLoad() {
     if (typeof SB_URL === 'undefined' || typeof SB_KEY === 'undefined') return;
     if (LB.busy) return;
@@ -4398,7 +4520,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
       }).then(function (r) { return r.ok ? r.json() : null; })
         .then(function (rows) {
           LB.busy = false;
-          if (Array.isArray(rows)) { LB.rows = rows; LB.at = Date.now(); lbPaint(); }
+          if (Array.isArray(rows)) { LB.rows = lbNormalizeRows(rows); LB.at = Date.now(); lbPaint(); }
         }).catch(function () { LB.busy = false; });
     } catch (e) { LB.busy = false; }
   }
@@ -4974,6 +5096,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
      · 파산: 일일 정산 후 순자산(현금+예금−대출원리금) ≤ −$5,000 → 전액 청산 후 사원 · 회생 지원금 $3,000
      · 현금 = HQ_BASE + 총수익 − 구매 + 보너스 + cashAdj + bank.cash  (bank.cash = 은행과 오간 현금 누계) */
   var BANK_LOC = '부산 남구 문현금융로 30 BNK부산은행 본점';
+  var BANK_LAT = 35.14567, BANK_LNG = 129.06562;   /* BNK부산은행 본점 좌표(지도 팝업용) */
   var BANK_RUIN = -5000, BANK_RESCUE = 3000;
   var BANK_DEP_RATE = 0.01, BANK_LOAN_RATE = 0.025;
 
@@ -5085,8 +5208,8 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
   function bankMarkup() {
     return '<div class="bank-h">🏦 초코퀀트 은행 <em>대출 · 예금 · 파산 워크아웃</em></div>'
       + '<div class="bank-loc"><span>📍 초코퀀트 중앙은행 <b>부산 남구 문현금융로 30 · BNK부산은행 본점</b></span>'
-      + '<a class="bank-map" href="' + naverMap(BANK_LOC) + '" target="_blank" rel="noopener noreferrer"'
-      + ' title="네이버 지도에서 보기">🗺️ 네이버 지도</a></div>'
+      + '<a class="bank-map" href="' + naverMap(BANK_LOC) + '" data-map-office="bank" target="_blank" rel="noopener noreferrer"'
+      + ' title="회의실 안 지도 팝업으로 보기">🗺️ 지도 보기</a></div>'
       + '<div class="bank-grid">'
       + '<div class="bank-c"><span>🪙 현금(지갑)</span><b data-bk="cash">—</b><i>바로 쓸 수 있는 돈</i></div>'
       + '<div class="bank-c mid"><span>🏦 예금</span><b data-bk="dep">—</b><i>일일 정산 +1.0%</i></div>'
@@ -5447,15 +5570,71 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
 
   /* ── 🏛️ 전용 사무실 (내 회의실 배경) ─────────────────────────────── */
   var OFFICES = [
-    { k: 'default', em: '🏛️', nm: '오션뷰 대회의실', price: 0, asset: 'room', loc: '부산 해운대 마린시티 오션뷰' },
-    { k: 'garage', em: '🏚️', nm: '낡은 스타트업 단칸방', price: 0, asset: 'office-garage', gift: true, loc: '부산 문현동 골목 소호실' },
-    { k: 'sky', em: '🌇', nm: '오션뷰 스카이 라운지', price: 6000, asset: 'office-sky', loc: '부산 센텀시티 스카이타워' },
-    { k: 'wall', em: '📈', nm: '월가 트레이딩 플로어', price: 10000, asset: 'office-wall', loc: '부산 문현금융단지 BIFC' },
-    { k: 'cyber', em: '⚡', nm: '사이버 퀀트 커맨드', price: 14000, asset: 'office-cyber', loc: '부산 해운대 엘시티(LCT) 타워' },
-    { k: 'salon', em: '🏛️', nm: '프라이빗 스위스 살롱', price: 18000, asset: 'office-salon', loc: '부산 광안리 오션 펜트하우스' }
+    { k: 'default', em: '🏛️', nm: '오션뷰 대회의실', price: 0, asset: 'room', loc: '부산 해운대 마린시티 오션뷰', lat: 35.15724, lng: 129.14827 },
+    { k: 'garage', em: '🏚️', nm: '낡은 스타트업 단칸방', price: 0, asset: 'office-garage', gift: true, loc: '부산 문현동 골목 소호실', lat: 35.14333, lng: 129.07212 },
+    { k: 'sky', em: '🌇', nm: '오션뷰 스카이 라운지', price: 6000, asset: 'office-sky', loc: '부산 센텀시티 스카이타워', lat: 35.16892, lng: 129.13168 },
+    { k: 'wall', em: '📈', nm: '월가 트레이딩 플로어', price: 10000, asset: 'office-wall', loc: '부산 문현금융단지 BIFC', lat: 35.14720, lng: 129.06565 },
+    { k: 'cyber', em: '⚡', nm: '사이버 퀀트 커맨드', price: 14000, asset: 'office-cyber', loc: '부산 해운대 엘시티(LCT) 타워', lat: 35.16101, lng: 129.16839 },
+    { k: 'salon', em: '🏛️', nm: '프라이빗 스위스 살롱', price: 18000, asset: 'office-salon', loc: '부산 광안리 오션 펜트하우스', lat: 35.15317, lng: 129.11867 }
   ];
   /* 가상 랜드마크 위치 — 네이버 지도 검색 링크 (개인 실제 주소는 절대 쓰지 않는다) */
   function naverMap(loc) { return 'https://map.naver.com/p/search/' + encodeURIComponent(loc); }
+
+  /* ── 🗺️ 지도 보기 팝업 — 회의실을 떠나지 않고 보는 부산 미니맵 ──────────────
+     · 인앱 브라우저에서 map.naver.com 으로 페이지가 이탈하지 않도록, 먼저 회의실 위에
+       팝업을 띄우고 안에는 실제 부산 좌표 기반 Google 지도 embed + 주소를 보여 준다.
+     · map.naver.com 은 X-Frame-Options 로 iframe 이 막히므로 embed 는 Google 지도만 쓰고,
+       외부 네이버 지도는 '🧭 외부 네이버 지도로 열기'(새 창)로 연결한다.
+     · ✕ 닫기·바깥 클릭·Esc → 팝업만 닫히고 회의실 화면 그대로 돌아온다. */
+  function mapTarget(key) {
+    if (key === 'bank') return { nm: '초코퀀트 중앙은행', loc: BANK_LOC, lat: BANK_LAT, lng: BANK_LNG };
+    var o = officeOf(key);
+    return { nm: o.nm, loc: o.loc, lat: o.lat, lng: o.lng };
+  }
+  function openMapPopup(key) {
+    var m = document.getElementById('mapModal');
+    if (!m) return;
+    var t = mapTarget(key);
+    var lat = hqNum(t.lat), lng = hqNum(t.lng);
+    var q = (lat && lng) ? (lat.toFixed(5) + ',' + lng.toFixed(5)) : t.loc;
+    var set = function (id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
+    set('mapTitle', t.nm);
+    set('mapSub', '회의실 안 미니맵 · 닫으면 회의실로');
+    set('mapAddr', t.loc);
+    var nv = document.getElementById('mapNaver');
+    if (nv) { nv.href = naverMap(t.loc); nv.setAttribute('aria-label', t.loc + ' — 외부 네이버 지도로 열기'); }
+    m.classList.add('open');
+    m.setAttribute('aria-hidden', 'false');
+    /* 지도는 팝업이 화면에 붙은 뒤에 넣는다 — display:none 상태에서 먼저 넣으면
+       Google embed 가 작은 기본 크기로 그려진 채 굳는다. */
+    var fr = document.getElementById('mapFrame');
+    var src = 'https://maps.google.com/maps?q=' + encodeURIComponent(q) + '&z=16&hl=ko&output=embed';
+    if (fr) {
+      fr.removeAttribute('src');
+      setTimeout(function () { try { fr.src = src; } catch (e) {} }, 30);
+    }
+    var x = m.querySelector('[data-mapclose]');
+    if (x) { try { x.focus(); } catch (e) {} }
+  }
+  function closeMapPopup() {
+    var m = document.getElementById('mapModal');
+    if (!m) return;
+    m.classList.remove('open');
+    m.setAttribute('aria-hidden', 'true');
+    var fr = document.getElementById('mapFrame');
+    if (fr) fr.removeAttribute('src');            /* 닫으면 지도 로딩을 멈춘다 */
+  }
+  document.addEventListener('click', function (e) {
+    var go = e.target.closest('[data-map-office]');
+    if (go) { e.preventDefault(); openMapPopup(go.getAttribute('data-map-office')); return; }
+    if (e.target.closest('[data-mapclose]')) { e.preventDefault(); closeMapPopup(); return; }
+    var m = document.getElementById('mapModal');
+    if (m && m.classList.contains('open') && e.target === m) closeMapPopup();
+  });
+  document.addEventListener('keydown', function (e) {
+    var m = document.getElementById('mapModal');
+    if (e.key === 'Escape' && m && m.classList.contains('open')) closeMapPopup();
+  });
   function officeOf(k) {
     for (var i = 0; i < OFFICES.length; i++) if (OFFICES[i].k === k) return OFFICES[i];
     return OFFICES[0];
@@ -5478,7 +5657,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
         + '<span class="office-nm">' + o.em + ' ' + o.nm + '</span>'
         + (lock ? '<span class="lock-badge office-lockb">🔒 회사 설립 후 해금</span>' : '')
         + '<span class="office-loc">📍 ' + o.loc
-        +   '<a href="' + naverMap(o.loc) + '" target="_blank" rel="noopener noreferrer" title="네이버 지도에서 보기">🗺️ 네이버 지도</a></span>'
+        +   '<a href="' + naverMap(o.loc) + '" data-map-office="' + o.k + '" target="_blank" rel="noopener noreferrer" title="회의실 안 지도 팝업으로 보기">🗺️ 지도 보기</a></span>'
         + '<button type="button" class="office-b' + (on ? ' on' : (have ? ' owned' : (lock ? ' locked' : ''))) + '" data-office="' + o.k + '"'
         + ((lock || (!have && lack)) ? ' aria-disabled="true"' : '') + '>'
         + (on ? '사용 중' : (have ? (o.gift ? '창업 선물' : '이 사무실로')
@@ -5766,7 +5945,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
       + '<div class="vst-cell"><span>회사</span><b>' + esc(String(r.company || '—')) + '</b></div>'
       + (nm === lbName() ? '<div class="vst-cell vst-furn"><span>🛋️ 인테리어</span><b>' + furnBadges() + '</b></div>' : '')
       + '<div class="vst-cell vst-loc"><span>📍 사무실 위치</span><b>' + esc(officeOf(onm).loc) + '</b>'
-      + '<a class="vst-map" href="' + naverMap(officeOf(onm).loc) + '" target="_blank" rel="noopener noreferrer">🗺️ 네이버 지도</a></div>';
+      + '<a class="vst-map" href="' + naverMap(officeOf(onm).loc) + '" data-map-office="' + onm + '" target="_blank" rel="noopener noreferrer" title="회의실 안 지도 팝업으로 보기">🗺️ 지도 보기</a></div>';
     /* 스카웃 제의 — 상대가 팀원이 있고 내가 회사를 세운 대표(또는 관리자)일 때만 */
     var so = document.getElementById('vstScout');
     if (so) {
@@ -6352,7 +6531,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
   /* x,y = 테이블 위 자리 · hx,hy = 머리 위(말풍선 기준점) — 광각 대회의실 1672×941 좌표(%).
      hx,hy 는 새 배경(choko-quant-hq-wide)에서 8명 머리 꼭대기 픽셀을 직접 재서 넣은 값이다. */
   var SEATS = [
-    { k:'me',       x:53.4, y:52.2, hx:53.7, hy:47.16, tone:'gold', name:'박지훈 회장', short:'박지훈 회장', mono:'박', boss:true },
+    { k:'me',       x:53.4, y:52.2, hx:53.7, hy:47.16, tone:'gold', name: MY_NAME, short: MY_NAME, mono:'박', boss:true },
     /* 초코 = 사진 왼쪽 맨 안쪽 연분홍 재킷 여성(회장님 바로 왼쪽) */
     { k:'choko',    x:41.2, y:62.0, hx:36.6, hy:44.55, tone:'cyan', name:'초코', short:'초코', img:'ceo' },
     { k:'advisor',  x:70.9, y:70.0, hx:74.2, hy:43.72, tone:'ruby', name:'수석 고문', short:'고문', img:'advisor' },
@@ -6605,7 +6784,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     if (s.boss) {
       return '<div class="seat boss" data-seat="' + s.k + '" style="left:' + s.x + '%;top:' + s.y + '%">'
         + '<div class="pod pod-bust pod-chair"><div class="cfig">' + chairFigure(s) + '</div>'
-        + '<button class="pnm" type="button" data-me-custom="1" data-npname="박지훈 회장" title="' + s.short + ' · 내 캐릭터 꾸미기">' + s.short + '</button></div></div>';
+        + '<button class="pnm" type="button" data-me-custom="1" data-npname="' + escAttr(MY_NAME) + '" title="' + s.short + ' · 내 캐릭터 꾸미기">' + s.short + '</button></div></div>';
     }
     var showSeat = (s.tone === 'gold' || s.guest === true);
     if (!showSeat) {
@@ -6637,7 +6816,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     return '<div class="holo ' + s.tone + '" data-holo="' + s.k + '" style="--depth:' + depth + '">'
       + '<div class="card" role="button" tabindex="0" data-goto="' + s.k + '">'
       + '<div class="cav' + cls + '">' + inner + '</div>'
-      + '<div class="ctx"><div class="cwho">' + s.name + '<em></em></div><div class="cmsg"></div>'
+      + '<div class="ctx"><div class="cwho">' + esc(s.name) + (s.boss ? '<i class="cbdg">' + esc(MY_ROLE) + '</i>' : '') + '<em></em></div><div class="cmsg"></div>'
       + '<div class="cimg"><img alt=""></div></div>'
       + '</div></div>';
   }
@@ -7289,7 +7468,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     return 'report';
   }
   function whoName(k) {
-    if (k === 'me') return '박지훈 회장';
+    if (k === 'me') return MY_NAME;
     if (k === 'sys') return '시스템';
     return (PEOPLE[k] && PEOPLE[k].name) || k;
   }
@@ -7577,7 +7756,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
   /* 명패 폭(%) — 기본 4.5%(회장석 5.0%)에 깊이 보정을 곱한다. 테이블 뒤쪽(작은 py)일수록 더 콤팩트. */
   function plateWidth(s) {
     var p = platePos(s);
-    var base = s.boss ? 6.4 : 5.7;
+    var base = s.boss ? 7.6 : 5.7;
     var f = 0.84 + (p.py - 50) * 0.0042;
     f = Math.max(0.80, Math.min(1.06, f));
     return +(base * f).toFixed(2);
@@ -7585,13 +7764,15 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
   function plateMarkup(s) {
     var p = platePos(s), t = plateTilt(s);
     var nm = plateLabel(s).slice(0, 10);
+    /* 이름은 순수 이름만 각인하고 직급은 작은 배지로 — '박지훈 회장' 중복 표기 금지 */
+    var bdg = s.boss ? '<i class="tpb">' + esc(MY_ROLE) + '</i>' : '';
     var img = (s.boss ? ASSETS.plateGold : ASSETS.plateSilver) || (ASSETS.plateSilver || '');
     return '<button type="button" class="tplate' + (s.boss ? ' boss' : '') + (s.guest ? ' guest' : '') + '" data-tp="' + s.k + '"'
       + ' style="--px:' + p.px + '%;--py:' + p.py + '%;--pw:' + plateWidth(s) + '%;--rz:' + t.rz + 'deg;--flip:' + t.flip + '"'
-      + ' aria-label="' + escAttr(s.name || s.k) + ' 명패 — 발언 보기">'
+      + ' aria-label="' + escAttr((s.name || s.k) + (s.boss ? ' · ' + MY_ROLE : '')) + ' 명패 — 발언 보기">'
       + '<span class="tpr" aria-hidden="true"></span>'
       + '<img class="tpi" alt="" src="' + img + '">'
-      + '<span class="tpl">' + esc(nm) + '</span>'
+      + '<span class="tpl">' + esc(nm) + bdg + '</span>'
       + '</button>';
   }
 
@@ -8059,7 +8240,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     if (dataUrl) {
       var found = -1;
       SHOTS.forEach(function (s, i) { if (s.src === dataUrl) found = i; });
-      if (found < 0) { SHOTS.push({ src: dataUrl, cap: cap || '공유한 그림', by: by || '박지훈 회장' }); found = SHOTS.length - 1; }
+      if (found < 0) { SHOTS.push({ src: dataUrl, cap: cap || '공유한 그림', by: by || MY_NAME }); found = SHOTS.length - 1; }
       /* 슬라이드 순서는 [시황][리그][직원설명…][SHOTS…] 이므로 SHOTS 인덱스를 그대로 쓰면 안 된다.
          실제 목록에서 이 그림의 위치를 찾아 그 슬라이드를 띄운다. */
       pmIdx = found + 2;
@@ -8143,10 +8324,10 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
        경량 JPEG dataURL 로 저장해 다른 접속자·5분 수거 스케줄이 같은 그림을 볼 수 있게 한다. */
     var line = '📺 브리핑 스크린에 자료를 띄웠습니다 — ' + name;
     extra.push({ a: 'me', t: nowLabel(), tag: 'general', x: line });
-    SHOTS.push({ src: dataUrl, cap: name, by: '박지훈 회장', at: nowLabel(), w: w, h: h });
+    SHOTS.push({ src: dataUrl, cap: name, by: MY_NAME, at: nowLabel(), w: w, h: h });
     render();
     compactDataUrl(dataUrl, function (dbUrl) { liveInsertRow(line, 'image', null, dbUrl); });
-    setTimeout(function () { openScreen(dataUrl, name, '박지훈 회장'); }, 150);
+    setTimeout(function () { openScreen(dataUrl, name, MY_NAME); }, 150);
   }
   /* DB 저장용 경량 사본 — 폭 480px·JPEG q0.6(≈20~35KB). 실패하면 원본을 그대로 쓴다. */
   function compactDataUrl(url, cb) {
@@ -8425,8 +8606,8 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
     client: null,
     ch: null,
     myKey: '',
-    myName: '박지훈 회장',
-    myRole: '회장',
+    myName: MY_NAME,
+    myRole: MY_ROLE,
     peers: {},                // 'n:이름' -> { key, name, role, look } 지금 접속 중인 사람
     seats: {},                // 원격 접속자 좌석 배치 여부
     seen: {},                 // 서버 행 id — 초기 로드/실시간 중복 방지
@@ -8496,9 +8677,9 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
   /* ── 사람(발화자) 보장 — 모르는 접속자도 말풍선·명단에 안전하게 표시 ──
      sender 컬럼에는 화면에 보일 이름이 들어간다. 같은 이름이면 같은 사람으로 본다. */
   function livePerson(name, roleText, look) {
-    var nm = String(name || '게스트').slice(0, 14);
+    var nm = normName(String(name || '게스트')).slice(0, 14);
     if (!nm) nm = '게스트';
-    if (nm === LIVE.myName) return 'me';
+    if (isMeName(nm) || nm === LIVE.myName) return 'me';   /* '박지훈 회장' 예전 표기도 내 발언으로 */
     if (hqStaffKey(nm)) return hqStaffKey(nm);           // AI 임직원 이름(변형 포함)은 원래 좌석 캐릭터로
     var key = 'n:' + nm;
     var p = PEOPLE[key];
@@ -8590,7 +8771,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
         if (!row || row.id == null || LIVE.seen[row.id] || !afterFloor(row.created_at)) return;
         LIVE.seen[row.id] = 1;
         if (row.role === 'access_log') return;           // 🔐 접속 로그는 대화창에 그리지 않는다
-        if (row.sender === LIVE.myName) return;          // 내 발언은 화면에 이미 있다
+        if (row.sender === LIVE.myName || isMeName(row.sender)) return;          // 내 발언은 화면에 이미 있다
         var m = liveRowMsg(row);
         if (!m.x || liveDuplicate(m)) return;
         extra.push(m);
@@ -8728,7 +8909,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
       if (LIVE.seen[row.id]) return;
       LIVE.seen[row.id] = 1;
     }
-    if (row.sender === LIVE.myName) return;             // 내 낙관적 반영분과 중복 방지
+    if (row.sender === LIVE.myName || isMeName(row.sender)) return;             // 내 낙관적 반영분과 중복 방지
     var m = liveRowMsg(row);
     if (!m.x || liveDuplicate(m)) return;
     extra.push(m);
@@ -8747,7 +8928,7 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
       var metas = st[pk] || [];
       var meta = metas[metas.length - 1] || {};
       var name = String(meta.name || '게스트').slice(0, 14) || '게스트';
-      if (name === LIVE.myName) return;                 // 내 다른 탭은 한 사람으로
+      if (isMeName(name) || name === LIVE.myName) return;                 // 내 다른 탭은 한 사람으로
       var key = 'n:' + name;
       if (seen[key]) return;
       seen[key] = 1;
@@ -9420,6 +9601,26 @@ body.screen-open .wall-tv{opacity:0; pointer-events:none}
 })();
 </script>
 
+
+<div class="hqm" id="mapModal" aria-hidden="true">
+  <div class="hqsheet sm map-sheet" role="dialog" aria-modal="true" aria-labelledby="mapTitle">
+    <div class="hq-h">
+      <span class="em" aria-hidden="true">🗺️</span>
+      <b id="mapTitle">지도 보기</b>
+      <em id="mapSub">회의실 안에서 바로 봅니다</em>
+      <button class="hq-x" type="button" data-mapclose="1" aria-label="지도 닫기">✕</button>
+    </div>
+    <div class="hq-body">
+      <div class="map-frame"><iframe id="mapFrame" title="부산 위치 미니맵" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe></div>
+      <div class="map-addr"><span aria-hidden="true">📍</span><b id="mapAddr">—</b></div>
+      <div class="map-acts">
+        <a class="map-a naver" id="mapNaver" href="https://map.naver.com" target="_blank" rel="noopener noreferrer">🧭 외부 네이버 지도로 열기</a>
+        <button class="map-a close" type="button" data-mapclose="1">✕ 닫기</button>
+      </div>
+      <p class="map-note">닫으면 회의실로 그대로 돌아옵니다 · 지도는 Google 지도 미니맵이고, 자세히 보려면 위 버튼으로 네이버 지도를 새 창에서 엽니다.</p>
+    </div>
+  </div>
+</div>
 
 <div class="vst" id="vstModal" aria-hidden="true">
   <div class="vst-s" role="dialog" aria-modal="true" aria-labelledby="vstName">
