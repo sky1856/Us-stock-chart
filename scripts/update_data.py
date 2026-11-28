@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """미국주식 차트분석기 데이터 갱신 스크립트 (v3 — 5년 백테스트 + 워밍업 + 거시지표 + 펀더멘털).
 
-Yahoo Finance 에서 top100.json 에 정의된 102종목(100 + NKE, QQQ)의
+Yahoo Finance 에서 top150.json 에 정의된 152종목(시총 1~150위 + NKE, QQQ)의
 10년 일봉을 내려받아 그중 최근 KEEP_BARS(1,505)봉만 남기고,
 거시 지표(^VIX, ^TNX), 종목별 펀더멘털(quoteSummary)과 함께
 다음 실적 발표일(calendarEvents.earnings.earningsDate)까지 모아
@@ -13,7 +13,7 @@ scripts/data.js 를 다시 생성한다.
 
   window.MARKET = {asOf, updatedAt, dates[], tickers[], series{}, fundamentals{}, fearGreed{}, macro{}}
     updatedAt    : 데이터를 확인해 기록한 한국시간 'YYYY-MM-DD HH:MM' (휴장일 포함 매 실행 갱신)
-    series       : 종목 102 + ^VIX + ^TNX + DXY  (off,o,h,l,c,v — 거래일 캘린더 정렬)
+    series       : 종목 152 + ^VIX + ^TNX + DXY  (off,o,h,l,c,v — 거래일 캘린더 정렬)
     fundamentals : {asOf, fetchedAt, tickers{t:{...}}}   # t.earningsDate = 다음 실적 발표일 YYYY-MM-DD (없으면 생략)
     fearGreed    : CNN 공포·탐욕 지수 {score, rating, previousClose, previous1Week,
                    previous1Month, previous1Year, timestamp, fetchedAt, source}
@@ -65,7 +65,10 @@ def kst_now_str():
         from datetime import timedelta
         now = now + timedelta(hours=9)
     return now.strftime('%Y-%m-%d %H:%M')
-TOP100 = os.path.join(HERE, 'top100.json')
+# 유니버스 설정 — 시총 1~150위 150행(+EXTRA NKE·QQQ) = 분석 152종목.
+#   rank 1~100 = 추세형 유니버스(Top 100), rank 101~150 = 스윙형에만 추가되는 구간.
+#   (top100.json 은 이 파일의 1~100위 부분과 같은 옛 사본 — 과거 연구 스크립트 호환용으로만 남긴다)
+TOP150 = os.path.join(HERE, 'top150.json')
 
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36")
@@ -139,6 +142,30 @@ KO = {
  'SBUX':('스타벅스','Consumer Discretionary'),'MRVL':('마벨 테크놀로지','Semiconductors'),
  'SCCO':('서던 코퍼','Materials'),'PH':('파커하니핀','Industrials'),'CME':('CME 그룹','Financials'),
  'NKE':('나이키','Consumer Discretionary'),'QQQ':('QQQ (나스닥100 ETF)','ETF'),
+ # 시총 101~150위 — 스윙형(Top 150) 유니버스에서만 쓰는 구간
+ 'STX':('시게이트','Technology Hardware'),'BKNG':('부킹홀딩스','Consumer Discretionary'),
+ 'COF':('캐피털원','Financials'),'NEM':('뉴몬트','Materials'),'SO':('서던 컴퍼니','Utilities'),
+ 'WDC':('웨스턴 디지털','Technology Hardware'),'MAR':('메리어트','Consumer Discretionary'),
+ 'ABNB':('에어비앤비','Consumer Discretionary'),'CVS':('CVS 헬스','Health Care'),
+ 'HCA':('HCA 헬스케어','Health Care'),'MRSH':('마쉬앤맥레넌','Financials'),
+ 'DUK':('듀크 에너지','Utilities'),'REGN':('리제네론','Health Care'),'FTNT':('포티넷','Software'),
+ 'BNY':('BNY 멜론','Financials'),'ICE':('인터컨티넨탈 익스체인지','Financials'),
+ 'MMM':('3M','Industrials'),'GD':('제너럴 다이내믹스','Industrials'),
+ 'WM':('웨이스트 매니지먼트','Industrials'),'MPC':('마라톤 페트롤리엄','Energy'),
+ 'EQIX':('이퀴닉스','Real Estate'),'SNDK':('샌디스크','Technology Hardware'),
+ 'NOW':('서비스나우','Software'),'UPS':('UPS','Industrials'),'CSX':('CSX','Industrials'),
+ 'PSX':('필립스66','Energy'),'CMCSA':('컴캐스트','Communication Services'),
+ 'MRNA':('모더나','Health Care'),'USB':('US 뱅코프','Financials'),
+ 'VLO':('발레로 에너지','Energy'),'ADBE':('어도비','Software'),'CTAS':('신타스','Industrials'),
+ 'WAT':('워터스','Health Care'),'GLW':('코닝','Technology Hardware'),
+ 'MSI':('모토로라 솔루션즈','Technology Hardware'),'SPG':('사이먼 프로퍼티','Real Estate'),
+ 'EMR':('에머슨 일렉트릭','Industrials'),'TT':('트레인 테크놀로지스','Industrials'),
+ 'PNC':('PNC 파이낸셜','Financials'),'KKR':('KKR','Financials'),
+ 'SHW':('셔윈윌리엄스','Materials'),'PWR':('콴타 서비스','Industrials'),
+ 'ECL':('에코랩','Materials'),'HWM':('하우멧 에어로스페이스','Industrials'),
+ 'MDLZ':('몬델리즈','Consumer Staples'),'AMT':('아메리칸 타워','Real Estate'),
+ 'ELV':('엘레반스 헬스','Health Care'),'RCL':('로열 캐리비안','Consumer Discretionary'),
+ 'MCO':('무디스','Financials'),'WMB':('윌리엄스','Energy'),
 }
 SECTOR_KO = {
  'Technology':'기술','Semiconductors':'반도체','Software':'소프트웨어',
@@ -151,7 +178,7 @@ EXTRA = ('NKE', 'QQQ')
 
 
 def ticker_list():
-    base = json.load(open(TOP100, encoding='utf-8'))
+    base = json.load(open(TOP150, encoding='utf-8'))
     tickers = ['GOOGL' if d['ticker'] == 'GOOG' else d['ticker'] for d in base]
     for extra in EXTRA:
         if extra not in tickers:
@@ -752,7 +779,7 @@ def build_payload(base, tickers, charts_ok, prev, fg=None):
             except Exception as e:
                 print('index parse fail %s: %s' % (t, e))
 
-    # 거래일 캘린더 = 종목 102개의 합집합 (지수의 별도 휴장일은 캘린더에서 제외)
+    # 거래일 캘린더 = 종목 152개의 합집합 (지수의 별도 휴장일은 캘린더에서 제외)
     alld = set()
     for t in tickers:
         if t in per:

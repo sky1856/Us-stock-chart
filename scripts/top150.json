@@ -1,0 +1,1202 @@
+[
+ {
+  "rank": 1,
+  "ticker": "AAPL",
+  "name": "Apple",
+  "mc": 5145409617920,
+  "mcText": "5.145 T",
+  "price": 354.07
+ },
+ {
+  "rank": 2,
+  "ticker": "NVDA",
+  "name": "NVIDIA",
+  "mc": 3751960903680,
+  "mcText": "3.751 T",
+  "price": 155.38
+ },
+ {
+  "rank": 3,
+  "ticker": "MSFT",
+  "name": "Microsoft",
+  "mc": 3684357898240,
+  "mcText": "3.684 T",
+  "price": 496.13
+ },
+ {
+  "rank": 4,
+  "ticker": "GOOG",
+  "name": "Alphabet (Google)",
+  "mc": 3400274280448,
+  "mcText": "3.400 T",
+  "price": 276.58
+ },
+ {
+  "rank": 5,
+  "ticker": "AMZN",
+  "name": "Amazon",
+  "mc": 2728046362624,
+  "mcText": "2.728 T",
+  "price": 252.29
+ },
+ {
+  "rank": 6,
+  "ticker": "SPCX",
+  "name": "SpaceX",
+  "mc": 1708633620480,
+  "mcText": "1.708 T",
+  "price": 125.81
+ },
+ {
+  "rank": 7,
+  "ticker": "TSLA",
+  "name": "Tesla",
+  "mc": 1520546873344,
+  "mcText": "1.520 T",
+  "price": 384.68
+ },
+ {
+  "rank": 8,
+  "ticker": "META",
+  "name": "Meta Platforms (Facebook)",
+  "mc": 1507722133504,
+  "mcText": "1.507 T",
+  "price": 589.82
+ },
+ {
+  "rank": 9,
+  "ticker": "AVGO",
+  "name": "Broadcom",
+  "mc": 1437244456960,
+  "mcText": "1.437 T",
+  "price": 301.08
+ },
+ {
+  "rank": 10,
+  "ticker": "LLY",
+  "name": "Eli Lilly",
+  "mc": 1253803819008,
+  "mcText": "1.253 T",
+  "price": 1408.0
+ },
+ {
+  "rank": 11,
+  "ticker": "BRK-B",
+  "name": "Berkshire Hathaway",
+  "mc": 1226293772288,
+  "mcText": "1.226 T",
+  "price": 577.21
+ },
+ {
+  "rank": 12,
+  "ticker": "ANT",
+  "name": "Anthropic",
+  "mc": 1094794870784,
+  "mcText": "1.094 T",
+  "price": null
+ },
+ {
+  "rank": 13,
+  "ticker": "WMT",
+  "name": "Walmart",
+  "mc": 1049713967104,
+  "mcText": "1.049 T",
+  "price": 132.31
+ },
+ {
+  "rank": 14,
+  "ticker": "JPM",
+  "name": "JPMorgan Chase",
+  "mc": 842093821952,
+  "mcText": "842.09 B",
+  "price": 317.1
+ },
+ {
+  "rank": 15,
+  "ticker": "V",
+  "name": "Visa",
+  "mc": 777628155904,
+  "mcText": "777.62 B",
+  "price": 416.78
+ },
+ {
+  "rank": 16,
+  "ticker": "MU",
+  "name": "Micron Technology",
+  "mc": 712559034368,
+  "mcText": "712.55 B",
+  "price": 629.79
+ },
+ {
+  "rank": 17,
+  "ticker": "AMD",
+  "name": "AMD",
+  "mc": 683988942848,
+  "mcText": "683.98 B",
+  "price": 413.27
+ },
+ {
+  "rank": 18,
+  "ticker": "JNJ",
+  "name": "Johnson & Johnson",
+  "mc": 665525026816,
+  "mcText": "665.52 B",
+  "price": 276.46
+ },
+ {
+  "rank": 19,
+  "ticker": "XOM",
+  "name": "Exxon Mobil",
+  "mc": 645455347712,
+  "mcText": "645.45 B",
+  "price": 158.23
+ },
+ {
+  "rank": 20,
+  "ticker": "MA",
+  "name": "Mastercard",
+  "mc": 564034273280,
+  "mcText": "564.03 B",
+  "price": 647.44
+ },
+ {
+  "rank": 21,
+  "ticker": "ABBV",
+  "name": "AbbVie",
+  "mc": 530779799552,
+  "mcText": "530.77 B",
+  "price": 300.28
+ },
+ {
+  "rank": 22,
+  "ticker": "COST",
+  "name": "Costco",
+  "mc": 483768729600,
+  "mcText": "483.76 B",
+  "price": 1092.0
+ },
+ {
+  "rank": 23,
+  "ticker": "KO",
+  "name": "Coca-Cola",
+  "mc": 419951706112,
+  "mcText": "419.95 B",
+  "price": 97.62
+ },
+ {
+  "rank": 24,
+  "ticker": "CVX",
+  "name": "Chevron",
+  "mc": 407285170176,
+  "mcText": "407.28 B",
+  "price": 208.73
+ },
+ {
+  "rank": 25,
+  "ticker": "PG",
+  "name": "Procter & Gamble",
+  "mc": 399748038656,
+  "mcText": "399.74 B",
+  "price": 172.47
+ },
+ {
+  "rank": 26,
+  "ticker": "PLTR",
+  "name": "Palantir",
+  "mc": 388362797056,
+  "mcText": "388.36 B",
+  "price": 161.18
+ },
+ {
+  "rank": 27,
+  "ticker": "CSCO",
+  "name": "Cisco",
+  "mc": 370550702080,
+  "mcText": "370.55 B",
+  "price": 93.99
+ },
+ {
+  "rank": 28,
+  "ticker": "HD",
+  "name": "Home Depot",
+  "mc": 352930365440,
+  "mcText": "352.93 B",
+  "price": 353.69
+ },
+ {
+  "rank": 29,
+  "ticker": "MRK",
+  "name": "Merck",
+  "mc": 349004857344,
+  "mcText": "349.00 B",
+  "price": 141.57
+ },
+ {
+  "rank": 30,
+  "ticker": "ORCL",
+  "name": "Oracle",
+  "mc": 341389017088,
+  "mcText": "341.38 B",
+  "price": 109.5
+ },
+ {
+  "rank": 31,
+  "ticker": "BAC",
+  "name": "Bank of America",
+  "mc": 335074164736,
+  "mcText": "335.07 B",
+  "price": 48.56
+ },
+ {
+  "rank": 32,
+  "ticker": "GE",
+  "name": "General Electric",
+  "mc": 328636923904,
+  "mcText": "328.63 B",
+  "price": 318.03
+ },
+ {
+  "rank": 33,
+  "ticker": "UNH",
+  "name": "UnitedHealth",
+  "mc": 306332205056,
+  "mcText": "306.33 B",
+  "price": 341.88
+ },
+ {
+  "rank": 34,
+  "ticker": "INTC",
+  "name": "Intel",
+  "mc": 291261972480,
+  "mcText": "291.26 B",
+  "price": 54.8
+ },
+ {
+  "rank": 35,
+  "ticker": "PANW",
+  "name": "Palo Alto Networks",
+  "mc": 289804779520,
+  "mcText": "289.80 B",
+  "price": 352.99
+ },
+ {
+  "rank": 36,
+  "ticker": "PM",
+  "name": "Philip Morris International",
+  "mc": 286714691584,
+  "mcText": "286.71 B",
+  "price": 183.95
+ },
+ {
+  "rank": 37,
+  "ticker": "MS",
+  "name": "Morgan Stanley",
+  "mc": 263826161664,
+  "mcText": "263.82 B",
+  "price": 168.79
+ },
+ {
+  "rank": 38,
+  "ticker": "RTX",
+  "name": "RTX",
+  "mc": 263586217984,
+  "mcText": "263.58 B",
+  "price": 195.33
+ },
+ {
+  "rank": 39,
+  "ticker": "TMO",
+  "name": "Thermo Fisher Scientific",
+  "mc": 257738244096,
+  "mcText": "257.73 B",
+  "price": 695.62
+ },
+ {
+  "rank": 40,
+  "ticker": "AMAT",
+  "name": "Applied Materials",
+  "mc": 256935116800,
+  "mcText": "256.93 B",
+  "price": 323.76
+ },
+ {
+  "rank": 41,
+  "ticker": "AMGN",
+  "name": "Amgen",
+  "mc": 256356892672,
+  "mcText": "256.35 B",
+  "price": null
+ },
+ {
+  "rank": 42,
+  "ticker": "CAT",
+  "name": "Caterpillar",
+  "mc": 247389143040,
+  "mcText": "247.38 B",
+  "price": 540.63
+ },
+ {
+  "rank": 43,
+  "ticker": "LRCX",
+  "name": "Lam Research",
+  "mc": 245037383680,
+  "mcText": "245.03 B",
+  "price": 196.16
+ },
+ {
+  "rank": 44,
+  "ticker": "WFC",
+  "name": "Wells Fargo",
+  "mc": 243720241152,
+  "mcText": "243.72 B",
+  "price": 81.19
+ },
+ {
+  "rank": 45,
+  "ticker": "NFLX",
+  "name": "Netflix",
+  "mc": 241739415552,
+  "mcText": "241.73 B",
+  "price": 58.87
+ },
+ {
+  "rank": 46,
+  "ticker": "TXN",
+  "name": "Texas Instruments",
+  "mc": 236154798080,
+  "mcText": "236.15 B",
+  "price": 258.44
+ },
+ {
+  "rank": 47,
+  "ticker": "GS",
+  "name": "Goldman Sachs",
+  "mc": 232484061184,
+  "mcText": "232.48 B",
+  "price": 806.02
+ },
+ {
+  "rank": 48,
+  "ticker": "IBM",
+  "name": "IBM",
+  "mc": 222689361920,
+  "mcText": "222.68 B",
+  "price": 235.62
+ },
+ {
+  "rank": 49,
+  "ticker": "GILD",
+  "name": "Gilead Sciences",
+  "mc": 221139959808,
+  "mcText": "221.13 B",
+  "price": 178.29
+ },
+ {
+  "rank": 50,
+  "ticker": "CRWD",
+  "name": "CrowdStrike",
+  "mc": 217311592448,
+  "mcText": "217.31 B",
+  "price": 210.86
+ },
+ {
+  "rank": 51,
+  "ticker": "ANET",
+  "name": "Arista Networks",
+  "mc": 212959100928,
+  "mcText": "212.95 B",
+  "price": 168.56
+ },
+ {
+  "rank": 52,
+  "ticker": "DIS",
+  "name": "Walt Disney",
+  "mc": 209250713600,
+  "mcText": "209.25 B",
+  "price": 122.51
+ },
+ {
+  "rank": 53,
+  "ticker": "AXP",
+  "name": "American Express",
+  "mc": 206952464384,
+  "mcText": "206.95 B",
+  "price": 308.63
+ },
+ {
+  "rank": 54,
+  "ticker": "MCD",
+  "name": "McDonald",
+  "mc": 198113787904,
+  "mcText": "198.11 B",
+  "price": 280.7
+ },
+ {
+  "rank": 55,
+  "ticker": "VZ",
+  "name": "Verizon",
+  "mc": 195459252224,
+  "mcText": "195.45 B",
+  "price": 47.16
+ },
+ {
+  "rank": 56,
+  "ticker": "PEP",
+  "name": "Pepsico",
+  "mc": 194435891200,
+  "mcText": "194.43 B",
+  "price": 142.68
+ },
+ {
+  "rank": 57,
+  "ticker": "GEV",
+  "name": "GE Vernova",
+  "mc": 190739546112,
+  "mcText": "190.73 B",
+  "price": 720.65
+ },
+ {
+  "rank": 58,
+  "ticker": "C",
+  "name": "Citigroup",
+  "mc": 188445032448,
+  "mcText": "188.44 B",
+  "price": 113.85
+ },
+ {
+  "rank": 59,
+  "ticker": "DELL",
+  "name": "Dell",
+  "mc": 187742781440,
+  "mcText": "187.74 B",
+  "price": 295.28
+ },
+ {
+  "rank": 60,
+  "ticker": "ABT",
+  "name": "Abbott Laboratories",
+  "mc": 182529327104,
+  "mcText": "182.52 B",
+  "price": 105.39
+ },
+ {
+  "rank": 61,
+  "ticker": "APH",
+  "name": "Amphenol",
+  "mc": 181416624128,
+  "mcText": "181.41 B",
+  "price": 73.47
+ },
+ {
+  "rank": 62,
+  "ticker": "WELL",
+  "name": "Welltower",
+  "mc": 179837124608,
+  "mcText": "179.83 B",
+  "price": 245.14
+ },
+ {
+  "rank": 63,
+  "ticker": "NEE",
+  "name": "Nextera Energy",
+  "mc": 177390157824,
+  "mcText": "177.39 B",
+  "price": 84.58
+ },
+ {
+  "rank": 64,
+  "ticker": "TMUS",
+  "name": "T-Mobile US",
+  "mc": 177216307200,
+  "mcText": "177.21 B",
+  "price": 167.3
+ },
+ {
+  "rank": 65,
+  "ticker": "BLK",
+  "name": "BlackRock",
+  "mc": 176973873152,
+  "mcText": "176.97 B",
+  "price": 1146.0
+ },
+ {
+  "rank": 66,
+  "ticker": "QCOM",
+  "name": "QUALCOMM",
+  "mc": 176507207680,
+  "mcText": "176.50 B",
+  "price": 164.96
+ },
+ {
+  "rank": 67,
+  "ticker": "KLAC",
+  "name": "KLA",
+  "mc": 174140915712,
+  "mcText": "174.14 B",
+  "price": 133.65
+ },
+ {
+  "rank": 68,
+  "ticker": "UNP",
+  "name": "Union Pacific Corporation",
+  "mc": 172825837568,
+  "mcText": "172.82 B",
+  "price": 290.83
+ },
+ {
+  "rank": 69,
+  "ticker": "CVNA",
+  "name": "Carvana",
+  "mc": 165649350656,
+  "mcText": "165.64 B",
+  "price": 65.96
+ },
+ {
+  "rank": 70,
+  "ticker": "DE",
+  "name": "Deere &amp; Company (John Deere)",
+  "mc": 165485297664,
+  "mcText": "165.48 B",
+  "price": 613.76
+ },
+ {
+  "rank": 71,
+  "ticker": "PFE",
+  "name": "Pfizer",
+  "mc": 162217836544,
+  "mcText": "162.21 B",
+  "price": 28.46
+ },
+ {
+  "rank": 72,
+  "ticker": "SCHW",
+  "name": "Charles Schwab",
+  "mc": 162089385984,
+  "mcText": "162.08 B",
+  "price": 93.91
+ },
+ {
+  "rank": 73,
+  "ticker": "DHR",
+  "name": "Danaher",
+  "mc": 161171865600,
+  "mcText": "161.17 B",
+  "price": 229.09
+ },
+ {
+  "rank": 74,
+  "ticker": "COP",
+  "name": "ConocoPhillips",
+  "mc": 159189598208,
+  "mcText": "159.18 B",
+  "price": 134.64
+ },
+ {
+  "rank": 75,
+  "ticker": "CRM",
+  "name": "Salesforce",
+  "mc": 159052972032,
+  "mcText": "159.05 B",
+  "price": 193.26
+ },
+ {
+  "rank": 76,
+  "ticker": "TJX",
+  "name": "TJX Companies",
+  "mc": 158242258944,
+  "mcText": "158.24 B",
+  "price": 143.86
+ },
+ {
+  "rank": 77,
+  "ticker": "T",
+  "name": "AT&T",
+  "mc": 154130513920,
+  "mcText": "154.13 B",
+  "price": 22.88
+ },
+ {
+  "rank": 78,
+  "ticker": "ADI",
+  "name": "Analog Devices",
+  "mc": 151644766208,
+  "mcText": "151.64 B",
+  "price": 312.95
+ },
+ {
+  "rank": 79,
+  "ticker": "ISRG",
+  "name": "Intuitive Surgical",
+  "mc": 150602825728,
+  "mcText": "150.60 B",
+  "price": 434.46
+ },
+ {
+  "rank": 80,
+  "ticker": "BX",
+  "name": "Blackstone Group",
+  "mc": 147322470400,
+  "mcText": "147.32 B",
+  "price": 119.35
+ },
+ {
+  "rank": 81,
+  "ticker": "VRTX",
+  "name": "Vertex Pharmaceuticals",
+  "mc": 142974959616,
+  "mcText": "142.97 B",
+  "price": 563.92
+ },
+ {
+  "rank": 82,
+  "ticker": "PGR",
+  "name": "Progressive",
+  "mc": 136152326144,
+  "mcText": "136.15 B",
+  "price": 235.68
+ },
+ {
+  "rank": 83,
+  "ticker": "LMT",
+  "name": "Lockheed Martin",
+  "mc": 135514251264,
+  "mcText": "135.51 B",
+  "price": 586.63
+ },
+ {
+  "rank": 84,
+  "ticker": "UBER",
+  "name": "Uber",
+  "mc": 132110802944,
+  "mcText": "132.11 B",
+  "price": 64.7
+ },
+ {
+  "rank": 85,
+  "ticker": "SPGI",
+  "name": "S&P Global",
+  "mc": 131953786880,
+  "mcText": "131.95 B",
+  "price": 455.17
+ },
+ {
+  "rank": 86,
+  "ticker": "BA",
+  "name": "Boeing",
+  "mc": 129636876288,
+  "mcText": "129.63 B",
+  "price": 163.59
+ },
+ {
+  "rank": 87,
+  "ticker": "LOW",
+  "name": "Lowe's Companies",
+  "mc": 129625915392,
+  "mcText": "129.62 B",
+  "price": 231.04
+ },
+ {
+  "rank": 88,
+  "ticker": "IBKR",
+  "name": "Interactive Brokers",
+  "mc": 127293972480,
+  "mcText": "127.29 B",
+  "price": 74.71
+ },
+ {
+  "rank": 89,
+  "ticker": "BMY",
+  "name": "Bristol-Myers Squibb",
+  "mc": 126774206464,
+  "mcText": "126.77 B",
+  "price": 62.02
+ },
+ {
+  "rank": 90,
+  "ticker": "APP",
+  "name": "AppLovin",
+  "mc": 126270119936,
+  "mcText": "126.27 B",
+  "price": 381.11
+ },
+ {
+  "rank": 91,
+  "ticker": "MCK",
+  "name": "McKesson",
+  "mc": 124472672256,
+  "mcText": "124.47 B",
+  "price": 1078.0
+ },
+ {
+  "rank": 92,
+  "ticker": "MO",
+  "name": "Altria Group",
+  "mc": 124458352640,
+  "mcText": "124.45 B",
+  "price": 74.82
+ },
+ {
+  "rank": 93,
+  "ticker": "PLD",
+  "name": "Prologis",
+  "mc": 123789541376,
+  "mcText": "123.78 B",
+  "price": 127.32
+ },
+ {
+  "rank": 94,
+  "ticker": "SYK",
+  "name": "Stryker Corporation",
+  "mc": 123374338048,
+  "mcText": "123.37 B",
+  "price": 324.08
+ },
+ {
+  "rank": 95,
+  "ticker": "ADP",
+  "name": "Automatic Data Processing",
+  "mc": 122687283200,
+  "mcText": "122.68 B",
+  "price": 310.79
+ },
+ {
+  "rank": 96,
+  "ticker": "SBUX",
+  "name": "Starbucks",
+  "mc": 121283829760,
+  "mcText": "121.28 B",
+  "price": 106.38
+ },
+ {
+  "rank": 97,
+  "ticker": "MRVL",
+  "name": "Marvell Technology",
+  "mc": 118382206976,
+  "mcText": "118.38 B",
+  "price": 131.57
+ },
+ {
+  "rank": 98,
+  "ticker": "SCCO",
+  "name": "Southern Copper",
+  "mc": 116773191680,
+  "mcText": "116.77 B",
+  "price": 136.85
+ },
+ {
+  "rank": 99,
+  "ticker": "PH",
+  "name": "Parker-Hannifin",
+  "mc": 114273951744,
+  "mcText": "114.27 B",
+  "price": 906.24
+ },
+ {
+  "rank": 100,
+  "ticker": "CME",
+  "name": "CME Group",
+  "mc": 110691057664,
+  "mcText": "110.69 B",
+  "price": 309.25
+ },
+ {
+  "rank": 101,
+  "ticker": "STX",
+  "name": "Seagate Technology Holdings plc",
+  "mc": 116998111232,
+  "mcText": "117.00 B",
+  "price": 509.66
+ },
+ {
+  "rank": 102,
+  "ticker": "BKNG",
+  "name": "Booking Holdings Inc.",
+  "mc": 111845228544,
+  "mcText": "111.85 B",
+  "price": 150.39
+ },
+ {
+  "rank": 103,
+  "ticker": "COF",
+  "name": "Capital One Financial Corporation",
+  "mc": 111241527296,
+  "mcText": "111.24 B",
+  "price": 184.93
+ },
+ {
+  "rank": 104,
+  "ticker": "NEM",
+  "name": "Newmont Corporation",
+  "mc": 111058583552,
+  "mcText": "111.06 B",
+  "price": 106.87
+ },
+ {
+  "rank": 105,
+  "ticker": "SO",
+  "name": "The Southern Company",
+  "mc": 110651367424,
+  "mcText": "110.65 B",
+  "price": 95.04
+ },
+ {
+  "rank": 106,
+  "ticker": "WDC",
+  "name": "Western Digital Corporation",
+  "mc": 109343563776,
+  "mcText": "109.34 B",
+  "price": 292.11
+ },
+ {
+  "rank": 107,
+  "ticker": "MAR",
+  "name": "Marriott International, Inc.",
+  "mc": 108411928576,
+  "mcText": "108.41 B",
+  "price": 421.01
+ },
+ {
+  "rank": 108,
+  "ticker": "ABNB",
+  "name": "Airbnb, Inc.",
+  "mc": 106912333824,
+  "mcText": "106.91 B",
+  "price": 179.16
+ },
+ {
+  "rank": 109,
+  "ticker": "CVS",
+  "name": "CVS Health Corporation",
+  "mc": 105697361920,
+  "mcText": "105.70 B",
+  "price": 82.61
+ },
+ {
+  "rank": 110,
+  "ticker": "HCA",
+  "name": "HCA Healthcare, Inc.",
+  "mc": 104648876032,
+  "mcText": "104.65 B",
+  "price": 500.97
+ },
+ {
+  "rank": 111,
+  "ticker": "MRSH",
+  "name": "Marsh & McLennan Companies, Inc.",
+  "mc": 103681138688,
+  "mcText": "103.68 B",
+  "price": 218.04
+ },
+ {
+  "rank": 112,
+  "ticker": "DUK",
+  "name": "Duke Energy Corporation",
+  "mc": 102851321856,
+  "mcText": "102.85 B",
+  "price": 131.91
+ },
+ {
+  "rank": 113,
+  "ticker": "REGN",
+  "name": "Regeneron Pharmaceuticals, Inc.",
+  "mc": 102634758144,
+  "mcText": "102.63 B",
+  "price": 992.14
+ },
+ {
+  "rank": 114,
+  "ticker": "FTNT",
+  "name": "Fortinet, Inc.",
+  "mc": 102477316096,
+  "mcText": "102.48 B",
+  "price": 139.48
+ },
+ {
+  "rank": 115,
+  "ticker": "BNY",
+  "name": "The Bank of New York Mellon Corporation",
+  "mc": 100705992704,
+  "mcText": "100.71 B",
+  "price": 149.66
+ },
+ {
+  "rank": 116,
+  "ticker": "ICE",
+  "name": "Intercontinental Exchange, Inc.",
+  "mc": 99750641664,
+  "mcText": "99.75 B",
+  "price": 178.49
+ },
+ {
+  "rank": 117,
+  "ticker": "MMM",
+  "name": "3M Company",
+  "mc": 98814189568,
+  "mcText": "98.81 B",
+  "price": 191.23
+ },
+ {
+  "rank": 118,
+  "ticker": "GD",
+  "name": "General Dynamics Corporation",
+  "mc": 98188484608,
+  "mcText": "98.19 B",
+  "price": 363.36
+ },
+ {
+  "rank": 119,
+  "ticker": "WM",
+  "name": "Waste Management, Inc.",
+  "mc": 98013028352,
+  "mcText": "98.01 B",
+  "price": 246.49
+ },
+ {
+  "rank": 120,
+  "ticker": "MPC",
+  "name": "Marathon Petroleum Corporation",
+  "mc": 97967161344,
+  "mcText": "97.97 B",
+  "price": 359.8
+ },
+ {
+  "rank": 121,
+  "ticker": "EQIX",
+  "name": "Equinix, Inc.",
+  "mc": 97490624512,
+  "mcText": "97.49 B",
+  "price": 984.87
+ },
+ {
+  "rank": 122,
+  "ticker": "SNDK",
+  "name": "Sandisk Corporation",
+  "mc": 97166557184,
+  "mcText": "97.17 B",
+  "price": 85.36
+ },
+ {
+  "rank": 123,
+  "ticker": "NOW",
+  "name": "ServiceNow, Inc.",
+  "mc": 96318701568,
+  "mcText": "96.32 B",
+  "price": 92.8
+ },
+ {
+  "rank": 124,
+  "ticker": "UPS",
+  "name": "United Parcel Service, Inc.",
+  "mc": 95900991488,
+  "mcText": "95.90 B",
+  "price": 112.63
+ },
+ {
+  "rank": 125,
+  "ticker": "CSX",
+  "name": "CSX Corporation",
+  "mc": 94713806848,
+  "mcText": "94.71 B",
+  "price": 51.38
+ },
+ {
+  "rank": 126,
+  "ticker": "PSX",
+  "name": "Phillips 66",
+  "mc": 94444314624,
+  "mcText": "94.44 B",
+  "price": 242.12
+ },
+ {
+  "rank": 127,
+  "ticker": "CMCSA",
+  "name": "Comcast Corporation",
+  "mc": 92610240512,
+  "mcText": "92.61 B",
+  "price": 26.08
+ },
+ {
+  "rank": 128,
+  "ticker": "MRNA",
+  "name": "Moderna, Inc.",
+  "mc": 92512534528,
+  "mcText": "92.51 B",
+  "price": 228.64
+ },
+ {
+  "rank": 129,
+  "ticker": "USB",
+  "name": "U.S. Bancorp",
+  "mc": 92386197504,
+  "mcText": "92.39 B",
+  "price": 59.29
+ },
+ {
+  "rank": 130,
+  "ticker": "VLO",
+  "name": "Valero Energy Corporation",
+  "mc": 91861745664,
+  "mcText": "91.86 B",
+  "price": 329.39
+ },
+ {
+  "rank": 131,
+  "ticker": "ADBE",
+  "name": "Adobe Inc.",
+  "mc": 91380269056,
+  "mcText": "91.38 B",
+  "price": 234.79
+ },
+ {
+  "rank": 132,
+  "ticker": "CTAS",
+  "name": "Cintas Corporation",
+  "mc": 90763427840,
+  "mcText": "90.76 B",
+  "price": 228.58
+ },
+ {
+  "rank": 133,
+  "ticker": "WAT",
+  "name": "Waters Corporation",
+  "mc": 90578468864,
+  "mcText": "90.58 B",
+  "price": 460.88
+ },
+ {
+  "rank": 134,
+  "ticker": "GLW",
+  "name": "Corning Incorporated",
+  "mc": 90516029440,
+  "mcText": "90.52 B",
+  "price": 105.08
+ },
+ {
+  "rank": 135,
+  "ticker": "MSI",
+  "name": "Motorola Solutions, Inc.",
+  "mc": 90078887936,
+  "mcText": "90.08 B",
+  "price": 544.83
+ },
+ {
+  "rank": 136,
+  "ticker": "SPG",
+  "name": "Simon Property Group, Inc.",
+  "mc": 89057738752,
+  "mcText": "89.06 B",
+  "price": 235.27
+ },
+ {
+  "rank": 137,
+  "ticker": "EMR",
+  "name": "Emerson Electric Co.",
+  "mc": 89032294400,
+  "mcText": "89.03 B",
+  "price": 162.29
+ },
+ {
+  "rank": 138,
+  "ticker": "TT",
+  "name": "Trane Technologies plc",
+  "mc": 88899969024,
+  "mcText": "88.90 B",
+  "price": 406.13
+ },
+ {
+  "rank": 139,
+  "ticker": "PNC",
+  "name": "The PNC Financial Services Group, Inc.",
+  "mc": 88362459136,
+  "mcText": "88.36 B",
+  "price": 222.7
+ },
+ {
+  "rank": 140,
+  "ticker": "KKR",
+  "name": "KKR & Co. Inc.",
+  "mc": 87935090688,
+  "mcText": "87.94 B",
+  "price": 95.78
+ },
+ {
+  "rank": 141,
+  "ticker": "SHW",
+  "name": "The Sherwin-Williams Company",
+  "mc": 87754448896,
+  "mcText": "87.75 B",
+  "price": 363.24
+ },
+ {
+  "rank": 142,
+  "ticker": "PWR",
+  "name": "Quanta Services, Inc.",
+  "mc": 87483154432,
+  "mcText": "87.48 B",
+  "price": 580.6
+ },
+ {
+  "rank": 143,
+  "ticker": "ECL",
+  "name": "Ecolab Inc.",
+  "mc": 87413399552,
+  "mcText": "87.41 B",
+  "price": 311.67
+ },
+ {
+  "rank": 144,
+  "ticker": "HWM",
+  "name": "Howmet Aerospace Inc.",
+  "mc": 86455369728,
+  "mcText": "86.46 B",
+  "price": 217.41
+ },
+ {
+  "rank": 145,
+  "ticker": "MDLZ",
+  "name": "Mondelez International, Inc.",
+  "mc": 85785862144,
+  "mcText": "85.79 B",
+  "price": 67.77
+ },
+ {
+  "rank": 146,
+  "ticker": "AMT",
+  "name": "American Tower Corporation",
+  "mc": 85763792896,
+  "mcText": "85.76 B",
+  "price": 184.93
+ },
+ {
+  "rank": 147,
+  "ticker": "ELV",
+  "name": "Elevance Health, Inc.",
+  "mc": 84957495296,
+  "mcText": "84.96 B",
+  "price": 393.22
+ },
+ {
+  "rank": 148,
+  "ticker": "RCL",
+  "name": "Royal Caribbean Cruises Ltd.",
+  "mc": 84346961920,
+  "mcText": "84.35 B",
+  "price": 315.35
+ },
+ {
+  "rank": 149,
+  "ticker": "MCO",
+  "name": "Moody's Corporation",
+  "mc": 84132610048,
+  "mcText": "84.13 B",
+  "price": 487.94
+ },
+ {
+  "rank": 150,
+  "ticker": "WMB",
+  "name": "The Williams Companies, Inc.",
+  "mc": 83926089728,
+  "mcText": "83.93 B",
+  "price": 67.13
+ }
+]

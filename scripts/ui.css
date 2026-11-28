@@ -3262,3 +3262,200 @@ html[data-theme="light"] .strat-risk{background:#F4F8FC;border-color:rgba(14,116
 .ag-tt{flex:1 1 220px}
 .ag-tt b em{white-space:nowrap;display:inline-block}
 .ag-tt b{display:block}
+
+/* ============================================================================
+   ChoKo QUANT 브랜딩 (2026-11-28)
+   · 상단 로고 = choko-quant-mark-tesla-lux.png (브러시드 티타늄 CK + 루비 슬래시) 인라인 data URI
+   · 브랜드 텍스트 'ChoKo QUANT' — 대문자 C·K만 굵게 + 포인트 컬러(루비 레드)
+   · 서명 배지(CREATED BY JiHoon Park) 옆 'with ChoKo' 배지 — C·K만 굵게 + 포인트 컬러
+   · 제작자 서명 박스(.sig-badge)는 건드리지 않는다 — 폰트·그라디언트·테두리 그대로
+   ============================================================================ */
+:root{ --ck-red:#FF3B5C; --ck-red-soft:rgba(255,59,92,.45); }
+html[data-theme="light"]{ --ck-red:#D2103A; --ck-red-soft:rgba(210,16,58,.22); }
+
+.logo{padding:0; overflow:hidden}
+.logo .logo-img{width:100%; height:100%; display:block; object-fit:cover; border-radius:inherit}
+html[data-theme="light"] .logo{
+  background:#0B1226; border-color:rgba(15,23,42,.18);
+  box-shadow:0 2px 10px -6px rgba(15,23,42,.75), 0 0 0 1px rgba(255,255,255,.04) inset;
+}
+.brand-text .brand-name,
+html[data-theme="light"] .brand-text .brand-name{
+  background:none; -webkit-background-clip:border-box; background-clip:border-box;
+  color:var(--txt); -webkit-text-fill-color:currentColor;
+  font-weight:500; letter-spacing:.10em;
+}
+html[data-theme="light"] .brand-text .brand-name{ color:#16233A; }
+.brand-text .brand-name .ck{
+  font-weight:900; letter-spacing:0;
+  color:var(--ck-red); -webkit-text-fill-color:currentColor;
+  text-shadow:0 0 14px var(--ck-red-soft);
+}
+.brand-text .brand-name .bw{ font-weight:500; letter-spacing:.16em }
+
+.with-choko{
+  display:inline-flex; align-items:baseline; gap:4px; flex:0 0 auto;
+  padding:5px 9px 6px; border-radius:99px; line-height:1;
+  font-size:11px; font-weight:500; letter-spacing:.04em; color:var(--txt3);
+  border:1px solid var(--line); background:rgba(255,255,255,.03);
+  white-space:nowrap;
+}
+.with-choko b{ font-weight:800; letter-spacing:.02em; color:var(--txt2) }
+.with-choko .ck{ font-weight:900; color:var(--ck-red); text-shadow:0 0 10px var(--ck-red-soft) }
+html[data-theme="light"] .with-choko{ border-color:rgba(15,23,42,.14); background:rgba(15,23,42,.03) }
+html[data-theme="light"] .with-choko b{ color:#334155 }
+@media (max-width:1180px){ .with-choko{ display:none } }
+@media (max-width:640px){ .brand-text .brand-name{ font-size:12.5px; letter-spacing:.06em } }
+/* 상단 바 폭 확보 — 'with ChoKo' 배지가 들어와도 1600px 에서 가로 넘침이 없도록 간격만 미세 조정 */
+@media (min-width:1021px){
+  .topbar{gap:11px}
+  .market-badge{padding:6px 9px}
+}
+.with-choko{font-size:10.5px; padding:4px 7px 5px; gap:3px}
+/* 1600px 대에서 검색창이 좁아질 때 단축키 힌트(⌘K)를 접어 입력 문구 자리를 확보 (⌘K 동작은 그대로) */
+@media (max-width:1700px){ .search kbd{display:none} }
+
+/* ============================================================================
+   투자 성향 스위치 — '첫 번째로 고르는 핵심 선택' (2026-11-28 강조 개편)
+   · 상단 헤더(브랜드 바로 뒤)·전략 바 두 곳 모두 '1 성향' 라벨과 함께 배치
+   · 안정형 활성 = 시안·에메랄드 그라데이션 + 밝은 테두리 글로우
+   · 공격형 활성 = 레드·앰버 그라데이션 + 붉은 글로우
+   · 비활성 탭도 대비를 올려 읽기 쉽게 (글자 700)
+   ============================================================================ */
+.risk-pick{ display:flex; align-items:center; gap:7px; flex:0 0 auto; white-space:nowrap }
+.rp-n{
+  width:16px; height:16px; border-radius:50%; display:grid; place-items:center; flex:0 0 auto;
+  font-family:var(--mono); font-size:10.5px; font-weight:800; color:#04121A; line-height:1;
+  background:linear-gradient(135deg,#8BFAE6,#38BDF8);
+  box-shadow:0 0 12px rgba(56,189,248,.65), 0 0 0 1px rgba(190,250,255,.55) inset;
+}
+.rp-t{ font-size:10.5px; font-weight:800; letter-spacing:.12em; color:#9FE8FF }
+html[data-theme="light"] .rp-n{ color:#FFFFFF; background:linear-gradient(135deg,#0E7490,#0891B2); box-shadow:0 0 10px rgba(8,145,178,.35), 0 0 0 1px rgba(255,255,255,.5) inset }
+html[data-theme="light"] .rp-t{ color:#0E7490 }
+
+.risk-switch{
+  padding:4px; gap:4px; border-radius:12px;
+  background:rgba(5,11,19,.78);
+  border:1px solid rgba(148,196,235,.30);
+  box-shadow:0 0 0 1px rgba(4,8,14,.55) inset, 0 10px 26px -20px rgba(0,0,0,1);
+}
+.risk-switch button{
+  padding:7px 13px; border-radius:9px; gap:5px;
+  font-size:12.5px; font-weight:700; letter-spacing:-.005em; color:#C6D4E4;
+}
+.risk-switch button .rk-ic{ font-size:13.5px; line-height:1; filter:grayscale(.25) }
+.risk-switch button:hover{ color:#FFFFFF; background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.14) }
+
+/* 안정형 활성 — 시안·에메랄드 */
+.risk-switch button[data-risk-btn="safe"].on{
+  color:#03222B; border-color:rgba(150,250,255,.95);
+  background:linear-gradient(135deg,#5CF2D6 0%,#22D3EE 55%,#38BDF8 100%);
+  box-shadow:0 0 0 1px rgba(255,255,255,.35) inset, 0 0 20px -2px rgba(34,211,238,.85), 0 8px 20px -12px rgba(34,211,238,1);
+  text-shadow:0 1px 0 rgba(255,255,255,.35);
+}
+.risk-switch button[data-risk-btn="safe"].on .rk-ic{ filter:none }
+/* 공격형 활성 — 레드·앰버 */
+.risk-switch button[data-risk-btn="aggr"].on{
+  color:#2A0A05; border-color:rgba(255,196,130,.95);
+  background:linear-gradient(135deg,#FF5A5F 0%,#F43F5E 45%,#FFB020 100%);
+  box-shadow:0 0 0 1px rgba(255,255,255,.30) inset, 0 0 22px -2px rgba(255,80,70,.9), 0 8px 22px -12px rgba(255,90,60,1);
+  text-shadow:0 1px 0 rgba(255,220,190,.35);
+}
+.risk-switch button[data-risk-btn="aggr"].on .rk-ic{ filter:none }
+.risk-switch button[data-risk-btn="aggr"]:hover{ color:#FFE3D2; background:rgba(255,122,90,.16); border-color:rgba(255,140,100,.45) }
+
+/* 라이트 테마 */
+html[data-theme="light"] .risk-switch{ background:#FFFFFF; border-color:rgba(15,23,42,.16); box-shadow:0 2px 10px -8px rgba(15,23,42,.55) }
+html[data-theme="light"] .risk-switch button{ color:#3B4A5E }
+html[data-theme="light"] .risk-switch button:hover{ color:#0F172A; background:rgba(15,23,42,.06) }
+html[data-theme="light"] .risk-switch button[data-risk-btn="safe"].on{ color:#04282F }
+html[data-theme="light"] .risk-switch button[data-risk-btn="aggr"].on{ color:#2A0A05 }
+
+/* 전략 바 안 — 같은 라벨·스위치, 바 높이에 맞춘 정렬 */
+.risk-pick-strat{ align-self:stretch }
+.strat-risk{ align-self:auto }
+.strat-risk button{ padding:8px 12px }
+@media (max-width:1020px){
+  .risk-pick{ gap:6px }
+  .risk-pick-strat{ align-self:center }
+  .strat-risk button{ padding:7px 11px; font-size:12px }
+}
+
+/* ---- 상단 바 폭 확보 (1600px 단일 행 유지 · 좁은 화면은 줄바꿈으로 넘침 0) ---- */
+@media (min-width:1021px) and (max-width:1699px){ .market-badge .upd{ display:none } }
+@media (min-width:1021px){ .search{ min-width:104px } }
+@media (min-width:1021px) and (max-width:1570px){
+  .topbar{ flex-wrap:wrap; row-gap:8px }
+  .search{ flex:1 1 260px; max-width:none }
+}
+
+/* ============================================================================
+   ① 상단 통합 컨트롤 (1 성향 · 2 전략) — 첫 화면 최상단 (2026-11-28)
+   · 메인 우측 칼럼 맨 위: 성향 스위치 + 전략 버튼을 한 줄에 (좁은 화면은 줄바꿈)
+   · 하단 전략 비교 섹션(#stratBar)과 같은 상태를 공유한다
+   ============================================================================ */
+.topctl{
+  display:flex; align-items:center; flex-wrap:wrap; gap:10px 14px;
+  padding:9px 13px; border-radius:14px;
+  border:1px solid rgba(96,205,255,.24);
+  background:linear-gradient(100deg,rgba(13,26,41,.94),rgba(7,13,22,.88));
+  box-shadow:0 16px 34px -30px rgba(56,189,248,1), 0 0 0 1px rgba(4,8,14,.45) inset;
+}
+html[data-theme="light"] .topctl{ background:linear-gradient(100deg,#FFFFFF,#F4F9FF); border-color:rgba(14,116,144,.20); box-shadow:0 10px 26px -24px rgba(15,23,42,.9) }
+.tc-grp{ display:flex; align-items:center; gap:9px; min-width:0; flex:0 1 auto }
+.tc-lab{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:800; letter-spacing:.12em; color:#9FE8FF; white-space:nowrap }
+html[data-theme="light"] .tc-lab{ color:#0E7490 }
+.tc-sep{ width:1px; align-self:stretch; min-height:26px; background:linear-gradient(180deg,transparent,rgba(148,196,235,.38),transparent) }
+.top-strat-seg{ padding:4px; border-radius:12px; background:rgba(5,11,19,.78); border-color:rgba(148,196,235,.30); flex:0 0 auto }
+.top-strat-seg button{ padding:7px 13px; border-radius:9px; font-size:12.5px; gap:5px }
+.top-strat-seg button b{ font-size:12.5px; font-weight:700 }
+.top-strat-seg button span{ font-size:11px; font-weight:600; color:var(--txt4) }
+.top-strat-seg button.on span{ color:#BFE9FF }
+.top-strat-seg button[data-m="swing"].on span{ color:#A7F3D0 }
+html[data-theme="light"] .top-strat-seg{ background:#FFFFFF; border-color:rgba(15,23,42,.14) }
+@media (max-width:760px){
+  .tc-grp{ flex:1 1 100% }
+  .tc-sep{ display:none }
+  .top-strat-seg{ flex:1 1 auto }
+  .top-strat-seg button{ flex:1 1 0; justify-content:center }
+}
+
+/* ---- 거시지표 · 공포·탐욕 시계 2열 (넓은 화면 빈 공간 정리) ---- */
+.macro-fg-grid{ display:grid; grid-template-columns:1fr 1.15fr; gap:14px; align-items:stretch }   /* 왼쪽 공포·탐욕 시계 · 오른쪽 거시지표 */
+.macro-fg-grid > .macro-strip{ align-content:flex-start; min-width:0 }
+.macro-fg-grid > .fg-card{ padding:12px 13px 13px; gap:8px; min-width:0 }
+.macro-fg-grid .fg-grid{ grid-template-columns:minmax(0,1fr); gap:10px; align-items:start }
+.macro-fg-grid .fg-dial{ max-width:272px }
+.macro-fg-grid .fg-info{ gap:8px }
+.macro-fg-grid .fg-guide{ padding:8px 10px }
+.macro-fg-grid .fg-guide p{ line-height:1.5 }
+.macro-fg-grid .fg-hist{ gap:5px }
+.macro-fg-grid .fg-b{ width:27px; height:27px }
+@media (max-width:1099px){
+  .macro-fg-grid{ grid-template-columns:1fr }
+  .macro-fg-grid .fg-grid{ grid-template-columns:minmax(0,352px) minmax(0,1fr); gap:22px }
+  .macro-fg-grid .fg-dial{ max-width:352px }
+}
+@media (max-width:720px){
+  .macro-fg-grid .fg-grid{ grid-template-columns:minmax(0,1fr) }
+  .macro-fg-grid .fg-dial{ max-width:300px }
+}
+
+/* ---- UX 보정 (2026-11-28 전수 검수) ------------------------------------- */
+/* 좁은 화면에서 브랜드 이름의 C·K 강조 span 까지 숨겨지던 문제 — 부제(직계 span)만 숨긴다 */
+@media (max-width:420px){
+  .brand-text > span{ display:none }
+  .brand-text .brand-name span{ display:inline }
+}
+/* 1600px 대에서 검색창이 숨 쉴 수 있게 — 헤더 성향 스위치의 이모지는 접는다(색으로 구분) */
+@media (min-width:1021px) and (max-width:1699px){
+  .topbar > .risk-pick .rk-ic{ display:none }
+}
+/* 히어로 상단 — 종목·가격이 행 아래쪽에 붙어 위가 비어 보이던 정렬 */
+.hero-main{ align-items:center }
+.hero{ padding:15px 18px; gap:13px 20px }
+.macro-fg-grid + .begin-card, .hero + .chart-card{ margin-top:0 }
+.tc-now{ margin-left:auto; font-size:11.5px; color:var(--txt3); letter-spacing:-.005em; white-space:nowrap; font-variant-numeric:tabular-nums }
+.tc-now b{ font-weight:700; color:var(--txt2) }
+html[data-theme="light"] .tc-now{ color:#64748B } html[data-theme="light"] .tc-now b{ color:#334155 }
+@media (max-width:1100px){ .tc-now{ display:none } }

@@ -582,6 +582,32 @@
   }
   function all() { return M.tickers.map(function (x) { return get(x.t); }).filter(Boolean); }
 
+  /* ============================================================
+     전략별 유니버스 — 추세형은 Top 100(기존 102종목), 스윙형은 Top 150(152종목)
+     · rank 는 data.js meta.r (시총 순위) — 1~100위 + NKE·QQQ(r 없음) = 102종목이 추세형
+     · 스윙형은 101~150위 50종목을 더한 152종목 전체
+     · 스캐너 목록·상태 탭 카운트·프리셋 카운트·유니버스 백테스트 평균·자동 선택(topScoreT)이
+       모두 이 함수를 거치므로, 화면 제목(Top 100 / Top 150)과 집계가 항상 같은 집합을 가리킨다.
+     · 검색(전역 검색·관심종목 추가)은 152종목 전체를 대상으로 한다 — 차트는 어느 종목이든 열 수 있다.
+     ============================================================ */
+  var UNIV_MAX_RANK = { trend: 100, swing: 150 };
+  function uniMode(key) { return (key || stratKey()) === 'swing' ? 'swing' : 'trend'; }
+  function inUniv(x, mode) { return !x || x.r == null || x.r <= UNIV_MAX_RANK[mode || 'swing']; }
+  var uniListCache = {};
+  function uniList(key) {
+    var mode = uniMode(key);
+    var c = uniListCache[mode];
+    if (c && c.src === M.tickers) return c.list;
+    var list = M.tickers.filter(function (x) { return inUniv(x, mode); });
+    uniListCache[mode] = { src: M.tickers, list: list };
+    return list;
+  }
+  /* 유니버스가 바뀌면(전략 전환) 이 집합으로 센 캐시들을 버린다 */
+  function uniReset() {
+    presetCache = null; wCountCache = null; mom6Cache = null; win70Cache = {};
+    vcpCache = null; divCache = null; bkCache = null; triCache = null;
+  }
+
   /* 자동 선택 종목 — '지금 선택한 전략(state.strategy)'의 추천 1위.
      좌측 스캐너를 추천순으로 정렬했을 때 맨 위 1행과 같은 종목이 되도록, 스캐너와 똑같은
      필터·검색(scanRows)과 비교 함수(recCmp)를 그대로 쓴다 — 화면과 자동 선택이 어긋나지 않는다.
@@ -591,7 +617,7 @@
      다음 접속·전략 전환 때 그 종목이 자동으로 뜬다 (하드코딩 없음). */
   function topScoreT() {
     var rows = scanRows();
-    if (!rows.length) rows = M.tickers.map(function (x) { return A[x.t]; }).filter(Boolean);  /* 필터로 목록이 비면 전체에서 */
+    if (!rows.length) rows = uniList().map(function (x) { return A[x.t]; }).filter(Boolean);  /* 필터로 목록이 비면 그 전략 유니버스 전체에서 */
     if (!rows.length) return '';
     rows.sort(recCmp);
     return rows[0].sym || '';
@@ -738,8 +764,9 @@
     if (topT) { state.cur = topT; autoPick = true; }
     else if (!A[state.cur]) state.cur = (M.tickers[0] || {}).t || '';
     wSyncToggle();
-    $('#uniCount').textContent = String(M.tickers.length);      /* 스캐너 '전체' 집계와 같은 수 — 데이터에서 동적 반영 */
-    var fa = $('#favAdd'); if (fa) fa.title = '관심종목 추가 — ' + M.tickers.length + '종목 검색';
+    fitSearchPlaceholder();
+    $('#uniCount').textContent = String(uniList().length);      /* 스캐너 '전체' 집계와 같은 수 — 선택 전략 유니버스에서 동적 반영 */
+    var fa = $('#favAdd'); if (fa) fa.title = '관심종목 추가 — ' + M.tickers.length + '종목 검색';   /* 검색은 152종목 전체 */
     var cf = $('#cFav'); if (cf) cf.textContent = state.watch.length;
     renderFavs();
     renderScanner();
@@ -749,6 +776,13 @@
     prefetchPeriods();          /* 3M·6M·1Y·2Y 기간 집계를 백그라운드에서 미리 계산 */
   }
 
+  /* 검색창 폭에 맞춰 안내 문구를 줄인다 — 좁은 화면에서 '종목 검색 · E' 처럼 잘리지 않게 */
+  function fitSearchPlaceholder() {
+    var el = $('#globalSearch'); if (!el) return;
+    var short = (el.clientWidth || 0) < 190;
+    el.placeholder = short ? '종목 검색' : '종목 검색 · 티커 또는 회사명';
+  }
+  window.addEventListener('resize', function () { fitSearchPlaceholder(); });
   function renderFavs() {
     var el = $('#favPills'); if (!el) return;
     el.innerHTML = state.watch.map(function (t) {
@@ -803,7 +837,7 @@
     if (presetCache) return presetCache;
     var F = (M.fundamentals && M.fundamentals.tickers) || {};
     var known = {};
-    M.tickers.forEach(function (x) { known[x.t] = 1; });
+    uniList().forEach(function (x) { known[x.t] = 1; });
     var keys = Object.keys(F).filter(function (t) { return known[t] && F[t] && F[t].marketCap != null; });
     keys.sort(function (a, b) { return F[b].marketCap - F[a].marketCap; });
     var top = keys.slice(0, PRESET_TOP_N);
@@ -826,7 +860,7 @@
   function wCounts() {
     if (wCountCache) return wCountCache;
     var cnt = { '돌파': 0, '임박': 0, '진행': 0 }, set = {}, total = 0, asOf = M.asOf;
-    M.tickers.forEach(function (x) {
+    uniList().forEach(function (x) {
       var a = A[x.t];
       if (!a || !a.w || !a.w.stage) return;
       if (a.w.stage === '실패') { cnt['실패'] = (cnt['실패'] || 0) + 1; return; }
@@ -846,7 +880,7 @@
     if (vcpCache) return vcpCache;
     var pd = presetData();
     var set = {}, cnt = { pool: 0, tt: 0, brk: 0, near: 0, total: 0 }, rows = [];
-    M.tickers.forEach(function (x) {
+    uniList().forEach(function (x) {
       var a = A[x.t];
       if (!a || !a.vcp || !a.meta) return;
       if (!pd.top30[x.t] && !pd.quality[x.t]) return;      /* 대형 우량주 풀 밖은 제외 */
@@ -882,7 +916,7 @@
   function divCounts() {
     if (divCache) return divCache;
     var set = {}, list = [], asOf = M.asOf;
-    M.tickers.forEach(function (x) {
+    uniList().forEach(function (x) {
       var a = A[x.t];
       if (!a || !a.div || !a.div.hit) return;
       set[x.t] = 1; list.push(x.t);
@@ -923,7 +957,7 @@
   function bkCounts() {
     if (bkCache) return bkCache;
     var set = {}, list = [], soft = {}, softList = [], asOf = M.asOf;
-    M.tickers.forEach(function (x) {
+    uniList().forEach(function (x) {
       var a = A[x.t];
       if (!a || !a.bk || !a.bk.hit) return;
       soft[x.t] = 1; softList.push(x.t);
@@ -943,7 +977,7 @@
     var key = state.strategy === 'swing' ? 'swing' : 'trend';
     if (win70Cache[key]) return win70Cache[key];
     var set = {}, list = [];
-    M.tickers.forEach(function (x) {
+    uniList(key).forEach(function (x) {
       var a = A[x.t];
       if (!a || !a.strategy || !a.strategy[key]) return;
       var st = a.strategy[key].stats;
@@ -952,7 +986,7 @@
       if (w == null) return;
       if (w >= 0.7) { set[x.t] = 1; list.push(x.t); }
     });
-    win70Cache[key] = { set: set, list: list, n: list.length, total: M.tickers.length, key: key,
+    win70Cache[key] = { set: set, list: list, n: list.length, total: uniList(key).length, key: key,
       name: key === 'swing' ? '스윙형(단기)' : '추세형(중기)' };
     return win70Cache[key];
   }
@@ -965,7 +999,7 @@
   function mom6Counts() {
     if (mom6Cache) return mom6Cache;
     var rows = [];
-    M.tickers.forEach(function (x) {
+    uniList().forEach(function (x) {
       var a = A[x.t];
       if (!a || !a.close || a.close.length < MOM6_BARS) return;
       var i = a.close.length - 1, j = i - (MOM6_BARS - 1);
@@ -1065,7 +1099,7 @@
   }
   function scanCounts(scoped) {
     var c = { all: 0, buy: 0, entryBuy: 0, hold: 0, wait: 0, sell: 0, entry: 0, held: 0, blocked: 0, cool: 0, fav: 0 };
-    M.tickers.forEach(function (x) {
+    uniList().forEach(function (x) {
       var a = A[x.t]; if (!a) return;
       if (scoped && !presetMembers(a)) return;          /* 프리셋 안에서만 집계 */
       c.all++;
@@ -1124,7 +1158,7 @@
   function triCounts() {
     if (triCache) return triCache;
     var cnt = { '돌파': 0, '임박': 0, '진행': 0 }, set = {}, total = 0, asOf = M.asOf, list = [];
-    M.tickers.forEach(function (x) {
+    uniList().forEach(function (x) {
       var a = A[x.t];
       if (!a || !a.tri) return;
       cnt[a.tri.stage] = (cnt[a.tri.stage] || 0) + 1;
@@ -1312,7 +1346,7 @@
   /* 스캐너에 지금 보이는 종목(탭·프리셋·검색 적용, 정렬 전) — 자동 선택(topScoreT)도 같은 함수를 쓴다 */
   function scanRows() {
     var q = state.listQ.trim().toLowerCase();
-    return M.tickers.map(function (x) { return A[x.t]; }).filter(function (a) {
+    return uniList().map(function (x) { return A[x.t]; }).filter(function (a) {
       if (!a) return false;
       var rv = rowOf(a);
       if (!matchesFilter(a, rv)) return false;
@@ -1464,7 +1498,7 @@
   /* 5년(또는 선택 기간) 백테스트 창을 온전히 채운 종목의 전략 성과 분포 */
   function computeUniNow(mode, bars) {
     var acc = accNew();
-    M.tickers.forEach(function (x) {
+    uniList(mode).forEach(function (x) {
       var a = A[x.t];
       if (!a || !a.close) return;
       var b = uniBundle(x.t, bars); if (!b) return;
@@ -1479,7 +1513,7 @@
     if (uniRunning[key]) { if (done) uniRunning[key].push(done); return; }
     var waits = uniRunning[key] = done ? [done] : [];
     var gen = uniGen;
-    var order = M.tickers.slice(), idx = 0;
+    var order = M.tickers.slice(), idx = 0;        /* 두 전략을 한 번에 — 집계만 유니버스별로 나눈다 */
     var accs = { trend: accNew(), swing: accNew() };
     function step() {
       var t0 = performance.now();
@@ -1488,6 +1522,7 @@
         if (!a || !a.close) continue;
         var b = uniBundle(x.t, bars); if (!b) continue;
         ['trend', 'swing'].forEach(function (m) {
+          if (!inUniv(x, m)) return;               /* 추세형 집계는 Top 100(102종목)만 */
           var it = b[m]; if (!it) return;
           accAdd(accs[m], it, a.close.length - it.startIdx, bars);
         });
@@ -1548,10 +1583,27 @@
       '리밸런싱 시작일을 0~20일 옮기면 10년 총수익 ' + pctK(g.phaseMin, 0) + '~' + pctK(g.phaseMax, 0) + '(샤프 1.30~1.56) · 2022년 ' + pct(g.y2022, 1) + '\n' +
       '샤프 정점은 C2 70% + 모멘텀 30%(1.52) — 50:50은 수익을 더 원할 때의 선택';
   }
+  /* 전략별 유니버스 머리글 — 왼쪽 제목·분석 종목 수·상단 로고 부제를 지금 전략의 집합에 맞춘다
+     (본문-제목 일치: 추세형 Top 100 = 102종목 / 스윙형 Top 150 = 152종목) */
+  var UNIV_HEAD = {
+    trend: { title: '시가총액 Top 100', logo: 'US Top 100 Analyzer' },
+    swing: { title: '시가총액 Top 150', logo: 'US Top 150 Analyzer' }
+  };
+  function renderUnivHead() {
+    var m = uniMode(), h = UNIV_HEAD[m], n = uniList(m).length;
+    var t = $('#uniTitle'); if (t) t.textContent = h.title;
+    var c = $('#uniCount'); if (c) c.textContent = String(n);
+    var b = $('#brandSub'); if (b) b.textContent = h.logo;
+    /* 상단 통합 컨트롤 오른쪽 — 지금 무엇으로 보고 있는지 한 줄로 (제목·본문 일치 확인용) */
+    var now = $('#tcNow');
+    if (now) now.innerHTML = '<b>' + (riskAggr() ? '🔥 공격형' : '🛡️ 안정형') + '</b> · <b>' +
+      (m === 'swing' ? '⚡ 스윙형' : '📈 추세형') + '</b> · ' + h.title.replace('시가총액 ', '') + ' · 분석 ' + n + '종목';
+  }
   function renderStrategy() {
+    renderUnivHead();
     var info = stratInfo(stratKey());
     var bar = $('#stratBar'); if (bar) bar.setAttribute('data-m', info.key);
-    $$('#stratSeg button').forEach(function (b) {
+    $$('.strat-seg button').forEach(function (b) {          /* 상단 통합 컨트롤 + 하단 전략 바 두 곳을 함께 동기화 */
       var on = b.getAttribute('data-m') === info.key;
       b.classList.toggle('on', on);
       b.setAttribute('aria-selected', on ? 'true' : 'false');
@@ -1573,7 +1625,7 @@
       if (meta) meta.innerHTML = '전략 비교 · 같은 종목·같은 기간·거래비용 <b>0.03%</b> · 체결 <b>신호 다음 날 시가</b> · 집계 <b>' +
         u.n + '종목</b>(' + btTag() + ' 기간 충족) · 거래 ' + u.trades + '건';
     } else if (el) {
-      el.innerHTML = '<span class="uni-calc"><i></i>' + btName() + ' · 99종목 집계 중…</span>';
+      el.innerHTML = '<span class="uni-calc"><i></i>' + btName() + ' · ' + uniList(info.key).length + '종목 집계 중…</span>';
       if (meta) meta.innerHTML = '전략 비교 · 같은 종목·같은 기간·거래비용 <b>0.03%</b> · 체결 <b>신호 다음 날 시가</b> · ' + btTag() + ' 종목 집계 중…';
     }
     renderPresetGuide();          /* 전략을 바꾸면 스캐너 3줄 가이드도 그 전략 것으로 */
@@ -1586,6 +1638,7 @@
     if (mode !== 'swing' && mode !== 'trend') return;
     state.strategy = mode;
     stratPersist();
+    uniReset();                                               /* 전략별 유니버스가 바뀌니 목록·카운트 캐시를 버린다 */
     adoptRecSort();                                           /* 전략 버튼 → 좌측 스캐너 추천 순위로 자동 전환 */
     var top = topScoreT();                                    /* 바뀐 전략 기준 1위 */
     if (top) { state.cur = top; autoPick = true; clearDeepLink(); }
@@ -5264,11 +5317,12 @@
     drawCount();
 
     /* ---- 전략 전환 탭 (추세형 ↔ 스윙형) ---- */
-    var stratSeg = $('#stratSeg');
-    if (stratSeg) stratSeg.onclick = function (e) {
-      var b = e.target.closest('button'); if (!b) return;
-      setStrategy(b.getAttribute('data-m'));
-    };
+    $$('.strat-seg').forEach(function (seg) {               /* 상단(1·2 통합 컨트롤)과 하단 전략 바가 같은 전환 함수를 쓴다 */
+      seg.onclick = function (e) {
+        var b = e.target.closest('button[data-m]'); if (!b) return;
+        setStrategy(b.getAttribute('data-m'));
+      };
+    });
 
     /* ---- 성향 전환 (🛡️ 안정형 ↔ 🔥 공격형) — 상단 헤더·전략 바 두 곳이 같은 상태를 공유 ---- */
     $$('.risk-switch').forEach(function (seg) {
