@@ -179,7 +179,7 @@
     maOn: { 5: true, 20: true, 60: true, 120: true, 240: true },
     simIdx: 0, tool: 'cursor', ewMode: 0, clean: false,
     ewShow: { sub: true, ch: true, clu: true },
-    watch: [], strategy: 'trend', risk: 'safe'
+    watch: [], strategy: 'trend', risk: 'safe', invest: 'div10'
   };
   watchRestore();
 
@@ -377,6 +377,7 @@
     if (t) { state.cur = t; autoPick = true; clearDeepLink(); }
     if (state.cur && A[state.cur]) select(state.cur, true);
     renderScanner();
+    setNxTab(next);                                  /* 투자 운영 원칙 탭도 그 성향으로 (사용자는 자유롭게 다시 고를 수 있음) */
   }
   /* 성향이 바뀌었으므로 모든 종목 분석을 새 프로필로 다시 돌린다 (102종목 약 1.2초) */
   function riskRebuild() {
@@ -386,6 +387,7 @@
     for (var k in winCache) if (Object.prototype.hasOwnProperty.call(winCache, k)) delete winCache[k];
     for (var u in uniCache) if (Object.prototype.hasOwnProperty.call(uniCache, u)) delete uniCache[u];
     uniGen++;                                       /* 진행 중인 기간 집계 작업 결과는 버린다 */
+    acctGen++;                                      /* 진행 중인 계좌 시뮬레이션 결과도 버린다 */
     mom6Cache = null;
     M.tickers.forEach(function (x) { A[x.t] = get(x.t); });
     renderFavs();
@@ -419,6 +421,8 @@
     var seg = $('#stratBar');
     if (seg) seg.setAttribute('data-risk', riskProfile());
     renderAggrCard();
+    renderNotice();                                 /* 투자 운영 원칙 탭의 규칙·검증 수치도 새 성향 기준으로 */
+    renderAcct();                                   /* 성향이 바뀌면 계좌 시뮬레이션도 새 규칙으로 */
   }
   /* 공격형 카드 — 추세형은 50:50 블렌드 가이드 + 오늘의 모멘텀 Top5, 스윙형은 S2 파라미터 요약 */
   function renderAggrCard() {
@@ -1598,6 +1602,433 @@
     })();
   }
   /* ============================================================
+     투자 운영 원칙 — 선택형 탭 (📌 기본 원칙 · 🛡️ 안정형 · 🔥 공격형)
+     · 길게 나열하지 않고 고른 항목의 핵심만 보여 준다
+     · 성향(1️⃣)을 바꾸면 그 성향 탭으로 자동 연동 — 사용자는 언제든 자유롭게 눌러 비교
+     ============================================================ */
+  var nxTab = 'base';
+  function nxHead(txt, tone) {
+    return '<div class="nx-lab"><b>' + txt + '</b><span class="nx-pill ' + tone + '">' + (tone === 'safe' ? '🛡️ 안정형' : '🔥 공격형') + '</span></div>';
+  }
+  function nxPaneHtml(prof) {
+    var p = QE.riskParams ? QE.riskParams(prof) : riskParams(), g = riskGuide();
+    var aggr = prof === 'aggr';
+    var sw = g.swing || {}, tr = g.trend || {};
+    var rules = aggr
+      ? ['스윙 <b>손절 상한 −' + Math.round((p.swing.stopCap || 0.15) * 100) + '%</b>',
+         '손절 후 재진입 금지 <b>' + (p.swing.coolLoss || 0) + '일</b>',
+         '추세는 <b>C2 50% + 6M모멘텀 Top5 50%</b> 가이드']
+      : ['스윙 <b>손절 상한 −' + Math.round((p.swing.stopCap || 0.10) * 100) + '%</b>',
+         '손절 후 재진입 금지 <b>' + (p.swing.coolLoss == null ? 10 : p.swing.coolLoss) + '거래일</b>',
+         '추세는 <b>C2 규칙 그대로</b> (모멘텀 가미 없음)'];
+    var nums = aggr
+      ? ['스윙 S2 <b>5Y ' + pct(sw.ret5, 1) + '</b> · <b>10Y ' + pct(sw.ret10, 1) + '</b>',
+         '추세 블렌드 <b>10Y ' + pctK(tr.ret10, 0) + '</b> · MDD <b class="neg">' + pct(tr.mdd10, 1) + '</b> · 2022년 ' + pct(tr.y2022, 1)]
+      : ['스윙 <b>5Y +144.9%</b> · <b>10Y +249.4%</b> (S2 비교 기준)',
+         '추세 C2 <b>10Y +914.1%</b> · MDD <b class="neg">−21.3%</b> · 샤프 1.45'];
+    var note = aggr
+      ? '수익 구간이 넓어진 만큼 <b>한 번의 손실폭도 커집니다</b> — 진입 전에 손절가를 먼저 정하세요'
+      : '검증된 기본 규칙 그대로 — <b>원금 방어 우선</b>, 신호가 적어 거래 횟수가 줄어듭니다';
+    return '<div class="nx-grid nx-grid-1">' +
+        '<div class="nx-item ' + (aggr ? 'nx-swing' : 'nx-hold') + '">' +
+          nxHead('규칙 차이', aggr ? 'aggr' : 'safe') +
+          '<ul class="nx-list">' + rules.map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ul>' +
+        '</div>' +
+        '<div class="nx-item nx-nums">' +
+          nxHead('검증 수치 (고정 · 10년/5년)', aggr ? 'aggr' : 'safe') +
+          '<ul class="nx-list">' + nums.map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ul>' +
+        '</div>' +
+      '</div>' +
+      '<p class="nx-foot">' + note + ' · 지금 화면의 계좌 수치는 위 <b>계좌 시뮬레이션</b>에서 선택한 성향·전략·기간으로 다시 계산됩니다.</p>';
+  }
+  /* 전략 탭 — 지금 기간의 유니버스 성과까지 함께(동적) */
+  function nxStratHtml(key) {
+    var sw = key === 'swing';
+    var p = sw ? (QE.swingParams || {}) : (QE.trendParams || {});
+    var info = stratInfo(key), u = universeStats(key);
+    var rules = sw
+      ? ['진입 · <b>RSI(2) ' + (p.rsiEntry || 10) + ' 미만</b> + QQQ ' + (p.qqqMa || 200) + '일선 위 (RSI(2) 5 미만 극단 패닉이면 아래여도 허용)',
+         '손절 · <b>' + (p.stopAtr || 4.5) + ' ATR</b>, 최대 <b>−' + Math.round((p.stopCap || 0.10) * 100) + '%</b> · 재진입 ' + (p.coolLoss == null ? 10 : p.coolLoss) + '거래일 금지',
+         '청산 · 이익 <b>+' + Math.round((p.ma20Gate || 0.05) * 100) + '%</b> 이상에서 20일선 아래 <b>' + (p.ma20Confirm || 2) + '일</b> 연속 마감 → 다음 날 시가']
+      : ['진입 · 종합점수 <b>' + (p.entry == null ? 50 : p.entry) + ' 이상</b> + QQQ 100일선 단계 (RSI(2)<5 극단 패닉 예외)',
+         '손절 <b>' + (p.stopAtr || 6) + ' ATR</b> · 트레일 <b>' + (p.trailAtr || 10) + ' ATR</b> 즉시',
+         '청산 · 시장약세 전량 청산은 진입 <b>' + (p.minHold || 3) + '거래일</b> 이후 · 보유 중기(수개월)'];
+    var perf = '<ul class="nx-list">' +
+      '<li>이 기간(<b>' + btTag() + '</b>) <b>' + (u ? u.n : uniList(key).length) + '종목</b> 평균 <b class="' + (u ? cls(u.mean) : '') + '">' + (u ? pct(u.mean, 2) : '집계 중…') + '</b>' +
+        ' · 중앙 ' + (u ? pct(u.med, 2) : '—') + '</li>' +
+      '<li>평균 MDD <b class="neg">' + (u ? pct(u.mdd, 2) : '—') + '</b> · 승률 <b>' + (u && u.win != null ? (u.win * 100).toFixed(1) + '%' : '—') + '</b> · 보유 초과 ' + (u ? u.beat + '/' + u.n : '—') + '</li>' +
+      '<li>유니버스 <b>' + (sw ? 'Top 150 · 152종목' : 'Top 100 · 102종목') + '</b> · 신호 다음 날 시가 매수 · 비용 0.03%</li>' +
+      '</ul>';
+    return '<div class="nx-grid nx-grid-1">' +
+        '<div class="nx-item ' + (sw ? 'nx-swing' : 'nx-hold') + '">' +
+          '<div class="nx-lab"><b>' + (sw ? '⚡ 스윙형 (단기)' : '📈 추세형 (중기)') + '</b><span class="nx-pill ' + (sw ? 'aggr' : 'safe') + '">' + (sw ? 'Top 150' : 'Top 100') + '</span></div>' +
+          '<ul class="nx-list">' + rules.map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ul>' +
+        '</div>' +
+        '<div class="nx-item nx-nums">' +
+          '<div class="nx-lab"><b>지금 기간 성과</b><span class="nx-pill ' + (sw ? 'aggr' : 'safe') + '">' + btName() + '</span></div>' +
+          perf +
+        '</div>' +
+      '</div>' +
+      '<p class="nx-foot">' + (sw ? '단기 눌림 매수 — 거래가 잦고 보유가 짧습니다(평균 수주).' : '중기 추세 추종 — 거래가 적고 보유가 깁니다(평균 수개월).') +
+      ' 지금 화면의 전략은 <b>3️⃣ 전략</b> 버튼에서 바꿉니다.</p>';
+  }
+  function renderNotice() {
+    var s = $('#nxSafe'), a = $('#nxAggr'), t = $('#nxTrend'), g = $('#nxSwing');
+    if (s) s.innerHTML = nxPaneHtml('safe');
+    if (a) a.innerHTML = nxPaneHtml('aggr');
+    if (t) t.innerHTML = nxStratHtml('trend');
+    if (g) g.innerHTML = nxStratHtml('swing');
+    $$('#nxTabs button').forEach(function (b) {
+      var on = b.getAttribute('data-nx') === nxTab;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    $$('#nxBody [data-nx-pane], #noticeCard [data-nx-pane]').forEach(function (pn) {
+      pn.hidden = pn.getAttribute('data-nx-pane') !== nxTab;
+    });
+  }
+  function setNxTab(k, fromRisk) {
+    nxTab = (k === 'safe' || k === 'aggr' || k === 'trend' || k === 'swing' || k === 'base') ? k : 'base';
+    renderNotice();
+  }
+
+  /* ============================================================
+     계좌 포트폴리오 시뮬레이션 — 2️⃣ 투자방식 (집중 1 · 분산 3 · 분산 10)
+     ------------------------------------------------------------
+     · 고정 숫자를 쓰지 않는다. **지금 화면의 조합** 위에서 매번 계산한다:
+         성향(안정/공격) × 전략(추세 Top100 / 스윙 Top150) × 기간(3M·6M·1Y·2Y·5Y) × 슬롯 수
+     · 규칙 (REPORT_SLOTS_3_5_10 · REPORT_PORTFOLIO_CAP 실측과 같은 계좌 규칙)
+         신호 = 당일 종가 판정 → 다음 거래일 시가 매수 (엔진 거래 기록 그대로)
+         슬롯 = N개, 1포지션 목표 = 계좌 equity / N (동일가중, 리밸런싱 없음)
+         우선순위 = 시총순위 오름차순 (동률은 유니버스 순서)
+         섹터 캡 = 1슬롯 없음 · 3슬롯 1종목 · 10슬롯 3종목
+         패닉일(QQQ 200일선 아래 ∧ QQQ RSI(2)<5) 신규 투입 합계 ≤ 계좌 70%
+         비용 = 매수·매도 각 0.03% · 현금 잔고 연 4%(일 4/252% 복리)
+         미래참조 없음 — 판단은 당일 종가까지, 집행은 다음 날 시가
+     · 캐시 '성향|전략|기간' — 기간·성향·전략이 바뀔 때만 다시 계산한다.
+     · 8ms 단위로 나눠 계산해 화면이 멈추지 않는다(기간 집계와 같은 방식).
+     ============================================================ */
+  var ACCT_SLOTS = {
+    conc1: { key: 'conc1', n: 1, cap: 0, label: '🎯 집중 1', short: '집중 1', weight: '100%', hold: '1종목 전부' },
+    div3: { key: 'div3', n: 3, cap: 1, label: '⚖️ 분산 3', short: '분산 3', weight: '33%', hold: '1종목 33%' },
+    div10: { key: 'div10', n: 10, cap: 3, label: '🌐 분산 10', short: '분산 10', weight: '10%', hold: '1종목 10%' }
+  };
+  var SLOT_KEYS = ['conc1', 'div3', 'div10'];
+  var SLOT_STORE = 'apex.slots.v1';
+  var ACCT_FEE = 0.0003, ACCT_PANIC = 0.70, ACCT_RATE = 0.04 / 252;
+  function slotMode() { return ACCT_SLOTS[state.invest] ? state.invest : 'div10'; }
+  function slotInfo(k) { return ACCT_SLOTS[k || slotMode()]; }
+  function slotRestore() {
+    try {
+      var v = localStorage.getItem(SLOT_STORE);
+      if (ACCT_SLOTS[v]) state.invest = v;
+    } catch (e) { /* 저장소 차단 환경에서는 분산 10 */ }
+  }
+  function slotPersist() { try { localStorage.setItem(SLOT_STORE, slotMode()); } catch (e) {} }
+  function slotSecCapText(k) {
+    var c = slotInfo(k).cap;
+    return c > 0 ? ('동일 섹터 최대 ' + c + '종목') : '섹터 캡 없음(1종목)';
+  }
+  /* 2️⃣ 투자방식 버튼 — 성향·전략·기간은 그대로 두고 슬롯 수만 바꾼다(재분석 없음) */
+  function setAcctSlot(k) {
+    if (!ACCT_SLOTS[k] || k === slotMode()) { renderAcct(); return; }
+    state.invest = k;
+    slotPersist();
+    renderAcct();
+    renderHeroAcct();
+    renderTodayStrip();
+  }
+
+  /* ---------------- 계좌 시뮬레이션 엔진 ---------------- */
+  var acctCache = {};        /* '성향|전략|기간' → { conc1:{…}, div3:{…}, div10:{…} } */
+  var acctRunning = {};      /* 진행 중인 작업(같은 키는 한 번만) */
+  var acctGen = 0;           /* 성향이 바뀌면 진행 중인 결과를 버린다 */
+  function acctKey(mode, bars) { return riskProfile() + '|' + mode + '|' + bars; }
+  /* 패닉일 — QQQ 200일선 아래이면서 QQQ RSI(2) < 5 (추세·스윙 엔진의 시장 예외와 같은 정의) */
+  var _panicCache = null;
+  function acctPanic() {
+    var s = (M.series && M.series.QQQ) || null;
+    if (!s || !s.c || !QE.sma || !QE.rsi) return null;
+    var stamp = (M.asOf || '') + '|' + s.c.length;
+    if (_panicCache && _panicCache.stamp === stamp) return _panicCache.map;
+    var off = s.off || 0, c = s.c, ma = QE.sma(c, 200), r2 = QE.rsi(c, 2);
+    var map = new Array(M.dates.length).fill(false);
+    for (var i = 0; i < c.length; i++) {
+      if (ma[i] == null || r2[i] == null) continue;
+      map[off + i] = (c[i] < ma[i] && r2[i] < 5);
+    }
+    _panicCache = { stamp: stamp, map: map };
+    return map;
+  }
+  /* 종목별 전략 거래를 계좌 입력으로 — 지금 성향·기간으로 계산된 엔진 거래를 그대로 쓴다 */
+  function acctRow(x, b, mode) {
+    var a = A[x.t];
+    if (!a || !a.series || !b) return null;
+    var it = b[mode]; if (!it || !it.trades || !it.trades.length) return null;
+    var off = (M.series[x.t] && M.series[x.t].off) || 0, tr = [], i, t;
+    for (i = 0; i < it.trades.length; i++) {
+      t = it.trades[i];
+      if (t.entryIdx == null || !(t.entry > 0) || t.exitIdx == null || !(t.exit > 0)) continue;
+      tr.push({ eG: off + t.entryIdx, xG: t.reason === '보유중' ? -1 : off + t.exitIdx,
+        eP: t.entry, xP: t.exit, hold: t.hold || 0 });
+    }
+    if (!tr.length) return null;
+    return { t: x.t, rank: x.r == null ? 1e9 : x.r, sec: x.sk || x.nk || '기타',
+      off: off, c: a.series.c, trades: tr };
+  }
+  /* 슬롯 하나의 계좌 곡선 — 동일가중 · 시총순 · 섹터 캡 · 패닉 바스켓 · 현금 이자 */
+  function acctRun(rows, slot, bars) {
+    var N = slot.n, cap = slot.cap, FEE = ACCT_FEE;
+    var G = M.dates.length, start = Math.max(0, G - bars), panic = acctPanic();
+    var evE = {}, evX = {}, i, k, q;
+    for (i = 0; i < rows.length; i++) {
+      var row = rows[i];
+      for (k = 0; k < row.trades.length; k++) {
+        var t = row.trades[k];
+        if (t.eG >= start && t.eG < G) (evE[t.eG] || (evE[t.eG] = [])).push({ row: row, t: t });
+        if (t.xG >= start && t.xG < G) (evX[t.xG] || (evX[t.xG] = [])).push({ row: row });
+      }
+    }
+    var cash = 1, pos = [], curve = [], peak = 1, mdd = 0, log = [];
+    var wins = 0, closed = 0, entries = 0, holdSum = 0, dayHold = 0, secHold = {};
+    function pxAt(r2, g) { var ix = g - r2.off; return (ix >= 0 && ix < r2.c.length) ? r2.c[ix] : null; }
+    function equityAt(g) {
+      var v = cash;
+      for (var j2 = 0; j2 < pos.length; j2++) {
+        var p = pxAt(pos[j2].row, g);
+        v += (p != null ? p * pos[j2].shares : pos[j2].cost);
+      }
+      return v;
+    }
+    for (var g = start; g < G; g++) {
+      /* 1) 시가 청산 먼저 */
+      var xs = evX[g];
+      if (xs) for (k = 0; k < xs.length; k++) {
+        var pi = -1;
+        for (q = 0; q < pos.length; q++) if (pos[q].row === xs[k].row) { pi = q; break; }
+        if (pi < 0) continue;
+        var pp = pos.splice(pi, 1)[0];
+        var trade = null;
+        for (q = 0; q < pp.trades.length; q++) if (pp.trades[q].eG === pp.eG) { trade = pp.trades[q]; break; }
+        var out = pp.shares * (trade ? trade.xP : pp.entry) * (1 - FEE);
+        cash += out;
+        log.push({ t: pp.row.t, eG: pp.eG, xG: g, ret: out / pp.cost - 1, w: pp.shares * pp.entry * (1 + FEE) });
+        closed++; holdSum += (trade ? trade.hold : 0);
+        if (out - pp.cost > 0) wins++;
+        secHold[pp.sec] = Math.max(0, (secHold[pp.sec] || 0) - 1);
+      }
+      /* 2) 시가 신규 매수 — 빈 슬롯 · 섹터 캡 · 패닉 바스켓 70% */
+      var es = evE[g];
+      if (es && pos.length < N) {
+        es.sort(function (p1, p2) { return (p1.row.rank - p2.row.rank); });
+        var eq = equityAt(g > start ? g - 1 : g);
+        var target = eq / N, left = (panic && panic[g]) ? eq * ACCT_PANIC : Infinity;
+        for (k = 0; k < es.length && pos.length < N; k++) {
+          var er = es[k], busy = false;
+          for (q = 0; q < pos.length; q++) if (pos[q].row === er.row) { busy = true; break; }
+          if (busy) continue;
+          if (cap > 0 && (secHold[er.row.sec] || 0) >= cap) continue;
+          var notional = Math.min(target, left);
+          if (!(notional > eq * 1e-6) || !(er.t.eP > 0)) continue;
+          cash -= notional * (1 + FEE);
+          pos.push({ row: er.row, trades: er.row.trades, eG: er.t.eG, shares: notional / er.t.eP,
+            cost: notional * (1 + FEE), entry: er.t.eP, sec: er.row.sec });
+          secHold[er.row.sec] = (secHold[er.row.sec] || 0) + 1;
+          left -= notional;
+          entries++;
+        }
+      }
+      /* 3) 종가 평가 → 현금 이자 */
+      var eqC = equityAt(g);
+      cash *= (1 + ACCT_RATE);
+      curve.push(eqC);
+      if (eqC > peak) peak = eqC;
+      var dd = (eqC - peak) / peak;
+      if (dd < mdd) mdd = dd;
+      dayHold += pos.length;
+    }
+    var days = Math.max(1, G - start);
+    var total = curve.length ? curve[curve.length - 1] - 1 : 0;
+    var open = 0, openRet = 0, endSec = {};
+    for (q = 0; q < pos.length; q++) {
+      endSec[pos[q].sec] = (endSec[pos[q].sec] || 0) + 1;
+      var last = pxAt(pos[q].row, G - 1);
+      if (last == null) continue;
+      open++; openRet += pos[q].shares * last - pos[q].cost;
+    }
+    return {
+      slots: N, bars: bars, ret: total, mdd: mdd,
+      win: closed ? wins / closed : null, closed: closed, entries: entries,
+      avgHold: closed ? holdSum / closed : null,
+      avgPos: dayHold / days, exposure: N ? (dayHold / days) / N : 0,
+      cagr: Math.pow(Math.max(1 + total, 1e-6), 252 / days) - 1,
+      open: open, openPnl: openRet, endSec: endSec, log: log
+    };
+  }
+  /* 성향·전략·기간 조합 하나를 계산 — 두 전략 × 세 슬롯을 한 번에 캐시한다 */
+  function startAcctJob(bars, done) {
+    var key = 'job' + bars + '|' + riskProfile();
+    if (acctRunning[key]) { if (done) acctRunning[key].push(done); return; }
+    var waits = acctRunning[key] = done ? [done] : [];
+    var gen = acctGen, job = [], inputs = { trend: [], swing: [] }, ix = 0;
+    ['trend', 'swing'].forEach(function (m) {
+      uniList(m).forEach(function (x) { job.push({ m: m, x: x }); });
+    });
+    function step() {
+      var t0 = window.performance && performance.now ? performance.now() : Date.now();
+      function now() { return window.performance && performance.now ? performance.now() : Date.now(); }
+      while (ix < job.length && now() - t0 < 8) {
+        var it = job[ix++], row = null;
+        try { row = acctRow(it.x, winOf(it.x.t, bars), it.m); } catch (e) { row = null; }
+        if (row) inputs[it.m].push(row);
+      }
+      if (ix < job.length) { setTimeout(step, 0); return; }
+      if (gen !== acctGen) { delete acctRunning[key]; return; }      /* 성향 변경 — 결과 폐기 */
+      ['trend', 'swing'].forEach(function (m) {
+        var r = {};
+        SLOT_KEYS.forEach(function (sk) { r[sk] = acctRun(inputs[m], ACCT_SLOTS[sk], bars); });
+        acctCache[acctKey(m, bars)] = r;
+      });
+      delete acctRunning[key];
+      if (btBars() === bars) { renderAcct(); renderHeroAcct(); renderTodayStrip(); }
+      waits.forEach(function (f) { try { f(); } catch (e) {} });
+    }
+    setTimeout(step, 0);
+  }
+  /* 검증용 훅 — 화면과 같은 계산 결과를 외부 스크립트가 읽는다(APEX_DIAG 과 같은 방식) */
+  try {
+    window.APEX_ACCT = { stats: acctStats, cache: acctCache, panic: acctPanic, slot: slotMode };
+  } catch (e) { /* file:// 등에서 막히면 무시 */ }
+  /* 지금 화면 조합의 슬롯 결과 — 없으면 계산을 걸어 두고 null(화면은 '계산 중') */
+  function acctStats(sk) {
+    var bars = btBars(), c = acctCache[acctKey(stratKey(), bars)];
+    if (c && c[sk]) return c[sk];
+    startAcctJob(bars);
+    return null;
+  }
+  /* 계좌 시뮬레이션 요약·카드·히어로 가이드를 한 번에 다시 그린다 */
+  function renderAcct() {
+    var cur = slotMode(), mode = stratKey(), bars = btBars();
+    var now = acctStats(cur), base = acctStats('conc1'), big = acctStats('div10');
+    /* 2️⃣ 버튼 안의 핵심 수치 — 지금 성향·전략·기간 기준 */
+    $$('#topSlotSeg button[data-slot]').forEach(function (b) {
+      var k = b.getAttribute('data-slot'), r = acctStats(k), on = (k === cur);
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      var n = b.querySelector('.sl-n');
+      if (n) n.textContent = r ? (pct(r.ret, 0) + ' / ' + pct(r.mdd, 0)) : '—';
+    });
+    /* 요약(선택 효과) — 컨트롤러 바로 아래 */
+    var pe = $('#pickEffect');
+    if (pe) {
+      var head = '<span class="pe-k">선택 효과</span>' +
+        '<b class="pe-p">' + (riskAggr() ? '🔥 공격형' : '🛡️ 안정형') + '</b>' +
+        '<b class="pe-p">' + slotInfo(cur).label + '</b>' +
+        '<b class="pe-p">' + (mode === 'swing' ? '⚡ 스윙형' : '📈 추세형') + '</b>' +
+        '<b class="pe-p pe-per">' + btTag() + '</b>';
+      if (!now) {
+        pe.innerHTML = head + '<span class="pe-wait"><i></i>계좌 계산 중… (' + btName() + ' · ' + uniList(mode).length + '종목)</span>';
+        pe.title = '지금 성향·전략·기간 조합으로 계좌 포트폴리오(집중1/분산3/분산10)를 계산하고 있습니다';
+      } else {
+        pe.innerHTML = head +
+          '<span class="pe-v">수익 <b class="' + cls(now.ret) + '">' + pct(now.ret, 1) + '</b></span>' +
+          '<span class="pe-v">최악 MDD <b class="neg">' + pct(now.mdd, 1) + '</b></span>' +
+          '<span class="pe-v">승률 <b>' + (now.win == null ? '—' : (now.win * 100).toFixed(1) + '%') + '</b></span>' +
+          '<span class="pe-v">거래 <b>' + now.closed + '건</b></span>' +
+          '<span class="pe-d">' + acctDeltaText(now, base, big, cur) + '</span>';
+        pe.title = '이 숫자는 계좌(포트폴리오) 기준입니다 — 왼쪽 스캐너의 종목별 수익률과는 다른 값입니다.\n' +
+          '계산: ' + btName() + ' · ' + uniList(mode).length + '종목 · ' + slotInfo(cur).hold + ' · ' + slotSecCapText(cur) +
+          ' · 시총순 우선 · 패닉 바스켓 70% · 현금 연 4% · 비용 왕복 0.06%';
+      }
+    }
+    /* 계좌 카드(1·3·10 나란히) */
+    var grid = $('#acGrid');
+    if (grid) {
+      grid.innerHTML = SLOT_KEYS.map(function (k) {
+        var r = acctCache[acctKey(mode, bars)] ? acctCache[acctKey(mode, bars)][k] : null;
+        var s = SLOT_KEYS.indexOf(k) === SLOT_KEYS.indexOf(cur) ? ' on' : '';
+        return '<button type="button" class="ac-cell' + s + '" data-slot="' + k + '" aria-pressed="' + (s ? 'true' : 'false') + '"' +
+          ' title="' + ACCT_SLOTS[k].label + ' — ' + ACCT_SLOTS[k].hold + ' · ' + slotSecCapText(k) +
+          (r ? ('\n수익 ' + pct(r.ret, 1) + ' · 최악 MDD ' + pct(r.mdd, 1) + ' · 승률 ' + (r.win == null ? '—' : (r.win * 100).toFixed(1) + '%') +
+               ' · 거래 ' + r.closed + '건 · 노출 ' + (r.exposure * 100).toFixed(0) + '% · 평균 보유 ' + (r.avgHold == null ? '—' : Math.round(r.avgHold) + '일')) : '') + '">' +
+          '<span class="ac-t">' + ACCT_SLOTS[k].label + '</span>' +
+          '<span class="ac-r">수익 <b class="' + (r ? cls(r.ret) : '') + '">' + (r ? pct(r.ret, 1) : '—') + '</b></span>' +
+          '<span class="ac-r">MDD <b class="neg">' + (r ? pct(r.mdd, 1) : '—') + '</b></span>' +
+          '<span class="ac-r ac-w">승률 <b>' + (r && r.win != null ? (r.win * 100).toFixed(1) + '%' : '—') + '</b> <i>거래 ' + (r ? r.closed : '—') + '</i></span>' +
+          '</button>';
+      }).join('');
+    }
+    var an = $('#acNow');
+    if (an) an.innerHTML = (riskAggr() ? '🔥 공격형' : '🛡️ 안정형') + ' · ' + (mode === 'swing' ? '⚡ 스윙형' : '📈 추세형') +
+      ' · <b>' + btTag() + '</b>(' + btName() + ') · ' + uniList(mode).length + '종목';
+    var as = $('#acSrc');
+    if (as) {
+      as.innerHTML = now
+        ? ('시총순 우선 · 패닉 바스켓 70% · 현금 연 4% · 평균 보유 <b>' + now.avgPos.toFixed(1) + '/' + now.slots + '종목</b>')
+        : '계산 중…';
+    }
+    var ad = $('#acDetail');
+    if (ad) {
+      if (!now) ad.innerHTML = '<span class="ac-w">같은 기간·성향·전략 위에서 1·3·10슬롯 계좌를 계산하고 있습니다…</span>';
+      else {
+        var st = slotInfo(cur), other = cur === 'conc1' ? big : base;
+        ad.innerHTML =
+          '<span><b>규칙</b> ' + slotSecCapText(cur) + ' · 시총순 우선 · 패닉 70% · 현금 4%</span>' +
+          '<span><b>손절 1회</b> 계좌 <b class="neg">' + pct(-0.10 / st.n, 1) + '</b></span>' +
+          '<span><b>노출</b> ' + (now.exposure * 100).toFixed(0) + '% <i>(보유 ' + now.avgPos.toFixed(1) + '/' + st.n + ')</i></span>' +
+          '<span><b>평균 보유</b> ' + (now.avgHold == null ? '—' : Math.round(now.avgHold) + '거래일') + '</span>' +
+          '<span class="ac-tip">' + acctTip(cur) + '</span>';
+      }
+    }
+  }
+  /* 지금 조합에서 어느 슬롯의 낙폭이 가장 작은지 — 문구를 계산값으로 만든다(하드코딩 금지) */
+  function acctTip(cur) {
+    var c = acctCache[acctKey(stratKey(), btBars())];
+    if (!c) return '';
+    var best = null;
+    SLOT_KEYS.forEach(function (k) { if (c[k] && (best == null || c[k].mdd > c[best].mdd)) best = k; });
+    var label = function (k) { return ACCT_SLOTS[k].short; };
+    if (cur === 'conc1') {
+      return '집중 1은 한 종목이 곧 계좌입니다 — 규칙으로 줄일 수 있는 위험이 아니라 구조적 위험 (손절 1회가 계좌 −' + (10).toFixed(0) + '%)';
+    }
+    if (best === cur) return '권장 — 이 조합(' + btTag() + ')에서 세 슬롯 중 낙폭이 가장 작습니다';
+    return '이 조합(' + btTag() + ')에서는 ' + label(best) + '의 낙폭이 가장 작습니다 (' + pct(c[best].mdd, 1) + ') — 짧은 기간은 순서가 흔들립니다';
+  }
+  /* 기준 대비 변화 — 지금 선택이 집중1(또는 분산10)보다 수익·낙폭에서 얼마나 다른가 */
+  function acctDeltaText(now, base, big, cur) {
+    if (cur === 'conc1') {
+      if (!big) return '<i>분산 10과 비교 계산 중…</i>';
+      var dr = (now.ret - big.ret) * 100, dm = (now.mdd - big.mdd) * 100;   /* dm > 0 = 분산 10이 낙폭을 그만큼 방어 */
+      return '분산 10 대비 수익 <b class="' + (dr > 0 ? 'pos' : 'neg') + '">' + (dr > 0 ? '+' : '') + dr.toFixed(1) + '%p</b>' +
+        ' · <b class="neg">낙폭 ' + Math.abs(dm).toFixed(1) + '%p 더 큼</b>';
+    }
+    if (!base) return '<i>집중 1과 비교 계산 중…</i>';
+    var dr2 = (now.ret - base.ret) * 100, dm2 = (now.mdd - base.mdd) * 100;  /* dm2 > 0 = 지금 선택이 낙폭을 방어 */
+    return '집중 1 대비 수익 <b class="' + (dr2 > 0 ? 'pos' : 'neg') + '">' + (dr2 > 0 ? '+' : '') + dr2.toFixed(1) + '%p</b>' +
+      ' · <b class="' + (dm2 > 0 ? 'pos' : 'neg') + '">낙폭 ' + (dm2 > 0 ? dm2.toFixed(1) + '%p 방어' : Math.abs(dm2).toFixed(1) + '%p 악화') + '</b>';
+  }
+  /* 히어로 — 지금 고른 투자방식의 계좌 배분·위험 안내 */
+  function renderHeroAcct() {
+    var el = $('#heroAcct');
+    if (!el) return;
+    var cur = slotMode(), st = slotInfo(cur), a = A[state.cur] || null, now = acctStats(cur);
+    var sec = a ? (a.meta.sk || '—') : '—';
+    var mine = (now && now.endSec && now.endSec[sec]) || 0;
+    el.innerHTML =
+      '<span class="ha-k">계좌 배분</span>' +
+      '<span class="ha-i">' + st.label + ' · <b>계좌의 ' + st.weight + '</b></span>' +
+      '<span class="ha-i">' + (st.cap > 0 ? '<b>섹터 ' + st.cap + '종목</b> · ' : '') + '시총순 우선</span>' +
+      (st.cap > 0
+        ? '<span class="ha-i">섹터 <b>' + sec + '</b> <i>보유 ' + mine + '/' + st.cap + '</i></span>'
+        : '') +
+      '<span class="ha-warn">손절 1회 = 계좌 <b>−' + (10 / st.n).toFixed(1) + '%</b>' +
+      (now ? ' · 계좌 MDD <b>' + pct(now.mdd, 1) + '</b>' : '') + '</span>' +
+      '<span class="ha-ex">1,000만원 → <b>' + (1000 / st.n).toFixed(0) + '만원</b></span>';
+    el.title = '이 화면의 투자방식(' + st.label + ') 기준 계좌 배분입니다 — 백테스트 계좌 규칙과 같은 슬롯 수를 씁니다.\n' +
+      '손절 1회(−10%)가 계좌에 미치는 충격 = −10% ÷ 슬롯 수 = −' + (10 / st.n).toFixed(1) + '%\n' +
+      '1슬롯은 갭 하락이면 −10%보다 더 커집니다(검증 최악 −11.1%).';
+  }
+  /* ============================================================
      🔥 공격형 · 추세 전략 바 성과 줄
      · 공격형 + 추세형일 때만: 'C2 50% + 6M모멘텀 Top5 50%'(월간 리밸런싱) 계좌 성과를
        상단 유니버스 비교 옆에 함께 보여 준다(10년 계좌 10슬롯 검증 · 참고용).
@@ -1632,10 +2063,21 @@
     var sw = state.strategy === 'swing';
     var counts = scanCounts(presetActive());
     var buy = counts.entryBuy;
+    /* 계좌 빈 슬롯 — 지금 투자방식(집중1/분산3/분산10)에서 오늘 실제로 살 수 있는 수(시뮬레이션 마지막 날 보유 기준) */
     var b1 = $('#tsBuy');
-    if (b1) b1.innerHTML = '<span class="ts-lbl">신규 매수</span> <b class="' + (buy > 0 ? 'pos' : '') + '">' + buy + '</b>건' +
-      '<i> · 보유 ' + counts.hold + ' · 매수대기 ' + counts.waitbuy + ' · 매도 ' + counts.sell + '</i>';
+    if (b1) {
+      var st = slotInfo(), ar = acctStats(slotMode());
+      var openN = ar ? ar.open : null, freeN = openN == null ? null : Math.max(0, st.n - openN);
+      b1.innerHTML = '<span class="ts-lbl">신규 매수</span> <b class="' + (buy > 0 ? 'pos' : '') + '">' + buy + '</b>건' +
+        '<i> · 보유 ' + counts.hold + ' · 매수대기 ' + counts.waitbuy + ' · 매도 ' + counts.sell + '</i>' +
+        '<span class="ts-slot" title="' + st.label + ' 기준 — 오늘 실제로 살 수 있는 수(시뮬레이션 보유 ' + (openN == null ? '—' : openN) + '/' + st.n + ')">' +
+        '· 빈 슬롯 <b>' + (freeN == null ? '—' : freeN) + '</b></span>';
+      b1.title = '계좌 빈 슬롯은 선택 기간(' + btTag() + ') 계좌 시뮬레이션의 마지막 날 보유 기준입니다 — 실제 계좌 보유가 아닙니다.\n' +
+        '같은 날 신호가 여러 개 떠도 빈 슬롯(' + (freeN == null ? '—' : freeN) + '자리)만큼만 살 수 있고, ' +
+        (st.cap > 0 ? '같은 섹터는 최대 ' + st.cap + '종목까지입니다.' : '1종목이면 섹터 캡이 의미가 없습니다.');
+    }
 
+    /* 2️⃣ 투자방식 — 지금 계좌가 몇 자리 비었는지(백테스트 가상 보유 기준, 표시 전용) */
     var q = A['QQQ'] || {};
     var plan = (sw ? q.swing : q.trendPlan) || {};
     var qqq = plan.qqq != null ? plan.qqq : null, ma = plan.qqqMa != null ? plan.qqqMa : null;
@@ -1729,6 +2171,8 @@
     }
     renderPresetGuide();          /* 전략을 바꾸면 스캐너 3줄 가이드도 그 전략 것으로 */
     renderStratBlend(info.key);   /* 🔥 공격형 — 추세는 50:50 모멘텀 블렌드 성과를 전략 바에 함께 */
+    renderAcct();                 /* 2️⃣ 투자방식(집중1/분산3/분산10) 계좌 시뮬레이션 — 이 전략·기간 기준 */
+    renderNotice();               /* 운영 원칙 탭의 '지금 기간 성과'도 이 기간 기준 */
   }
   /* 전략 버튼(추세형 ↔ 스윙형) — 누를 때마다 그 전략의 추천 1위 종목으로 자동 전환한다.
      앞서 다른 종목을 직접 골라 두었어도 그 전략 기준 1위(= 좌측 스캐너 추천순 1행)를 보여 준다.
@@ -1744,6 +2188,7 @@
     renderStrategy();
     renderScanner();                                          /* 좌측 스캐너 신호·순위를 새 전략 기준으로 즉시 재집계 */
     renderAggrCard();                                         /* 공격형 카드(추세 50:50 / 스윙 S2)도 선택 전략에 맞춰 */
+    setNxTab(mode);                                           /* 투자 운영 원칙 탭도 그 전략으로 (자유롭게 다시 고를 수 있음) */
     if (state.cur && A[state.cur]) select(state.cur, true);    /* 위에서 고른 1위 종목을 그대로 표시 (기간 유지) */
   }
   /* 자동 선택 시 주소에 박힌 종목(#종목 · ?t=종목)을 지운다 — 화면(전략 1위)과 주소가 어긋나지 않게 */
@@ -2136,6 +2581,7 @@
 
     renderPlan(a);
     renderHeroSum(a);
+    renderHeroAcct();
   }
 
   /* ============================================================
@@ -5508,6 +5954,24 @@
       };
     });
 
+    /* ---- 투자 운영 원칙 탭 (📌 기본 원칙 · 🛡️ 안정형 · 🔥 공격형) ---- */
+    var nxt = $('#nxTabs');
+    if (nxt) {
+      nxt.onclick = function (e) {
+        var b = e.target.closest('button[data-nx]'); if (!b) return;
+        setNxTab(b.getAttribute('data-nx'));
+      };
+    }
+    renderNotice();
+
+    /* ---- 투자방식 전환 (🎯 집중 1 · ⚖️ 분산 3 · 🌐 분산 10) — 상단 컨트롤 + 계좌 카드 두 곳 ---- */
+    $$('.slot-seg, #acGrid').forEach(function (box) {
+      box.onclick = function (e) {
+        var b = e.target.closest('[data-slot]'); if (!b) return;
+        setAcctSlot(b.getAttribute('data-slot'));
+      };
+    });
+
     /* ---- 성향 전환 (🛡️ 안정형 ↔ 🔥 공격형) — 상단 헤더·전략 바 두 곳이 같은 상태를 공유 ---- */
     $$('.risk-switch').forEach(function (seg) {
       seg.onclick = function (e) {
@@ -6226,6 +6690,7 @@
     }
     cleanRestore();                                  /* 깔끔 보기 저장 상태 — 첫 draw 전에 */
     riskRestore();                                   /* 성향(안정형/공격형) — 첫 분석 호출 전에 복원 */
+    slotRestore();                                   /* 투자방식(집중1/분산3/분산10) — 기본 분산 10 */
     applyRiskClass();                                /* html[data-risk] · theme-color */
     accBuild();                                       /* 접힘 상태를 먼저 복원해 화면 깜빡임 방지 */
     beginInit();                                      /* 초보자 3단계 보는 법 — 접기/펼치기 저장 상태 */

@@ -3754,3 +3754,391 @@ main.workspace > #stratBar .strat-uni{ font-size:11.5px; gap:3px 12px }
   main.workspace > #stratBar{ padding:8px 11px 8px 13px }
   main.workspace > #stratBar .strat-txt p{ font-size:11.5px }
 }
+
+/* ============================================================================
+   3축 컨트롤러 (1 성향 · 2 투자방식 · 3 전략) + 계좌 포트폴리오 시뮬레이션 (2026-11-28)
+   · 2️⃣ 투자방식은 슬롯 수만 바꾼다 — 성향·전략·기간은 그대로, 계좌 숫자만 다시 계산
+   · 선택 효과 요약은 컨트롤러 바로 아래(#pickEffect), 1·3·10 비교는 계좌 카드(#acctCard)
+   ============================================================================ */
+/* ---- 2️⃣ 투자방식 세그먼트 (상단 통합 컨트롤 안) ---- */
+.slot-seg{ display:flex; gap:3px; padding:3px; border-radius:11px; flex:0 0 auto;
+  background:rgba(5,11,19,.78); border:1px solid rgba(148,196,235,.28) }
+.slot-seg button{ display:inline-flex; align-items:baseline; gap:4px; padding:6px 10px; border-radius:8px;
+  font-size:12.5px; font-weight:600; color:var(--txt3); white-space:nowrap; border:1px solid transparent;
+  transition:color .16s,background .16s,border-color .16s,box-shadow .16s,transform .12s }
+.slot-seg button b{ font-size:12.5px; font-weight:700; letter-spacing:-.01em }
+.slot-seg button span{ font-size:10.5px; font-weight:600; color:var(--txt4) }
+.slot-seg button .sl-n{ font-style:normal; font-size:10.5px; font-weight:700; color:var(--txt3);
+  font-variant-numeric:tabular-nums; padding-left:5px; margin-left:2px; border-left:1px solid rgba(148,196,235,.22) }
+.slot-seg button:hover{ color:var(--txt); background:rgba(255,255,255,.05); border-color:rgba(255,255,255,.09) }
+.slot-seg button.on{ color:#FFF6E6; transform:translateY(-1px);
+  background:linear-gradient(180deg,rgba(255,176,32,.30),rgba(255,176,32,.10));
+  border-color:rgba(255,196,84,.80);
+  box-shadow:0 0 0 1px rgba(255,190,90,.18) inset,0 0 20px -8px rgba(255,176,32,.85) }
+.slot-seg button.on span,.slot-seg button.on .sl-n{ color:#FFE7BC; border-left-color:rgba(255,214,150,.4) }
+html[data-theme="light"] .slot-seg{ background:#FFFFFF; border-color:rgba(15,23,42,.14) }
+html[data-theme="light"] .slot-seg button{ color:#5A677A }
+html[data-theme="light"] .slot-seg button.on{ color:#7C2D12;
+  background:linear-gradient(180deg,#FEF3C7,#FDE9B8); border-color:rgba(217,119,6,.55);
+  box-shadow:0 0 0 1px rgba(217,119,6,.14) inset,0 8px 18px -14px rgba(180,83,9,.9) }
+html[data-theme="light"] .slot-seg button.on span,html[data-theme="light"] .slot-seg button.on .sl-n{ color:#92400E; border-left-color:rgba(180,83,9,.28) }
+html[data-risk="aggr"] .slot-seg button.on{ background:linear-gradient(180deg,rgba(255,176,32,.26),rgba(226,110,90,.12));
+  border-color:rgba(255,196,120,.68) }
+@media (max-width:1439px){ .slot-seg button .sl-n{ display:none } }
+@media (max-width:760px){
+  .tc-grp-slot{ flex:1 1 100% }
+  .slot-seg{ flex:1 1 auto }
+  .slot-seg button{ flex:1 1 0; justify-content:center; padding:6px 6px; gap:3px }
+}
+@media (max-width:430px){
+  .slot-seg button{ padding:6px 4px }
+  .slot-seg button span{ display:none }
+  .slot-seg button b{ font-size:11.5px }
+}
+
+/* ---- 선택 효과 요약 — 3축 컨트롤러 바로 아래 한 줄 ---- */
+.pick-effect{ flex:1 1 100%; display:flex; align-items:center; flex-wrap:wrap; gap:4px 10px;
+  padding:5px 10px 6px; margin:0 0 2px; border-radius:10px; min-width:0;
+  border:1px solid rgba(255,196,84,.28);
+  background:linear-gradient(100deg,rgba(255,176,32,.10),rgba(255,176,32,.02) 58%,transparent) }
+.pick-effect .pe-k{ font-size:10.5px; font-weight:800; letter-spacing:.10em; color:#FFD79A; white-space:nowrap }
+.pick-effect .pe-p{ font-size:11.5px; font-weight:700; color:var(--txt2); white-space:nowrap }
+.pick-effect .pe-per{ color:#FFD79A }
+.pick-effect .pe-v{ font-size:11.5px; color:var(--txt3); white-space:nowrap; font-variant-numeric:tabular-nums }
+.pick-effect .pe-v b{ font-size:13px; font-weight:800; color:var(--txt) }
+.pick-effect .pe-d{ font-size:11px; color:var(--txt3); white-space:nowrap; padding-left:8px; margin-left:2px;
+  border-left:1px solid rgba(255,196,84,.26); font-variant-numeric:tabular-nums }
+.pick-effect .pe-d b{ font-weight:800 }
+.pick-effect .pe-wait{ display:inline-flex; align-items:center; gap:6px; font-size:11.5px; color:var(--txt3) }
+.pick-effect .pe-wait i{ width:10px; height:10px; border-radius:50%; border:2px solid rgba(255,196,84,.35);
+  border-top-color:#FFC454; animation:apexspin .8s linear infinite }
+@keyframes apexspin{ to{ transform:rotate(360deg) } }
+html[data-theme="light"] .pick-effect{ background:linear-gradient(100deg,#FFFBEB,#FFFDF7 60%,transparent); border-color:rgba(217,119,6,.24) }
+html[data-theme="light"] .pick-effect .pe-k,html[data-theme="light"] .pick-effect .pe-per{ color:#B45309 }
+html[data-theme="light"] .pick-effect .pe-p{ color:#475569 }
+html[data-theme="light"] .pick-effect .pe-d{ color:#64748B; border-left-color:rgba(217,119,6,.24) }
+@media (max-width:760px){
+  .pick-effect{ gap:3px 8px; padding:5px 8px 6px }
+  .pick-effect .pe-v b{ font-size:12px }
+  .pick-effect .pe-d{ flex:1 1 100%; padding-left:0; margin-left:0; border-left:0; border-top:1px solid rgba(255,196,84,.18); padding-top:3px }
+}
+
+/* ---- 계좌 시뮬레이션 카드 (1·3·10 나란히) ---- */
+.acct-card{ display:flex; flex-direction:column; gap:7px; padding:9px 12px 10px; margin:0;
+  border-radius:14px; border:1px solid rgba(255,196,84,.22);
+  background:linear-gradient(180deg,rgba(19,25,34,.94),rgba(11,16,23,.94));
+  box-shadow:0 18px 40px -36px rgba(255,176,32,.85),0 1px 0 rgba(255,255,255,.04) inset }
+html[data-theme="light"] .acct-card{ background:linear-gradient(180deg,#FFFFFF,#FBFCFE); border-color:rgba(217,119,6,.20);
+  box-shadow:0 10px 26px -26px rgba(15,23,42,.9) }
+.ac-head{ display:flex; align-items:baseline; gap:8px; flex-wrap:wrap }
+.ac-head b{ font-size:12.5px; font-weight:800; letter-spacing:-.01em; color:var(--txt) }
+.ac-head b::before{ content:''; display:inline-block; width:3px; height:11px; margin-right:7px; border-radius:2px;
+  background:linear-gradient(180deg,#FFC454,#F59E0B); vertical-align:-1px }
+.ac-now{ font-size:11px; color:var(--txt3) }
+.ac-now b{ color:var(--txt2); font-weight:700 }
+.ac-src{ margin-left:auto; font-size:10.5px; color:var(--txt4); white-space:nowrap }
+.ac-src b{ color:var(--txt3); font-weight:700 }
+.ac-grid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px }
+.ac-cell{ display:flex; flex-direction:column; gap:2px; text-align:left; padding:7px 9px; border-radius:10px;
+  border:1px solid rgba(148,196,235,.16); background:rgba(255,255,255,.022); cursor:pointer;
+  transition:border-color .16s,background .16s,box-shadow .16s,transform .12s; min-width:0 }
+.ac-cell:hover{ border-color:rgba(255,196,84,.45); background:rgba(255,196,84,.06) }
+.ac-cell.on{ border-color:rgba(255,196,84,.75); background:linear-gradient(180deg,rgba(255,176,32,.14),rgba(255,176,32,.04));
+  box-shadow:0 0 0 1px rgba(255,190,90,.14) inset,0 10px 22px -18px rgba(255,176,32,.9) }
+.ac-t{ font-size:11.5px; font-weight:800; color:var(--txt); white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.ac-t em{ font-style:normal; font-size:10px; font-weight:600; color:var(--txt4); margin-left:5px }
+.ac-row{ display:flex; align-items:baseline; gap:4px; font-size:10.5px; color:var(--txt4); white-space:nowrap;
+  font-variant-numeric:tabular-nums }
+.ac-row b{ font-size:12px; font-weight:800; color:var(--txt2) }
+.ac-row i{ font-style:normal; font-size:9.5px; color:var(--txt4) }
+.ac-cap{ font-size:9.5px; color:var(--txt4); letter-spacing:.01em }
+.ac-detail{ display:flex; flex-wrap:wrap; gap:3px 14px; font-size:11px; color:var(--txt3) }
+.ac-detail b{ color:var(--txt2); font-weight:700 }
+.ac-detail i{ font-style:normal; color:var(--txt4) }
+.ac-detail .ac-tip{ flex:1 1 100%; font-size:10.5px; color:var(--txt4) }
+.ac-detail .ac-w{ font-size:11px; color:var(--txt4) }
+html[data-theme="light"] .ac-cell{ border-color:rgba(15,23,42,.10); background:rgba(15,23,42,.015) }
+html[data-theme="light"] .ac-cell.on{ border-color:rgba(217,119,6,.50); background:linear-gradient(180deg,#FFFBEB,#FEF6E4) }
+html[data-theme="light"] .ac-t{ color:#334155 }
+html[data-theme="light"] .ac-row b{ color:#1E293B }
+@media (max-width:760px){
+  .acct-card{ padding:8px 10px 9px }
+  .ac-grid{ grid-template-columns:repeat(3,minmax(0,1fr)); gap:5px }
+  .ac-cell{ padding:6px 7px }
+  .ac-t{ font-size:10.5px }
+  .ac-t em{ display:none }
+  .ac-row{ font-size:9.5px; gap:3px }
+  .ac-row b{ font-size:11px }
+  .ac-row i{ display:none }
+  .ac-src{ display:none }
+  .ac-detail{ font-size:10.5px; gap:2px 10px }
+}
+
+/* ---- 히어로 계좌 배분 가이드 ---- */
+.hero-acct{ display:flex; align-items:center; flex-wrap:wrap; gap:3px 12px; padding:6px 10px 7px; border-radius:10px;
+  border:1px solid rgba(255,196,84,.24); background:linear-gradient(100deg,rgba(255,176,32,.08),transparent 70%);
+  font-size:11.5px; color:var(--txt3) }
+.hero-acct .ha-k{ font-size:10.5px; font-weight:800; letter-spacing:.10em; color:#FFD79A; white-space:nowrap }
+.hero-acct .ha-i{ white-space:nowrap; color:var(--txt3) }
+.hero-acct .ha-i b{ color:var(--txt); font-weight:800 }
+.hero-acct .ha-i i{ font-style:normal; color:var(--txt4) }
+.hero-acct .ha-warn{ white-space:nowrap; font-size:11px; color:#FCA5A5 }
+.hero-acct .ha-warn b{ font-weight:800 }
+.hero-acct .ha-ex{ margin-left:auto; white-space:nowrap; font-size:10.5px; color:var(--txt4) }
+.hero-acct .ha-ex b{ color:var(--txt2); font-weight:700 }
+html[data-theme="light"] .hero-acct{ background:linear-gradient(100deg,#FFFBEB,transparent 70%); border-color:rgba(217,119,6,.22) }
+html[data-theme="light"] .hero-acct .ha-k{ color:#B45309 }
+html[data-theme="light"] .hero-acct .ha-i{ color:#475569 }
+html[data-theme="light"] .hero-acct .ha-i b{ color:#0F172A }
+html[data-theme="light"] .hero-acct .ha-warn{ color:#B91C1C }
+@media (max-width:760px){
+  .hero-acct{ gap:2px 10px; padding:5px 9px 6px; font-size:11px }
+  .hero-acct .ha-ex{ display:none }
+}
+@media (max-width:430px){ .hero-acct .ha-i:nth-of-type(3){ display:none } }
+
+/* 3축 컨트롤러 정렬 — 전략 버튼도 투자방식 버튼과 같은 높이·리듬으로 */
+.topctl .top-strat-seg{ padding:3px; border-radius:11px }
+.topctl .top-strat-seg button{ padding:6px 11px; border-radius:8px; font-size:12.5px; gap:4px }
+.topctl .top-strat-seg button b{ font-size:12.5px }
+.topctl .top-strat-seg button span{ font-size:10.5px }
+.topctl .tc-risk button{ padding:6px 10px; font-size:12.5px }
+
+/* ============================================================================
+   상단 브랜드 고급화 (2026-11-28 4차 — 회장님 지시)
+   · 아이콘: 38px 다크 사파이어 글래스 + 메탈릭 림/하이라이트 (유리 반사 레이어)
+   · ChoKo QUANT: C·K 루비 포인트 유지 + QUANT는 플래티넘 메탈 그라디언트·넓은 자간
+   · with ChoKo: 캡슐 → 메탈/글래스 필 + 루비 점 (명함 배지와 격을 맞춤)
+   · 제작자 서명 배지(.sig-badge)는 원본 그대로 — 손대지 않는다
+   ============================================================================ */
+.topbar .brand{ gap:11px }
+.topbar .brand .logo{
+  width:38px; height:38px; border-radius:11px; flex:0 0 auto;
+  background:
+    radial-gradient(130% 120% at 28% -10%, rgba(126,196,255,.34), transparent 62%),
+    linear-gradient(158deg,#17293F 0%,#0A1526 46%,#050A13 100%);
+  border:1px solid rgba(150,205,255,.30);
+  box-shadow:
+    0 0 0 1px rgba(6,11,20,.9),
+    0 1px 0 rgba(214,238,255,.26) inset,
+    0 -12px 20px -14px rgba(0,0,0,.92) inset,
+    0 10px 24px -16px rgba(2,8,18,1),
+    0 0 30px -14px rgba(88,180,255,.9);
+  position:relative; overflow:hidden;
+}
+.topbar .brand .logo::after{
+  content:""; position:absolute; inset:0; pointer-events:none; border-radius:inherit; opacity:.55;
+  background:
+    linear-gradient(156deg, rgba(255,255,255,.28) 0%, rgba(255,255,255,.06) 24%, transparent 44%),
+    linear-gradient(0deg, rgba(3,9,18,.38), transparent 44%);
+  mix-blend-mode:screen;
+}
+.topbar .brand .logo .logo-img{ width:100%; height:100%; object-fit:cover; display:block; border-radius:inherit }
+.topbar .brand-text{ gap:1px }
+.topbar .brand-text .brand-name,
+html[data-theme="light"] .topbar .brand-text .brand-name{
+  display:inline-block;
+  font-size:15px; font-weight:600; letter-spacing:.13em; line-height:1.1;
+  background:none; -webkit-background-clip:border-box; background-clip:border-box;
+  color:#EAF2FB; -webkit-text-fill-color:currentColor;
+  text-shadow:0 1px 0 rgba(0,0,0,.35);
+}
+html[data-theme="light"] .topbar .brand-text .brand-name{ color:#12233A; text-shadow:none }
+.topbar .brand-text .brand-name .ck{
+  font-weight:900; letter-spacing:0;
+  color:var(--ck-red); -webkit-text-fill-color:currentColor;
+  text-shadow:0 0 16px var(--ck-red-soft), 0 0 2px rgba(255,255,255,.28);
+}
+.topbar .brand-text .brand-name .bw{
+  font-size:11px; font-weight:700; letter-spacing:.34em; text-transform:uppercase;
+  margin-left:9px;
+  background:linear-gradient(180deg,#FFFFFF 0%,#DDE8F4 32%,#95A8BE 64%,#F4F9FF 100%);
+  -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent; color:transparent;
+  filter:drop-shadow(0 1px 0 rgba(10,20,34,.45));
+}
+html[data-theme="light"] .topbar .brand-text .brand-name .bw{
+  background:linear-gradient(180deg,#3E5470 0%,#16283D 40%,#5B7288 68%,#22364C 100%);
+  -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 1px 0 rgba(255,255,255,.8));
+}
+html[data-theme="light"] .topbar .brand .logo{
+  background:radial-gradient(130% 120% at 28% -10%, rgba(150,205,255,.28), transparent 60%),
+    linear-gradient(158deg,#0F2036 0%,#0A1526 48%,#060D18 100%);
+  border-color:rgba(15,30,55,.32);
+  box-shadow:0 0 0 1px rgba(255,255,255,.55), 0 1px 0 rgba(255,255,255,.30) inset,
+    0 10px 20px -14px rgba(8,20,40,.85), 0 0 22px -14px rgba(30,90,160,.55);
+}
+/* with ChoKo — 메탈/글래스 필 + 루비 점 */
+.topbar .with-choko{
+  display:inline-flex; align-items:center; gap:6px; flex:0 0 auto;
+  padding:5px 11px 6px; border-radius:99px; line-height:1;
+  font-size:10px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:#93A7BC;
+  border:1px solid transparent; white-space:nowrap; position:relative;
+  background:
+    linear-gradient(180deg, rgba(112,152,200,.26), rgba(18,30,46,.62) 58%, rgba(8,15,26,.72));
+  box-shadow:
+    0 0 0 1px rgba(158,202,246,.26) inset,
+    0 1px 0 rgba(255,255,255,.16) inset,
+    0 8px 20px -16px rgba(0,0,0,1);
+}
+.topbar .with-choko .wc-dot{
+  width:6px; height:6px; border-radius:50%; flex:0 0 auto;
+  background:radial-gradient(circle at 35% 30%, #FF8DA3, var(--ck-red) 55%, #8E0620 100%);
+  box-shadow:0 0 8px var(--ck-red-soft), 0 0 0 1px rgba(255,255,255,.22) inset;
+}
+.topbar .with-choko b{ font-weight:800; letter-spacing:.06em; text-transform:none; color:#EDF4FC; font-size:11px }
+.topbar .with-choko .ck{ font-weight:900; color:var(--ck-red); text-shadow:0 0 10px var(--ck-red-soft) }
+html[data-theme="light"] .topbar .with-choko{
+  background:linear-gradient(180deg,#FFFFFF,#F1F5FA 62%,#E8EEF6);
+  box-shadow:0 0 0 1px rgba(15,23,42,.14) inset, 0 1px 0 rgba(255,255,255,.9) inset, 0 6px 16px -14px rgba(15,23,42,.8);
+  color:#5A6B80;
+}
+html[data-theme="light"] .topbar .with-choko b{ color:#1E293B }
+@media (max-width:760px){
+  .topbar .brand{ gap:8px }
+  .topbar .brand .logo{ width:32px; height:32px; border-radius:10px }
+  .topbar .brand-text .brand-name{ font-size:12.5px; letter-spacing:.08em; gap:5px }
+  .topbar .brand-text .brand-name .bw{ font-size:9.5px; letter-spacing:.24em }
+}
+@media (max-width:420px){
+  .topbar .brand .logo{ width:29px; height:29px; border-radius:9px }
+  .topbar .brand-text .brand-name .bw{ letter-spacing:.18em }
+}
+
+/* 'with ChoKo' — 별도 알약 배지를 없애고 명함 배지 안 우하단에 작게 (2026-11-28 5차) */
+#withChoko{ display:none !important }
+.sig-badge{ padding-bottom:13px }
+.sig-badge .sig-with{
+  position:absolute; right:11px; bottom:3px; display:inline-flex; align-items:center; gap:3px;
+  font-size:7.5px; font-weight:700; letter-spacing:.15em; text-transform:uppercase; color:#6C8098;
+  white-space:nowrap; line-height:1;
+}
+.sig-badge .sig-with b{ font-size:8.5px; font-weight:800; letter-spacing:.04em; text-transform:none; color:#C9D8E8 }
+.sig-badge .sig-with .ck{ font-weight:900; color:var(--ck-red); text-shadow:0 0 8px var(--ck-red-soft) }
+.sig-badge .sig-with .wc-dot{
+  width:4px; height:4px; border-radius:50%; flex:0 0 auto;
+  background:radial-gradient(circle at 35% 30%, #FF8DA3, var(--ck-red) 60%, #8E0620 100%);
+  box-shadow:0 0 6px var(--ck-red-soft);
+}
+html[data-theme="light"] .sig-badge .sig-with{ color:#7A8CA1 }
+html[data-theme="light"] .sig-badge .sig-with b{ color:#33475F }
+@media (max-width:1360px){ .sig-badge .sig-n{ font-size:20px } }
+
+/* 계좌 카드 — 세로 카드 → 한 줄 스트립 (첫 화면에서 히어로가 밀리지 않게) */
+.acct-card{ flex-direction:row; align-items:center; flex-wrap:wrap; gap:6px 12px; padding:6px 11px 7px }
+.acct-card .ac-head{ flex:0 0 auto }
+.acct-card .ac-src{ display:none }
+.ac-grid{ display:flex; flex:0 1 auto; gap:5px; min-width:0; flex-wrap:wrap }
+.ac-cell{ flex-direction:row; align-items:baseline; gap:7px; padding:4px 9px; border-radius:9px }
+.ac-cell .ac-t{ font-size:11px }
+.ac-cell .ac-r{ font-size:10px; color:var(--txt4); white-space:nowrap; font-variant-numeric:tabular-nums }
+.ac-cell .ac-r b{ font-size:11.5px; font-weight:800 }
+.ac-cell .ac-w{ display:none }
+.ac-detail{ flex:1 1 260px; min-width:0; font-size:10.5px; gap:2px 10px }
+.ac-detail .ac-tip{ flex:1 1 100% }
+@media (max-width:1250px){ .ac-cell .ac-w{ display:none } }
+@media (max-width:760px){
+  .acct-card{ gap:5px 8px; padding:6px 9px 7px }
+  .ac-grid{ flex:1 1 100%; gap:4px }
+  .ac-cell{ flex:1 1 0; justify-content:center; padding:4px 5px; gap:4px }
+  .ac-cell .ac-t{ font-size:10px }
+  .ac-cell .ac-r{ font-size:9.5px }
+  .ac-cell .ac-r b{ font-size:11px }
+  .ac-detail{ flex:1 1 100% }
+  .ac-detail .ac-tip{ display:none }
+}
+.today-strip .ts-dim{ color:var(--txt4); font-style:normal }
+@media (max-width:1500px){ .hero-acct .ha-ex{ display:none } }
+@media (max-width:760px){ #tsSlot{ display:none } }
+.today-strip .ts-slot{ color:var(--txt3); font-weight:600; white-space:nowrap }
+.today-strip .ts-slot b{ color:var(--txt); font-weight:800 }
+@media (max-width:560px){ .today-strip .ts-slot{ display:none } }
+/* '오늘' 스트립 — 계좌 빈 슬롯이 붙어도 읽기 좋게 (좁은 화면에서는 숨김) */
+/* 투자 운영 원칙 — 통합 컨트롤러 바로 위로 이동 (2026-11-28 6차) */
+.macro-fg-grid + .notice-card{ margin-top:0 }
+.notice-card{ margin-bottom:0 }
+/* 투자 운영 원칙 — 컨트롤러 위 배치에 맞춘 높이 압축(넓은 화면) — 내용은 그대로, 여백·글자만 조임 */
+@media (min-width:1100px){
+  .notice-card{ padding:9px 13px 9px 15px }
+  .notice-card .nx-head{ gap:8px }
+  .notice-card .nx-grid{ margin-top:7px; gap:8px }
+  .notice-card .nx-item{ padding:6px 10px 7px }
+  .notice-card .nx-item p{ margin-top:4px; font-size:11.5px; line-height:1.5 }
+  .notice-card .nx-item p em.tm{ margin-top:2px !important; font-size:10px !important; line-height:1.4 !important }
+  .notice-card .nx-foot{ margin-top:6px; font-size:10.5px; line-height:1.35 }
+  .notice-card .nx-lab b{ font-size:12px }
+  .notice-card .nx-lab span{ font-size:10.5px; padding:1px 6px }
+}
+
+/* 투자 운영 원칙 — 선택형 탭 (📌 기본 원칙 · 🛡️ 안정형 · 🔥 공격형) */
+.nx-head .nx-tabs{ display:flex; gap:3px; margin-left:auto; flex:0 0 auto;
+  padding:3px; border-radius:10px; background:rgba(5,11,19,.72); border:1px solid rgba(148,196,235,.22) }
+.nx-head .nx-tabs button{ padding:4px 10px 5px; border-radius:7px; font-size:11px; font-weight:700;
+  color:var(--txt3); white-space:nowrap; border:1px solid transparent; line-height:1.1 }
+.nx-head .nx-tabs button:hover{ color:var(--txt); background:rgba(255,255,255,.06) }
+.nx-head .nx-tabs button.on{ color:#EAF6FF; background:linear-gradient(180deg,rgba(56,189,248,.30),rgba(56,189,248,.10));
+  border-color:rgba(96,205,255,.62); box-shadow:0 0 0 1px rgba(96,205,255,.14) inset,0 8px 18px -14px rgba(56,189,248,.9) }
+.nx-head .nx-tabs button[data-nx="aggr"].on{ color:#FFE8D6;
+  background:linear-gradient(180deg,rgba(255,122,90,.30),rgba(255,122,90,.10)); border-color:rgba(255,150,110,.62) }
+.nx-head .nx-tag{ margin-left:0 }
+html[data-theme="light"] .nx-head .nx-tabs{ background:#FFFFFF; border-color:rgba(15,23,42,.12) }
+html[data-theme="light"] .nx-head .nx-tabs button{ color:#5A677A }
+html[data-theme="light"] .nx-head .nx-tabs button.on{ color:#0B4A63; background:linear-gradient(180deg,#E0F5FF,#CFF0FE); border-color:rgba(14,116,144,.42) }
+html[data-theme="light"] .nx-head .nx-tabs button[data-nx="aggr"].on{ color:#7C1D0E; background:linear-gradient(180deg,#FFE7DA,#FFDCC8); border-color:rgba(194,65,12,.40) }
+.nx-pane[hidden]{ display:none }
+.nx-grid-1{ grid-template-columns:1fr 1fr }
+.nx-list{ margin:6px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:3px }
+.nx-list li{ position:relative; padding-left:11px; font-size:11.5px; line-height:1.5; color:var(--txt2); word-break:keep-all }
+.nx-list li::before{ content:''; position:absolute; left:2px; top:6px; width:4px; height:4px; border-radius:50%;
+  background:rgba(148,196,235,.6) }
+.nx-item.nx-hold .nx-list li::before{ background:rgba(16,185,129,.85) }
+.nx-item.nx-swing .nx-list li::before{ background:rgba(245,158,11,.9) }
+.nx-list li b{ color:var(--txt); font-weight:700 }
+.nx-lab .nx-pill{ font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:99px; margin-left:6px }
+.nx-lab .nx-pill.safe{ color:#6EE7B7; background:rgba(16,185,129,.12); border:1px solid rgba(16,185,129,.26) }
+.nx-lab .nx-pill.aggr{ color:#FCD34D; background:rgba(245,158,11,.12); border:1px solid rgba(245,158,11,.26) }
+html[data-theme="light"] .nx-list li{ color:#475569 }
+html[data-theme="light"] .nx-list li b{ color:#0F172A }
+@media (max-width:900px){
+  .nx-head .nx-tabs{ margin-left:0; flex:1 1 100%; justify-content:space-between }
+  .nx-head .nx-tabs button{ flex:1 1 0; text-align:center; padding:5px 4px }
+  .nx-head .nx-tag{ display:none }
+  .nx-grid-1{ grid-template-columns:1fr }
+}
+/* 운영 원칙 탭 5개 — 좁은 화면에서도 한 줄에 (라벨만) */
+@media (max-width:1500px){ .nx-head .nx-tabs button{ padding:4px 8px 5px; font-size:10.5px } }
+@media (max-width:900px){ .nx-head .nx-tabs{ overflow-x:auto; } .nx-head .nx-tabs button{ flex:0 0 auto } }
+
+/* 운영 원칙 — 승인된 4줄 원칙 (2×2) */
+.nx-grid-2{ grid-template-columns:1fr 1fr; gap:7px }
+.nx-grid-2 .nx-item{ padding:7px 11px 8px }
+.nx-grid-2 .nx-item p{ margin:4px 0 0; font-size:11.5px; line-height:1.5 }
+@media (max-width:900px){ .nx-grid-2{ grid-template-columns:1fr } }
+.nx-grid-2 .nx-item p b{ font-weight:700 }
+
+/* 모바일 명함 배지 — 숨기지 않고 헤더 2번째 슬림 줄로 (2026-11-28 7차) */
+@media (max-width:760px){
+  .topbar{ flex-wrap:wrap; row-gap:4px; height:auto; min-height:60px; padding:7px 10px 6px; align-content:center }
+  .topbar .sig-badge{
+    display:flex !important; order:9; flex:1 1 100%; width:100%;
+    flex-direction:row; align-items:center; justify-content:flex-start; gap:6px;
+    margin:0; padding:3px 9px 4px 10px; border-radius:9px; min-height:22px;
+    background:linear-gradient(180deg,rgba(12,22,34,.86),rgba(6,11,18,.90));
+    border-color:rgba(96,222,255,.20);
+    box-shadow:0 0 0 1px rgba(4,8,14,.45) inset;
+  }
+  .topbar .sig-badge::before{ top:5px; bottom:5px; width:1px }
+  .topbar .sig-badge .sig-k{ font-size:8px; letter-spacing:.18em }
+  .topbar .sig-badge .sig-n{ font-size:15px; line-height:1.05; padding:0 0 1px }
+  .topbar .sig-badge .sig-with{ position:static; right:auto; bottom:auto; margin-left:auto; font-size:7px; gap:3px }
+  .topbar .sig-badge .sig-with b{ font-size:8px }
+  html[data-theme="light"] .topbar .sig-badge{ background:linear-gradient(180deg,#FFFFFF,#F4F8FC); border-color:rgba(14,116,144,.20) }
+}
+/* 모바일 계좌 스트립 — 3칸이 좁으니 제목/수치를 두 줄로 */
+@media (max-width:560px){
+  .ac-cell{ flex-direction:column; align-items:flex-start; justify-content:center; gap:1px; padding:4px 7px }
+  .ac-cell .ac-t{ font-size:9.5px; max-width:100% }
+  .ac-cell .ac-r{ font-size:9px; gap:3px }
+  .ac-cell .ac-r b{ font-size:11px }
+}
