@@ -261,7 +261,7 @@
   function trendDesc() {
     var p = QE.trendParams || { entry: 50, stopAtr: 6, trailAtr: 10, trailStartAtr: 6, minHold: 3 };
     return '종합 기술점수 ' + p.entry + ' 이상 + ' + trendMktRule() + ' → 다음 날 시가 매수 · 손절 ' +
-      p.stopAtr + ' ATR · 트레일 ' + p.trailAtr + ' ATR (진입 +' + p.trailStartAtr + ' ATR 발동) — 둘 다 즉시 · 시장 위험 0% 청산은 진입 ' + p.minHold + '거래일 이후';
+      p.stopAtr + ' ATR · 트레일 ' + p.trailAtr + ' ATR (진입 +' + p.trailStartAtr + ' ATR 발동) — 둘 다 즉시 · QQQ 100일선 이탈 시 전량 청산은 진입 ' + p.minHold + '거래일 이후';
   }
   /* 추세형 시장 필터 문구 — 엔진 파라미터(TREND_P.panicEntryRsi / panicExitRsi)에서 생성 */
   function trendMktRule() {
@@ -772,8 +772,32 @@
     renderScanner();
     renderStrategy();
     renderRisk();               /* 성향 버튼·경계 배지·공격형 카드를 저장된 성향으로 */
+    syncHeaderHeight(); syncPeriodTitles();
     select(state.cur, true);    console.log('[APEX] analyzed ' + M.tickers.length + ' tickers in ' + Math.round(performance.now() - t0) + 'ms');
     prefetchPeriods();          /* 3M·6M·1Y·2Y 기간 집계를 백그라운드에서 미리 계산 */
+  }
+
+  /* 헤더 실제 높이를 CSS 변수로 — 사이드바(sticky)와 본문 앵커가 헤더 아래에서 시작한다.
+     헤더는 폭에 따라 1~2줄로 늘어나므로 고정값(57px)을 쓰면 관심종목 줄이 사이드바 제목을 덮는다. */
+  function syncHeaderHeight() {
+    var hb = document.querySelector('.topbar');
+    if (!hb) return;
+    var h = Math.round(hb.getBoundingClientRect().height);
+    if (h > 0) document.documentElement.style.setProperty('--hdr-h', h + 'px');
+  }
+  window.addEventListener('resize', syncHeaderHeight);
+  if (window.ResizeObserver) {
+    try { new ResizeObserver(syncHeaderHeight).observe(document.querySelector('.topbar')); } catch (e) {}
+  }
+
+  /* 5Y 버튼 툴팁 — 실제 데이터 구간으로 (예전 하드코딩 날짜가 어긋나던 문제) */
+  function syncPeriodTitles() {
+    var b = document.querySelector('#tf button[data-n="1255"]');
+    if (!b || !M.dates || !M.dates.length) return;
+    var n = Math.min(1255, M.dates.length);
+    var i0 = M.dates.length - n;
+    b.title = '5년 전체 (' + M.dates[i0] + ' ~ ' + M.dates[M.dates.length - 1] + ' · ' + n.toLocaleString('en-US') +
+      '거래일 · 2022년 하락장 포함) — 아래 자료 기간과 같은 기간으로 함께 움직입니다';
   }
 
   /* 검색창 폭에 맞춰 안내 문구를 줄인다 — 좁은 화면에서 '종목 검색 · E' 처럼 잘리지 않게 */
@@ -1070,8 +1094,9 @@
     var st = swing ? a.swing : a.trendPlan;
     var b = a.strategy && (swing ? a.strategy.swing : a.strategy.trend);
     var live = b && b.live;
-    var held = !!live, buy = false, sell = false, why = '', kind = '';
+    var held = !!live, buy = false, sell = false, waitbuy = false, why = '', kind = '';
     if (st && st.signal) { buy = true; why = swing ? 'RSI·시장 조건 충족' : '점수·시장 조건 충족'; kind = 'entry'; }
+    /* 보유는 신규 매수와 별개 상태 — 시장 필터(blocked)가 보유 판정을 덮어쓰지 않는다 */
     if (held) { buy = true; why = why || '전략 보유 중'; kind = kind || 'held'; }
     if (held) {
       if (swing) {
@@ -1082,23 +1107,25 @@
       } else if (live.trailStop != null && live.last != null && live.last <= live.trailStop) {
         sell = true; why = '보유 중 · 트레일 청산가 이탈'; kind = 'exit';
       } else if (live.marketExitPending) {
-        sell = true; why = '보유 중 · 시장 위험 0% — 다음 시가 전량 청산'; kind = 'exit';
+        sell = true; why = '보유 중 · 시장 필터(QQQ 100일선 아래) — 다음 시가 전량 청산'; kind = 'exit';
       }
     }
-    if (!sell && st && st.state === 'blocked') {
-      sell = true; kind = 'blocked';
-      why = '진입 제한' + (swing ? ' · QQQ 200일선 아래' : ' · 시장 단계 위험');
+    /* 신규 진입 제한 — 청산(매도)과 섞지 않고 '매수대기'로 따로 센다. 보유 중이면 보유가 우선. */
+    if (!sell && !held && st && st.state === 'blocked') {
+      waitbuy = true; kind = 'blocked';
+      why = '진입 조건은 갖췄지만 시장 필터로 신규 매수 제한' +
+        (swing ? ' · QQQ 200일선 아래' : ' · QQQ 100일선 아래(비중 0%)');
     }
     /* 손절 후 재진입 금지 기간 — 신규 진입 제한 상태(백테스트와 같은 판정) */
-    if (!sell && swing && st && st.state === 'cool') {
-      sell = true; kind = 'cool';
+    if (!sell && !held && swing && st && st.state === 'cool') {
+      waitbuy = true; kind = 'cool';
       why = '손절 후 재진입 대기 (' + st.coolLeft + '/' + st.coolTotal + '일)' +
         (st.coolFromDate ? ' — ' + st.coolFromDate + ' 손절 이후' : '') + ' · 신규 진입 금지 (W 돌파 포함)';
     }
-    return { buy: buy && !sell, sell: sell, held: held, why: why, kind: kind };
+    return { buy: buy && !sell, sell: sell, waitbuy: waitbuy, held: held, why: why, kind: kind };
   }
   function scanCounts(scoped) {
-    var c = { all: 0, buy: 0, entryBuy: 0, hold: 0, wait: 0, sell: 0, entry: 0, held: 0, blocked: 0, cool: 0, fav: 0 };
+    var c = { all: 0, buy: 0, entryBuy: 0, hold: 0, wait: 0, sell: 0, waitbuy: 0, entry: 0, held: 0, blocked: 0, cool: 0, fav: 0 };
     uniList().forEach(function (x) {
       var a = A[x.t]; if (!a) return;
       if (scoped && !presetMembers(a)) return;          /* 프리셋 안에서만 집계 */
@@ -1109,8 +1136,9 @@
         c.buy++;
         if (g.held) c.hold++; else c.entryBuy++;       /* 신규 진입 매수 / 보유시홀드 */
       }
-      if (g.sell) c.sell++;
-      if (!g.buy && !g.sell) c.wait++;                  /* 관망 — 살 자리도 팔 자리도 아님 */
+      if (g.sell) c.sell++;                             /* 보유 중 청산 조건 발동만 */
+      if (g.waitbuy) c.waitbuy++;                       /* 신규 진입 제한 — 매도와 분리 */
+      if (!g.buy && !g.sell && !g.waitbuy) c.wait++;     /* 관망 — 살 자리도 팔 자리도 아님 */
       var st = state.strategy === 'swing' ? a.swing : a.trendPlan;
       if (st && st.signal) c.entry++;
       if (g.held) c.held++;
@@ -1131,8 +1159,9 @@
         : 'QQQ $' + pxs(sw.qqq) + ' < 200일선 $' + pxs(sw.qqqMa) +
           (sw.qqqRsi2 != null ? ' · QQQ RSI(2) ' + sw.qqqRsi2.toFixed(1) + (sw.marketOs ? ' (극단 패닉 예외 적용)' : '') : '');
     }
-    return '<b>' + (state.strategy === 'swing' ? '스윙형(단기)' : '추세형(중기)') + '</b> 진입 조건 충족 <b>0건</b> — 현재 시장 단계(' +
-      t1 + ' · ' + s1 + ')로 신규 진입이 제한되어 있습니다. 행의 종합점수는 그대로 표시됩니다.';
+    return '<b>' + (state.strategy === 'swing' ? '스윙형(단기)' : '추세형(중기)') + '</b> 오늘 신규 매수 <b>0건</b> — ' +
+      (state.strategy === 'swing' ? 'QQQ 200일선 아래' : 'QQQ 100일선 아래 · 진입 제한(비중 0%)') + '이라 신규 진입이 막혀 있습니다 (' +
+      t1 + ' · ' + s1 + '). 조건을 갖춘 종목은 <b>매수대기</b> 탭에 모아 두었고, 행의 종합점수는 그대로 표시됩니다.';
   }
   /* 행의 전략 상태 칩 — 선택한 전략(또는 key 로 지정한 전략)의 실제 상태만 쓴다.
      상단 카드의 peState/peSig·매수/매도 탭과 같은 단일 소스라 서로 어긋나지 않는다.
@@ -1141,9 +1170,8 @@
   function sigChip(a, key) {
     var swing = (key || state.strategy) === 'swing';
     var g = sigOf(a, key);
-    if (g.sell && g.kind === 'blocked') return { tx: '시장대기', cls: 'n', why: g.why };
-    if (g.sell && g.kind === 'cool') return { tx: '손절대기', cls: 'n', why: g.why };
     if (g.sell) return { tx: '매도', cls: 's', why: g.why };
+    if (g.waitbuy) return { tx: '매수대기', cls: 'n', why: g.why };
     if (g.buy) return { tx: g.held ? '보유시홀드' : '매수', cls: g.held ? 'b' : 'sb', why: g.why };
     var st = swing ? a.swing : a.trendPlan;
     return { tx: '관망', cls: 'w', why: (st && st.reason) || '진입 조건 미충족 — 신규 진입 신호 없음' };
@@ -1194,7 +1222,8 @@
     var g;
     if (state.filter === 'buy') { g = sigOf(a); return g.buy && !g.held; }   /* 신규 진입 매수 */
     if (state.filter === 'hold') { g = sigOf(a); return g.buy && g.held; }   /* 보유시홀드 */
-    if (state.filter === 'wait') { g = sigOf(a); return !g.buy && !g.sell; } /* 관망 */
+    if (state.filter === 'wait') { g = sigOf(a); return !g.buy && !g.sell && !g.waitbuy; } /* 관망 */
+    if (state.filter === 'waitbuy') return sigOf(a).waitbuy;                 /* 매수대기(시장필터) */
     if (state.filter === 'sell') return sigOf(a).sell;
     if (state.filter === 'fav') return isWatch(a.sym);
     return true;
@@ -1294,9 +1323,12 @@
      추세형: 진입 조건 충족/보유 우선 → 종합 기술점수 내림차순
      스윙형: 스윙 진입/보유 우선 → 스윙 적합도(RSI(2) 과매도 깊이 · W 단계 · 종합점수) 내림차순 */
   function trendRankOf(a) {
-    var st = a.trendPlan, live = a.strategy && a.strategy.trend && a.strategy.trend.live;
+    var st = a.trendPlan;
+    var g = sigOf(a, 'trend');
     var sc = rowOf(a).score;
-    var tier = (st && st.signal) ? 3 : (live ? 2 : (st && st.scoreOk ? 1 : 0));
+    /* 3 신규 진입 → 2 보유 → 1.8 매수대기(시장 필터로만 막힌 후보) → 1.4 청산 대기 보유 → 0 대기
+       매수 0건인 날 1위가 '매도' 종목이 아니라 '대기 후보'가 되도록 청산 보유를 후보보다 뒤에 둔다 */
+    var tier = g.sell ? 1.4 : (g.held ? 2 : (g.buy ? 3 : ((st && st.state === 'blocked') ? 1.8 : (st && st.scoreOk ? 1.2 : 0))));
     return { tier: tier, fit: Math.round(sc), score: sc };
   }
   function swingRankOf(a) {
@@ -1308,21 +1340,28 @@
     if (r2 != null) rsiComp = r2 <= thr ? 45 - Math.max(0, r2) * 0.6 : Math.max(0, 45 - (r2 - thr) * 1.6);
     var wComp = w === '돌파' ? 25 : w === '임박' ? 20 : w === '진행' ? 12 : 0;
     var fit = Math.max(0, Math.min(100, Math.round(rsiComp + wComp + sc * 0.3)));
-    var tier = (st && st.signal) ? 3 : (live ? 2 : ((st && (st.state === 'blocked' || st.state === 'cool')) ? 1 : 0));
+    var g = sigOf(a, 'swing');
+    var tier = g.sell ? 1.4 : (g.held ? 2 : (g.buy ? 3 : ((st && (st.state === 'blocked' || st.state === 'cool')) ? 1.8 : 0)));
     return { tier: tier, fit: fit, score: sc, rsi2: r2, w: w, route: st ? st.route : null,
       cool: (st && st.state === 'cool') ? st.coolLeft : 0, coolTotal: (st && st.coolTotal) || 0 };
   }
   function rankInfo(a) { return state.strategy === 'swing' ? swingRankOf(a) : trendRankOf(a); }
+  /* 추천 순위 설명 — 행의 상태 칩(sigChip)과 같은 판정을 그대로 옮긴다(둘이 어긋나지 않게) */
   function rankTierText(a, r) {
-    if (state.strategy === 'swing') {
-      if (r.tier === 3) return r.route === 'W돌파' ? 'W 넥라인 돌파 진입' : 'RSI(2) 과매도 진입';
-      if (r.tier === 2) return '스윙 보유시홀드';
-      if (r.tier === 1) return r.cool ? '손절 후 재진입 대기 (' + r.cool + '/' + (r.coolTotal || 10) + '일)' : '진입 제한 · QQQ 200일선 아래';
+    var c = sigChip(a);
+    var swing = state.strategy === 'swing';
+    if (swing) {
+      if (c.tx === '매수') return (r.route === 'W돌파' || (a.swing && a.swing.route === 'W돌파')) ? 'W 넥라인 돌파 진입' : 'RSI(2) 과매도 진입';
+      if (c.tx === '보유시홀드') return '스윙 보유시홀드';
+      if (c.tx === '매도') return '보유 청산 신호 (시뮬 포지션)';
+      if (c.tx === '매수대기') return r.cool ? '손절 후 재진입 대기 (' + r.cool + '/' + (r.coolTotal || 10) + '일)'
+        : '진입 조건 충족 · QQQ 200일선 아래로 매수대기';
       return '스윙 신호 대기';
     }
-    if (r.tier === 3) return '진입 조건 충족';
-    if (r.tier === 2) return '추세 보유시홀드';
-    if (r.tier === 1) return '점수 충족 · 시장 단계 대기';
+    if (c.tx === '매수') return '진입 조건 충족';
+    if (c.tx === '보유시홀드') return '추세 보유시홀드';
+    if (c.tx === '매도') return '보유 청산 신호 (시뮬 포지션)';
+    if (c.tx === '매수대기') return '점수 충족 · QQQ 100일선 아래로 매수대기';
     return '진입 대기';
   }
   function rankTip(a, r, n) {
@@ -1383,14 +1422,15 @@
     $('#cSell').textContent = counts.sell;
     var cHd = $('#cHold'); if (cHd) cHd.textContent = counts.hold;
     var cWt = $('#cWait'); if (cWt) cWt.textContent = counts.wait;
+    var cWB = $('#cWaitBuy'); if (cWB) cWB.textContent = counts.waitbuy;
     var cf = $('#cFav'); if (cf) { cf.textContent = counts.fav; cf.title = scopeTxt + ' 관심종목 수'; }
-    ['#cAll', '#cBuy', '#cHold', '#cWait', '#cSell'].forEach(function (sel) {
+    ['#cAll', '#cBuy', '#cHold', '#cWait', '#cWaitBuy', '#cSell'].forEach(function (sel) {
       var el = $(sel); if (el) el.title = scopeTxt + ' 집계 — 프리셋을 켜면 그 안에서 다시 센다';
     });
     var siSum = $('#siSum');
     if (siSum) siSum.textContent = (presetActive() ? PRESET_META[state.preset].name + ' · ' : '') +
       (state.strategy === 'swing' ? '스윙형' : '추세형') + ' · 매수 ' + counts.entryBuy + ' · 홀드 ' + counts.hold +
-      ' · 관망 ' + counts.wait + ' · 매도 ' + counts.sell;
+      ' · 관망 ' + counts.wait + ' · 매수대기 ' + counts.waitbuy + ' · 매도 ' + counts.sell;
     var pd = presetData();
     var cTop = $('#cTop30'); if (cTop) cTop.textContent = pd.nTop;
     var cQual = $('#cQual'); if (cQual) cQual.textContent = pd.nQual;
@@ -1433,7 +1473,7 @@
         '<div class="sg2"><span class="sc' + (recSwing ? ' fit' : '') + '"' + scTt + '>' + scTx + '</span>' +
         stratTagHtml(a, othKey, false) + '</div></div>' +
         '</div>';
-    }).join('') : ((state.filter === 'buy' || state.filter === 'sell')
+    }).join('') : ((state.filter === 'buy' || state.filter === 'sell' || state.filter === 'waitbuy')
       ? '<div class="scan-note">' + marketNoteHtml() + '</div>'
       : '<div class="empty">' + (presetActive()
         ? '이 프리셋(' + PRESET_META[state.preset].name + ') 안에 해당 조건의 종목이 없습니다'
@@ -1464,6 +1504,7 @@
         select(r.dataset.t);
       };
     });
+    renderTodayStrip();
   }
 
   /* ---------------- 전략 탭 · 100종목 요약 ---------------- */
@@ -1583,6 +1624,63 @@
       '리밸런싱 시작일을 0~20일 옮기면 10년 총수익 ' + pctK(g.phaseMin, 0) + '~' + pctK(g.phaseMax, 0) + '(샤프 1.30~1.56) · 2022년 ' + pct(g.y2022, 1) + '\n' +
       '샤프 정점은 C2 70% + 모멘텀 30%(1.52) — 50:50은 수익을 더 원할 때의 선택';
   }
+  /* ---------------- 오늘 요약 스트립 ----------------
+     성향·전략 컨트롤 바로 아래 한 줄: 오늘 신규 매수 N건 · QQQ 해제 조건(+X.X% / RSI(2)<5) · 대기 후보.
+     숫자는 모두 스캐너 탭과 같은 sigOf/scanCounts 집계를 쓴다(안내문과 탭이 어긋나지 않게). */
+  function renderTodayStrip() {
+    var el = $('#todayStrip'); if (!el) return;
+    var sw = state.strategy === 'swing';
+    var counts = scanCounts(presetActive());
+    var buy = counts.entryBuy;
+    var b1 = $('#tsBuy');
+    if (b1) b1.innerHTML = '<span class="ts-lbl">신규 매수</span> <b class="' + (buy > 0 ? 'pos' : '') + '">' + buy + '</b>건' +
+      '<i> · 보유 ' + counts.hold + ' · 매수대기 ' + counts.waitbuy + ' · 매도 ' + counts.sell + '</i>';
+
+    var q = A['QQQ'] || {};
+    var plan = (sw ? q.swing : q.trendPlan) || {};
+    var qqq = plan.qqq != null ? plan.qqq : null, ma = plan.qqqMa != null ? plan.qqqMa : null;
+    var maLbl = sw ? (plan.qqqMaN || 200) : 100;
+    var qq = $('#tsQqq');
+    if (qq) {
+      if (qqq != null && ma != null) {
+        var need = ma / qqq - 1;
+        qq.innerHTML = need > 0
+          ? '<span class="ts-lbl">QQQ 해제 조건</span> <b class="neg">+' + (need * 100).toFixed(1) + '%</b> <i>(' + maLbl + '일선 ' + usd(ma) + ' · 현재 ' + usd(qqq) + ' · 또는 RSI(2)&lt;5 극단 패닉)</i>'
+          : '<span class="ts-lbl">QQQ ' + maLbl + '일선</span> <b class="pos">위</b> <i>(' + usd(qqq) + ' · ' + maLbl + '일선 ' + usd(ma) + ' · 진입 허용)</i>';
+      } else {
+        qq.innerHTML = 'QQQ ' + maLbl + '일선 <i>데이터 없음</i>';
+      }
+    }
+
+    /* 대기 후보 — 오늘 신규 매수가 0건일 때만, 조건을 갖추고 시장 필터에만 막힌 종목 1~2개 */
+    var sep = $('#tsCandSep'), cd = $('#tsCand');
+    var cands = [];
+    if (buy === 0) {
+      uniList().forEach(function (x) {
+        var a = A[x.t]; if (!a) return;
+        var g = sigOf(a);
+        if (!g.waitbuy || g.kind === 'cool') return;
+        var st = sw ? a.swing : a.trendPlan;
+        var r2 = st && st.rsi2 != null ? st.rsi2 : null;
+        cands.push({ t: x.t, r2: r2, fit: rankInfo(a).fit, score: rowOf(a).score });
+      });
+      cands.sort(function (p1, p2) {
+        if (sw) { if (p1.r2 == null) return 1; if (p2.r2 == null) return -1; return p1.r2 - p2.r2; }
+        return p2.score - p1.score;
+      });
+    }
+    if (sep) sep.hidden = !cands.length;
+    if (cd) {
+      cd.hidden = !cands.length;
+      if (cands.length) {
+        cd.innerHTML = '<span class="ts-lbl">대기 후보</span> <b>' + cands.slice(0, 3).map(function (c) {
+          return c.t + (sw && c.r2 != null ? ' <i>RSI(2) ' + c.r2.toFixed(1) + '</i>' : ' <i>점수 ' + Math.round(c.score) + '</i>');
+        }).join(' · ') + '</b>' + (cands.length > 3 ? ' <i>외 ' + (cands.length - 3) + '종목</i>' : '');
+        cd.title = '진입 조건(점수·RSI)은 갖췄지만 시장 필터로 신규 매수가 막힌 종목입니다 — 왼쪽 [매수대기] 탭과 같은 집합';
+      }
+    }
+  }
+
   /* 전략별 유니버스 머리글 — 왼쪽 제목·분석 종목 수·상단 로고 부제를 지금 전략의 집합에 맞춘다
      (본문-제목 일치: 추세형 Top 100 = 102종목 / 스윙형 Top 150 = 152종목) */
   var UNIV_HEAD = {
@@ -1601,6 +1699,7 @@
   }
   function renderStrategy() {
     renderUnivHead();
+    renderTodayStrip();
     var info = stratInfo(stratKey());
     var bar = $('#stratBar'); if (bar) bar.setAttribute('data-m', info.key);
     $$('.strat-seg button').forEach(function (b) {          /* 상단 통합 컨트롤 + 하단 전략 바 두 곳을 함께 동기화 */
@@ -1759,10 +1858,10 @@
     var exDf = t.panicExitRsi == null ? 15 : t.panicExitRsi;
     return {
       key: 'trend', name: '추세형(중기)' + (riskAggr() ? ' · 공격형' : ''), live: true,
-      buy: '종합 기술점수 ' + e + ' 이상 + ' + trendMktRule() + ' 100/50% — 다음 날 시가 매수. 시장 위험 0%여도 QQQ RSI(2)가 ' +
+      buy: '종합 기술점수 ' + e + ' 이상 + ' + trendMktRule() + ' 100/50% — 다음 날 시가 매수. QQQ 100일선 아래(진입 제한)여도 RSI(2)가 ' +
         exTh + ' 미만인 극단 패닉 날은 전액 비중으로 허용',
       stop: '진입가 − ' + (t.stopAtr || 6) + ' ATR(변동성 기준 손절폭) — 진입 직후부터 즉시 적용',
-      sell: '진입 +' + (t.trailStartAtr || 6) + ' ATR 이후 트레일링 ' + (t.trailAtr || 10) + ' ATR 청산 · 시장 위험 0%면 진입 ' +
+      sell: '진입 +' + (t.trailStartAtr || 6) + ' ATR 이후 트레일링 ' + (t.trailAtr || 10) + ' ATR 청산 · QQQ 100일선 아래면 진입 ' +
         (t.minHold || 3) + '거래일 뒤 전량 청산 (단, QQQ RSI(2)<' + exDf + '인 패닉일은 그날 청산을 보류하고 다음 날 재판정)',
       foot: '점수는 차트 참고 점수이고, 실제 매매는 이 신호 기준입니다.' +
         (riskAggr() ? ' 공격형 추세형은 C2 신호를 그대로 두고 계좌를 ‘C2 50% + 6M모멘텀 Top5 50%(월간 리밸런싱)’로 섮는 가이드를 함께 보여 줍니다 — 아래 공격형 카드 참고.' : '')
@@ -1879,12 +1978,12 @@
       tone = 'sell';
       sub = swing ? '이익 구간에서 20일선 아래로 <b>2일 연속</b> 마감했습니다'
         : '트레일 청산가를 종가가 이탈했습니다';
-    } else if (g.sell && g.kind === 'blocked') {
-      act = '관망 — 신규 진입 금지';
+    } else if (g.waitbuy && g.kind === 'blocked') {
+      act = '대기 — 오늘은 신규 매수 없음';
       tone = 'wait';
-      sub = swing ? '시장(QQQ)이 200일선 아래라 스윙 진입을 막고 있습니다'
-        : '시장 단계가 위험(0%)입니다';
-    } else if (g.sell && g.kind === 'cool') {
+      sub = swing ? '진입 조건은 갖췄지만 시장(QQQ)이 200일선 아래라 스윙 매수를 막고 있습니다'
+        : '진입 조건은 갖췄지만 QQQ가 100일선 아래 · 진입 제한(비중 0%) 상태입니다';
+    } else if (g.waitbuy && g.kind === 'cool') {
       act = '관망 — 손절 후 ' + (plan.coolLeft != null ? plan.coolLeft : '?') + '거래일 대기';
       tone = 'wait';
       sub = '같은 종목에서 손절이 이어지지 않게 쉬는 구간입니다';
@@ -1911,7 +2010,9 @@
     if (swing) { refLab = '20일선'; refPx = plan.ma20 != null ? plan.ma20 : (a.ind && a.ind.ma20 ? a.ind.ma20[a.close.length - 1] : null); }
     else { refLab = '트레일 기준'; refPx = live && live.trailStop != null ? live.trailStop : null; }
     var l2v = stopPx ? '<span class="big neg">' + usd(stopPx) + '</span>' + (dStop != null ? ' <b class="neg">(' + pct(dStop, 1) + ')</b>' : '') : '—';
-    var l2n = (swing ? '4.5 ATR과 −10% 중 가까운 쪽' : '진입가 − 6 ATR') +
+    var l2n = (live ? '보유 포지션 기준 · ' : '신규 진입 기준 · ') +
+      (swing ? (plan.stopAtr || 4.5) + ' ATR과 −' + Math.round(((plan.stopCap != null ? plan.stopCap : 0.1)) * 100) + '% 중 가까운 쪽'
+        : '진입가 − ' + ((a.trendPlan && a.trendPlan.stopAtr) || 6) + ' ATR') +
       (refPx != null && refLab ? ' · ' + refLab + ' <b>' + usd(refPx) + '</b>' : '');
 
     /* ③ 주의할 점 — 실적 D-3 · 데드캣(추가 하락) 위험 (제목 한 줄 + 설명) */
@@ -1935,7 +2036,7 @@
         if (wTone !== 'warn') wTone = 'warn';
       } else {
         vHead.push('데드캣(추가 하락) 위험');
-        wTxt.push('급락 중인데 <b>반등 확인(+3% 양봉·거래량)</b>이 없습니다 — 지금 사면 급락 저점을 다시 깨는 확률이 80%입니다');
+        wTxt.push('급락 중인데 <b>반등 확인(+3% 양봉·거래량)</b>이 없습니다 — 5년 사건 연구에서 반등 확인이 없는 급락 뒤에는 저점을 다시 깨는 경우가 다수였습니다. 확인 전에는 비중을 줄여 접근하세요');
         wTone = 'warn';
       }
     }
@@ -1949,7 +2050,7 @@
         '<div class="bs-v' + (tone === 'buy' ? ' pos' : tone === 'sell' ? ' neg' : ' dim') + '">' + act + '</div>' +
         '<span class="bs-n">' + sub + '</span></div>' +
       '<div class="bs-cell">' +
-        '<div class="bs-k"><i>②</i>손절가 / 기준선</div>' +
+        '<div class="bs-k"><i>②</i>' + (live ? '손절가 <em>보유 포지션</em>' : '손절가 <em>신규 진입 기준</em>') + '</div>' +
         '<div class="bs-v">' + l2v + '</div>' +
         '<span class="bs-n">' + l2n + '</span></div>' +
       '<div class="bs-cell tone-' + wTone + '">' +
@@ -1983,6 +2084,28 @@
     $('#heroName').textContent = a.meta.nk;
     $('#heroSector').textContent = a.meta.sk;
     var ha = $('#heroAsOf'); if (ha) ha.textContent = a.dates[a.dates.length - 1] + ' 종가';
+    /* 시뮬 기준 — 이 화면의 보유·청산은 백테스트 가상 포지션(실계좌 아님) */
+    var hsim = $('#heroSim');
+    if (hsim) {
+      var simLive = !!(a.strat && a.strat.live);
+      hsim.hidden = !simLive;
+      if (simLive) hsim.title = '이 종목은 ' + (a.stratKey === 'swing' ? '스윙형' : '추세형') + ' 백테스트에서 ' +
+        a.strat.live.entryDate + ' $' + pxs(a.strat.live.entry) + '에 진입한 것으로 계산된 가상 포지션입니다 — 실제 계좌 보유가 아닙니다';
+    }
+    /* 데이터 지연 — 원천(Yahoo) 결측으로 같은 봉이 반복된 종목 */
+    var hst = $('#heroStale');
+    if (hst) {
+      var sr = (M.series && M.series[a.sym]) || {};
+      var sn = sr.staleN || 0, mn = sr.miss10 || 0;
+      var warn = (sn >= 2 || mn >= 2);
+      hst.hidden = !warn;
+      if (warn) {
+        hst.textContent = sn >= 2 ? ('데이터 지연 ' + sn + '거래일') : ('데이터 결측 ' + mn + '/10봉');
+        hst.title = '원천(Yahoo) 데이터에 빠진 봉이 있어 직전 봉 값으로 채워 표시했습니다' +
+          (sr.lastReal ? ' — 마지막 실제 봉 ' + sr.lastReal : '') +
+          ' · 최근 10봉 중 ' + mn + '봉 결측. 이 종목의 지표·신호는 실제 가격과 다를 수 있으니 참고용으로만 보세요.';
+      } else hst.textContent = '';
+    }
     /* 공격형 · 6M모멘텀 Top5 강조 칩 (추세형에서 특히 — 블렌드 가이드의 모멘텀 슬리브 후보) */
     var hm = $('#heroMom');
     if (hm) {
@@ -2019,6 +2142,13 @@
      상단 매매 카드 — 신규 진입 / 보유 중 관리 / 손익비
      판정·손절·트레일 값은 엔진(trendStatus · swingStatus · 백테스트 live)에서만 받는다
      ============================================================ */
+  /* 손절가 라벨 — 보유 포지션의 손절가와 신규 진입 기준 손절가를 문구로 구분한다 */
+  function pbStopLabel(live, isSwing) {
+    var k = $('#phStopK'); if (!k) return;
+    k.innerHTML = live
+      ? '손절가 <em class="tm" title="백테스트에서 실제로 진입한 가상 포지션의 손절가입니다 — 보유 중에는 이 가격이 기준입니다">보유 포지션</em>'
+      : '손절가 <em class="tm" title="아직 보유하지 않은 상태의 신규 진입 기준 손절가입니다 — 진입하면 이 가격이 기준이 됩니다">신규 진입 기준</em>';
+  }
   function pbState(el, kind, text) {
     if (!el) return;
     el.className = 'pb-state ' + kind;
@@ -2104,6 +2234,7 @@
       /* 보유 중 관리 */
       if (live) {
         pbState($('#phState'), 'live', '보유시홀드');
+        pbStopLabel(true, isSwing);
         $('#phStop').className = 'neg';
         $('#phStop').textContent = usd(live.stop);
         $('#phStopSub').textContent = '진입 ' + usd(live.entry) + ' (' + live.entryDate + ') · ' + sp.stopAtr + ' ATR(변동성 기준 손절폭) / -' +
@@ -2123,6 +2254,7 @@
             : '평가이익 ' + pct(live.ret) + ' · 20일선 아래 ' + swBelow + '/' + swNeed + '일 — 내일도 아래로 마감해야 청산');
       } else {
         pbState($('#phState'), 'none', '포지션 없음');
+        pbStopLabel(false, isSwing);
         $('#phStop').className = 'neg';
         $('#phStop').textContent = usd(stopPrice);
         $('#phStopSub').textContent = '신규 진입 기준 ' + usd(entryRef) + ' − ' + (sp.stopAtr || 4.5) + ' ATR(변동성 기준 손절폭) / -' + Math.round((sp.stopCap || 0.1) * 100) + '% 상한';
@@ -2146,7 +2278,7 @@
       var sig2 = $('#peSig');
       sig2.className = tp.scoreOk ? 'pos' : 'dim';
       sig2.textContent = (tp.scoreOk ? '점수 조건 충족' : '점수 조건 미달') + ' / 시장 ' +
-        (tp.marketOk ? tp.marketStage : '단계 위험 0%');
+        (tp.marketOk ? tp.marketStage : ('QQQ 100일선 아래 · 진입 제한(비중 0%)'));
       var why = [
         { cls: tp.scoreOk ? 'on' : 'off', html: '종합점수 <b>' + (tp.score == null ? '—' : tp.score.toFixed(1)) + '</b> / 기준 ' + tp.need + ' — ' + (tp.scoreOk ? '충족' : '미달') },
         { cls: tp.marketOk ? (tp.tw < 1 ? 'wait' : 'on') : 'off', html: '시장 단계 <b>' + tp.marketStage + '</b> — ' + (tp.marketNote || '') }
@@ -2163,6 +2295,7 @@
       /* 보유 중 관리 */
       if (live) {
         pbState($('#phState'), 'live', '보유시홀드');
+        pbStopLabel(true, isSwing);
         $('#phStop').className = 'neg';
         $('#phStop').textContent = usd(live.stop);
         $('#phStopSub').textContent = '진입 ' + usd(live.entry) + ' (' + live.entryDate + ') · ' + tp.stopAtr + ' ATR 손절';
@@ -2177,16 +2310,16 @@
         if (live.marketExitPending) {
           $('#phExit').className = 'neg';
           $('#phExit').textContent = '다음 시가';
-          $('#phExitSub').textContent = '시장 위험 0%(QQQ 100일선 이탈) — 보유 ' + tHold + '거래일 · 다음 시가 전량 청산';
+          $('#phExitSub').textContent = 'QQQ 100일선 아래(진입 제한·비중 0%) — 보유 ' + tHold + '거래일 · 다음 시가 전량 청산';
         } else if (live.marketExitDeferred) {
           $('#phExit').className = 'warn';
           $('#phExit').textContent = '청산 보류';
-          $('#phExitSub').textContent = '시장 위험 0%지만 QQQ RSI(2) ' + (live.qqqRsi2 == null ? '—' : live.qqqRsi2.toFixed(1)) +
+          $('#phExitSub').textContent = 'QQQ 100일선 아래지만 RSI(2) ' + (live.qqqRsi2 == null ? '—' : live.qqqRsi2.toFixed(1)) +
             ' < ' + (live.panicExitRsi || 15) + ' 극단 패닉 — 오늘은 팔지 않고 다음 날 다시 판정합니다 (손절·트레일은 계속 작동)';
         } else if (tTw === 0 && !live.marketExitArmed) {
           $('#phExit').className = 'warn';
           $('#phExit').textContent = '유예 ' + tHold + '/' + tMin + '일';
-          $('#phExitSub').textContent = '시장 위험 0%지만 최소 보유 ' + tMin + '거래일 전 — 시장약세 청산 보류, 손절·트레일만 작동';
+          $('#phExitSub').textContent = 'QQQ 100일선 아래지만 최소 보유 ' + tMin + '거래일 전 — 시장약세 청산 보류, 손절·트레일만 작동';
         } else {
           $('#phExit').className = tr != null ? '' : 'mute';
           $('#phExit').textContent = tr != null ? usd(tr) : '미발동';
@@ -2197,6 +2330,7 @@
         }
       } else {
         pbState($('#phState'), 'none', '포지션 없음');
+        pbStopLabel(false, isSwing);
         $('#phStop').className = 'neg';
         $('#phStop').textContent = usd(stopPrice);
         $('#phStopSub').textContent = '신규 진입 기준 ' + usd(entryRef) + ' - ' + tp.stopAtr + ' ATR';
@@ -2210,21 +2344,63 @@
       }
     }
 
-    /* ---- 손익비 — 기준 진입가 · 손절가 · 목표가를 함께 표시 ---- */
-    var tgt = refTarget(a, entryRef);
-    var rr = (tgt && entryRef > 0 && stopPrice != null && entryRef > stopPrice)
-      ? (tgt.price - entryRef) / (entryRef - stopPrice) : null;
-    var rrEl = $('#rrVal');
-    if (rr != null) {
+    /* ---- 손익비 — 52주 고점을 무조건 목표로 잡던 모순 수정 ----
+       · 계획 R:R = 손절폭 대비 1.2~8R 구간에 있는 가장 가까운 목표(엘리어트 1차 목표 · 최근 20일 고점)
+       · 그런 목표가 없으면(신고가 부근 등) 5년 백테스트의 실현 R:R(평균 이익 ÷ 평균 손실)로 대체 */
+    var risk0 = (entryRef > 0 && stopPrice != null) ? entryRef - stopPrice : null;
+    var tgt = null, rr = null;
+    if (risk0 > 0) {
+      var cands = [];
+      var ewT = a.elliott && a.elliott.plan && a.elliott.plan.targets;
+      if (ewT && ewT.length) ewT.forEach(function (t) {
+        if (!t || t.bad || t.hi == null) return;
+        var px = (t.lo != null && t.lo > entryRef * 1.005) ? t.lo : (t.hi > entryRef * 1.005 ? t.hi : null);
+        if (px != null) cands.push({ price: px, name: '엘리어트 1차 목표' });
+      });
+      var hs = a.series && a.series.h;
+      if (hs && hs.length >= 20) {
+        var h20 = 0;
+        for (var q20 = hs.length - 20; q20 < hs.length; q20++) if (hs[q20] > h20) h20 = hs[q20];
+        if (h20 > entryRef * 1.01) cands.push({ price: h20, name: '최근 20일 고점' });
+      }
+      cands.forEach(function (c) { c.rr = (c.price - entryRef) / risk0; c.d = c.price / entryRef - 1; });
+      var ok = cands.filter(function (c) { return c.rr >= 1.2 && c.rr <= 8; });
+      ok.sort(function (x, y) { return x.d - y.d; });
+      if (ok.length) { tgt = ok[0]; rr = tgt.rr; }
+      else {
+        /* 목표 여지가 손절폭보다 작은 경우 — 참고로 가장 가까운 목표만 문구에 남긴다 */
+        cands.sort(function (x, y) { return x.d - y.d; });
+        if (cands.length) { tgt = cands[0]; rr = tgt.rr; }
+      }
+    }
+    var rrEl = $('#rrVal'), rrK = $('#rrK');
+    var stats0 = a.stats;
+    var realized = (stats0 && stats0.avgWin > 0 && stats0.avgLoss < 0) ? stats0.avgWin / Math.abs(stats0.avgLoss) : null;
+    var planOk = (rr != null && rr >= 1.2 && rr <= 8);
+    if (planOk) {
       rrEl.className = 'rr-v';
       rrEl.textContent = '1 : ' + rr.toFixed(2);
+      if (rrK) rrK.textContent = '계획 R:R (목표까지 이익 ÷ 손절폭)';
+      rrEl.title = '목표까지 ' + pct(tgt.d, 1) + ' ÷ 손절폭 ' + Math.abs(risk0 / entryRef * 100).toFixed(1) + '%';
+    } else if (realized != null) {
+      rrEl.className = 'rr-v';
+      rrEl.textContent = '1 : ' + realized.toFixed(2);
+      if (rrK) rrK.textContent = '실현 R:R (5년 평균 이익 ÷ 평균 손실)';
+      rrEl.title = '목표 여지가 손절폭보다 작아 계획 손익비 대신 청산 완료 거래의 실현 손익비를 표시합니다';
     } else {
       rrEl.className = 'rr-v mute';
       rrEl.textContent = '—';
+      if (rrK) rrK.textContent = '신규 진입 기준 R : R';
     }
     var stopLab = isSwing ? (sp.stopAtr || 4.5) + ' ATR' : (a.trendPlan ? a.trendPlan.stopAtr : 6) + ' ATR';
-    $('#rrBasis').innerHTML = '기준 진입 <b>' + usd(entryRef) + '</b> · 손절 <b>' + usd(stopPrice) + '</b> <i>(' + stopLab + ')</i> · 목표 ' +
-      (tgt ? '<b>' + usd(tgt.price) + '</b> <i>(' + tgt.name + ')</i>' : '<b>—</b> <i>(목표 미산정)</i>');
+    var tgtTxt = tgt
+      ? '<b>' + usd(tgt.price) + '</b> <i>(' + tgt.name + ' · ' + pct(tgt.d, 1) + ' · 계획 1:' + (rr != null ? rr.toFixed(2) : '—') + ')</i>'
+      : '<b>—</b> <i>(위쪽 목표 여지 없음 — 52주 고점 부근)</i>';
+    var rrNote = planOk ? ''
+      : (tgt ? ' — 목표가 손절폭보다 가까워 계획 손익비 1:' + (rr != null ? rr.toFixed(2) : '—')
+             : ' — 위쪽 저항이 없어 계획 손익비 대신 실현 손익비로 표시');
+    $('#rrBasis').innerHTML = '기준 진입 <b>' + usd(entryRef) + '</b> · 손절 <b>' + usd(stopPrice) + '</b> <i>(' + stopLab + ')</i> · 목표 ' + tgtTxt +
+      (rrNote ? ' <i class="rr-note">' + rrNote + '</i>' : '');
   }
 
   /* ---------------- 백테스트 집계 기간 표시 ---------------- */
@@ -2810,19 +2986,24 @@
       $('#k2s').innerHTML = '<span>' + a.close.length + '거래일 데이터</span>';
       $('#k3s').innerHTML = '<span>—</span>';
     } else {
-      var wins0 = (a.trades || []).filter(function (t) { return t.ret > 0; }).length;
+      /* 승률·PF는 청산 완료 거래만(엔진 stats) — 미청산 '보유중'은 아래 줄에 따로 표시 */
+      var wins0 = (a.trades || []).filter(function (t) { return t.ret > 0 && t.reason !== '보유중'; }).length;
+      var losses0 = s.trades - wins0;
       $('#k1').textContent = pct(s.totalReturn, 1);
       $('#k1').className = cls(s.totalReturn);
       $('#k1s').innerHTML = '<span>보유 <b class="' + cls(s.bhReturn) + '">' + pct(s.bhReturn, 1) + '</b></span>' +
         '<span>초과 <b class="' + cls(s.alpha) + '">' + (s.alpha >= 0 ? '+' : '') + (s.alpha * 100).toFixed(1) + '%p</b></span>';
-      $('#k2').textContent = (s.winRate * 100).toFixed(0) + '%';
-      $('#k2').className = s.winRate >= 0.5 ? 'pos' : (s.winRate >= 0.4 ? '' : 'neu');
+      $('#k2').textContent = s.trades > 0 ? (s.winRate * 100).toFixed(0) + '%' : '—';
+      $('#k2').className = s.trades === 0 ? 'neu' : (s.winRate >= 0.5 ? 'pos' : (s.winRate >= 0.4 ? '' : 'neu'));
       var kn = $('#k2n'); if (kn) kn.textContent = s.trades + '회';
-      $('#k2s').innerHTML = '<span>승 <b class="pos">' + wins0 + '</b> · 패 <b class="neg">' + (s.trades - wins0) + '</b></span>' +
-        '<span>평균 보유 <b>' + s.avgHold.toFixed(0) + '일</b></span>';
+      $('#k2s').innerHTML = '<span>승 <b class="pos">' + wins0 + '</b> · 패 <b class="neg">' + losses0 + '</b></span>' +
+        '<span>평균 보유 <b>' + s.avgHold.toFixed(0) + '일</b></span>' +
+        (s.openTrade ? '<span class="k2o" title="마지막 봉 기준 아직 청산되지 않은 가상 포지션 — 승률·PF에서 제외">보유중 1건 제외 (평가 <b class="' + cls(s.openTrade.ret) + '">' + pct(s.openTrade.ret, 1) + '</b>)</span>' : '');
       $('#k3').textContent = pct(s.mdd, 1);
       $('#k3').className = 'neg';
-      $('#k3s').innerHTML = '<span title="PF(Profit Factor) = 총이익 ÷ 총손실 — 1.5 이상이면 양호">손익비 <b class="' + (s.profitFactor >= 1.5 ? 'pos' : (s.profitFactor >= 1 ? '' : 'neg')) + '">' + s.profitFactor.toFixed(2) + '</b></span>' +
+      $('#k3s').innerHTML = '<span title="PF(Profit Factor) = 총이익 ÷ 총손실 — 1.5 이상이면 양호 · 청산 완료 거래 기준">손익비 <b class="' +
+        (s.profitFactor == null ? 'neu' : (s.profitFactor >= 1.5 ? 'pos' : (s.profitFactor >= 1 ? '' : 'neg'))) + '">' +
+        (s.profitFactor == null ? '—' : s.profitFactor.toFixed(2)) + '</b></span>' +
         '<span>보유 MDD <b style="color:#6B7689">' + pct(s.bhMdd, 1) + '</b></span>';
       $('#k1t').textContent = '연율화 ' + pct(s.cagr, 1) + ' · 샤프 ' + s.sharpe.toFixed(2);
       var eqv = [];
@@ -2830,7 +3011,7 @@
       miniLine($('#m1'), eqv, 'rgba(56,189,248,ALPHA)', 1);
       miniBars($('#m2'), (a.trades || []).slice(-14).map(function (tr) { return tr.ret; }));
       miniDrawdown($('#m3'), eqv);
-      $('#k2t').textContent = '평균 수익 ' + pct(s.avgWin, 1) + ' / 평균 손실 ' + pct(s.avgLoss, 1);
+      $('#k2t').textContent = '평균 수익 ' + pct(s.avgWin, 1) + ' / 평균 손실 ' + pct(s.avgLoss, 1) + ' (청산 완료 ' + s.trades + '건 기준)';
       $('#k3t').textContent = '시장 노출 ' + (s.exposure * 100).toFixed(0) + '% · 비용 0.03% · 익일 시가 체결 · PF=총이익÷총손실';
     }
     $('#k4').textContent = Math.round(a.score);
@@ -2943,7 +3124,9 @@
     var arr = (e0.scenarios && e0.scenarios.length) ? e0.scenarios : [e0];
     state.ewMode = Math.min(state.ewMode, arr.length - 1);
     var e = arr[state.ewMode];
-    var wcl = e.dir > 0 ? 'up' : 'dn';
+    /* 색은 '지금 진행 중인 파동'의 방향 — 상승 임펄스 안의 C파(하락)를 초록으로 칠하지 않는다 */
+    var curUp = e.leg ? e.leg.dir > 0 : e.dir > 0;
+    var wcl = curUp ? 'up' : 'dn';
     card.classList.toggle('ew-alt', state.ewMode === 1);
 
     /* 신뢰도 */
@@ -2955,7 +3138,7 @@
     var sw2 = $('#ewSwitch');
     if (sw2) {
       sw2.innerHTML = arr.map(function (s, i) {
-        var on = i === state.ewMode, alt = i > 0, up = s.dir > 0;
+        var on = i === state.ewMode, alt = i > 0, up = s.leg ? s.leg.dir > 0 : s.dir > 0;
         var tg = '';
         if (s.targets && s.targets.length) {
           var t = s.targets[0], tlo = t.lo, thi = t.hi;
@@ -2966,7 +3149,7 @@
         }
         var lbl = String(s.label || '').replace(' (규칙 위반)', '');
         var dirTxt = up ? '상승' : '하락';
-        var hint = dirTxt + (tg ? ' · 목표 ' + tg : '');
+        var hint = (s.leg ? s.leg.name + ' ' : '') + dirTxt + (tg ? ' · 목표 ' + tg : '');
         var full = (alt ? '대안' : '기본') + ' 시나리오 · ' + lbl + ' · 신뢰도 ' + s.conf +
           (tg ? ' · 1차 목표 ' + tg : '') + (s.next ? ' · ' + s.next : '');
         return '<button type="button" data-i="' + i + '" role="tab" aria-selected="' + (on ? 'true' : 'false') +
@@ -2990,7 +3173,8 @@
     $('#ewState').innerHTML =
       '<div class="ew-wave ' + wcl + '">' + e.badge + '</div>' +
       '<div class="ew-st-t"><b>' + e.label + '</b>' +
-      '<span>' + e.from.d + ' ' + usd(e.from.p) + ' 기점 · ' + e.kindTxt +
+      '<span>' + (e.leg ? '지금 <b style="display:inline;font-size:inherit">' + e.leg.name + ' ' + e.leg.dirWord + '</b> · ' : '') +
+      e.from.d + ' ' + usd(e.from.p) + ' 기점 · ' + e.kindTxt +
       ' · 스윙 임계 ' + (e.thr * 100).toFixed(1) + '%' + (e.diag ? ' · 대각(Diagonal)' : '') + '</span></div>';
 
     /* 현재 파동 → 다음 예상 방향 → 확인 가격 → 무효화 가격 (엔진 산출값 그대로) */
@@ -5706,7 +5890,7 @@
       tip: '돌파 후 2~3일 안에 거래량이 줄고 가격이 넥라인 아래로 돌아오면 실패로 처리합니다.' },
     { c: '차트·기법', t: 'ATR로 손절 거리 정하기', s: '종목 변동성에 맞춘 손절이 생존을 만든다',
       b: '<p>ATR(평균 진폭)은 그 종목이 하루에 얼마나 움직이는지를 나타냅니다. 손절을 <b>가격이 아니라 ATR 배수</b>로 정하면 변동성이 큰 종목에서 억울하게 털리는 일을 줄일 수 있습니다.</p>' +
-         '<p>이 분석기의 추세형은 6 ATR 손절·10 ATR 트레일, 스윙형은 4.5 ATR 손절에 <b>최대 -10%</b> 상한을 두었습니다. 엔비디아처럼 ATR이 큰 종목에서 손절이 -20%까지 벌어지는 것을 막기 위해서입니다.</p>' +
+         '<p>이 분석기의 추세형은 6 ATR 손절·10 ATR 트레일, 스윙형은 4.5 ATR 손절에 <b>최대 -10%</b>(🔥 공격형은 −15%) 상한을 두었습니다. 엔비디아처럼 ATR이 큰 종목에서 손절이 -20%까지 벌어지는 것을 막기 위해서입니다.</p>' +
          '<p>손절 폭을 좁히면 승률은 떨어지고, 넓히면 한 번의 손실이 커집니다. 두 전략을 나눠 쓰는 이유입니다.</p>',
       tip: '손절가는 진입 전에 정합니다. 사고 나서 정하면 대부분 못 지킵니다.' },
     { c: '차트·기법', t: '볼린저 밴드와 스퀴즈', s: '20일선 ±2 표준편차의 압축과 확장',
@@ -5755,7 +5939,7 @@
          '<p>모의매매 기능에서 수량과 비중(10·25·50·100%) 버튼으로 이 과정을 미리 연습해 보세요.</p>',
       tip: '분할은 감정 관리 도구입니다. 규칙을 정해 두고 기계적으로 실행하세요.' },
     { c: '차트·기법', t: '시장 레짐 필터', s: '개별 종목보다 시장이 먼저다',
-      b: '<p>아무리 좋은 종목도 시장이 무너지면 같이 빠집니다. 그래서 전략에는 <b>시장 필터</b>가 필요합니다. 추세형은 <b>QQQ 100일선 단계 (또는 QQQ RSI(2)&lt;5 극단 패닉 예외 · RSI(2)&lt;15 패닉일 청산 보류)</b>를 씁니다 — 시장이 위험(0%)이어도 QQQ RSI(2)가 5 미만인 극단 공포일에는 전액 비중으로 진입하고, 반대로 시장약세 청산 판정일의 QQQ RSI(2)가 15 미만이면 그날은 팔지 않고 다음 날 다시 판정합니다.</p>' +
+      b: '<p>아무리 좋은 종목도 시장이 무너지면 같이 빠집니다. 그래서 전략에는 <b>시장 필터</b>가 필요합니다. 추세형은 <b>QQQ 100일선 단계 (또는 QQQ RSI(2)&lt;5 극단 패닉 예외 · RSI(2)&lt;15 패닉일 청산 보류)</b>를 씁니다 — QQQ 100일선 아래(진입 제한)여도 QQQ RSI(2)가 5 미만인 극단 공포일에는 전액 비중으로 진입하고, 반대로 시장약세 청산 판정일의 QQQ RSI(2)가 15 미만이면 그날은 팔지 않고 다음 날 다시 판정합니다.</p>' +
          '<p>스윙형은 QQQ가 200일선 위일 때만 진입하되, 같은 극단 공포일(RSI(2) 5 미만)에는 200일선 아래여도 진입을 허용합니다(폭락일의 눌림 매수).</p>' +
          '<p>필터가 없으면 하락장에서 RSI(2) 신호가 계속 떠서 물타기만 반복하게 됩니다. 99종목 5년 백테스트에서 추세형에 공포 예외를 넣자 평균 +118.89% → <b>+133.90%</b>, 84/99종목이 개선됐습니다(2022년 −6.94% → −4.40%).</p>' +
          '<p>필터는 “수익을 늘리는 장치”라기보다 <b>큰 손실을 막는 장치</b>입니다.</p>',

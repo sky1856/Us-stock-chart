@@ -3459,3 +3459,278 @@ html[data-theme="light"] .top-strat-seg{ background:#FFFFFF; border-color:rgba(1
 .tc-now b{ font-weight:700; color:var(--txt2) }
 html[data-theme="light"] .tc-now{ color:#64748B } html[data-theme="light"] .tc-now b{ color:#334155 }
 @media (max-width:1100px){ .tc-now{ display:none } }
+
+/* ============================================================================
+   상용화 P0 (2026-11-28 2차) — 레이아웃 · 브랜딩 · 상태 모델 보정
+   · 헤더 높이를 실제 측정값(--hdr-h)으로 사이드바·본문이 따라간다 (겹침 0)
+   · 모바일 고정 헤더 60px (스크롤 시 화면 점유 해소)
+   · ChoKo QUANT 사파이어 글래스 / 네온 루비 프라이빗 뱅크 톤
+   · '오늘 요약' 스트립 · 매수대기 탭 · 데이터 지연/시뮬 기준 배지
+   ============================================================================ */
+html{ --hdr-h:57px; }
+.shell{ min-height:calc(100vh - var(--hdr-h)); }
+@media (min-width:901px){
+  .sidebar{ top:var(--hdr-h); height:calc(100vh - var(--hdr-h)); }
+}
+main.workspace > section, main.workspace > div{ scroll-margin-top:calc(var(--hdr-h) + 10px); }
+
+/* ---- 오늘 요약 스트립 (성향·전략 컨트롤 바로 아래 1줄) ---- */
+.today-strip{
+  display:flex; align-items:center; flex-wrap:wrap; gap:6px 10px;
+  padding:7px 13px; border-radius:11px; min-height:34px;
+  border:1px solid rgba(96,205,255,.16);
+  background:linear-gradient(100deg,rgba(9,19,31,.86),rgba(6,11,19,.72));
+  font-size:12px; color:var(--txt2); letter-spacing:-.005em;
+}
+.today-strip .ts-k{
+  font-size:10px; font-weight:800; letter-spacing:.16em; color:#06121C;
+  padding:3px 7px; border-radius:6px; line-height:1;
+  background:linear-gradient(135deg,#8BFAE6,#38BDF8);
+  box-shadow:0 0 12px rgba(56,189,248,.5);
+}
+.today-strip .ts-i{ display:inline-flex; align-items:baseline; gap:5px; white-space:nowrap }
+.today-strip .ts-i b{ font-weight:700; color:var(--txt); font-variant-numeric:tabular-nums }
+.today-strip .ts-i b.pos{ color:var(--up2) }
+.today-strip .ts-i b.neg{ color:var(--dn2) }
+.today-strip .ts-i i{ font-style:normal; color:var(--txt3) }
+.today-strip .ts-sep{ width:1px; height:13px; background:rgba(148,196,235,.26) }
+.today-strip .ts-cand{ color:#FCD34D }
+@media (max-width:760px){
+  .today-strip{ font-size:11.5px; padding:6px 10px; gap:4px 8px }
+  .today-strip .ts-sep{ display:none }
+}
+html[data-theme="light"] .today-strip{ background:linear-gradient(100deg,#FFFFFF,#F3F9FF); border-color:rgba(14,116,144,.18) }
+html[data-theme="light"] .today-strip .ts-k{ color:#FFFFFF; background:linear-gradient(135deg,#0E7490,#0891B2) }
+html[data-theme="light"] .today-strip .ts-i i{ color:#64748B }
+
+/* ---- 상태 탭 7개 (매수대기 추가) ---- */
+.seg-state{ grid-template-columns:repeat(7,minmax(0,1fr)) }
+.seg-state button{ font-size:11px; padding:5px 2px; white-space:nowrap }
+.seg-state button[data-f="waitbuy"] .c{ color:#FBBF24 }
+@media (max-width:900px){
+  .seg-state{ grid-template-columns:repeat(4,minmax(0,1fr)); gap:4px }
+  .seg-state button{ font-size:12px; padding:7px 4px }
+  .seg-state button .c{ font-size:11px }
+}
+@media (max-width:1180px) and (min-width:901px){
+  .seg-state button{ font-size:10.5px }
+}
+
+/* ---- 히어로 배지 — 데이터 지연 / 시뮬 기준 ---- */
+.stale-chip{
+  display:inline-flex; align-items:center; gap:4px; flex:0 0 auto;
+  font-size:11px; font-weight:700; line-height:1; padding:3px 7px; border-radius:6px;
+  color:#FDE68A; border:1px solid rgba(245,158,11,.45); background:rgba(245,158,11,.12);
+}
+.sim-chip{
+  display:inline-flex; align-items:center; flex:0 0 auto;
+  font-size:10.5px; font-weight:700; letter-spacing:.02em; line-height:1; padding:3px 7px; border-radius:6px;
+  color:#BAE6FD; border:1px solid rgba(56,189,248,.34); background:rgba(56,189,248,.10);
+}
+html[data-theme="light"] .stale-chip{ color:#B45309; background:rgba(245,158,11,.14); border-color:rgba(180,83,9,.35) }
+html[data-theme="light"] .sim-chip{ color:#0369A1; background:rgba(56,189,248,.12); border-color:rgba(3,105,161,.28) }
+
+/* ---- 모바일 고정 헤더 60px — 한 줄 ---- */
+@media (max-width:760px){
+  .topbar{ flex-wrap:nowrap; align-items:center; gap:8px; padding:0 10px; min-height:60px; height:60px }
+  .topbar .brand{ padding-right:0; gap:7px; min-width:0; flex:0 1 auto }
+  .logo{ width:26px; height:26px; border-radius:8px; flex:0 0 auto }
+  .brand-text .brand-name{ font-size:12px; letter-spacing:.05em; white-space:nowrap }
+  .brand-text > span{ display:none }
+  .sig-badge, .with-choko, .market-badge, .fav-wrap{ display:none }
+  .search{ flex:1 1 auto; min-width:0; max-width:none }
+  .search input{ padding:8px 10px 8px 30px; font-size:12.5px }
+  .search .si{ left:9px; width:13px; height:13px }
+  .search kbd{ display:none }
+  .theme-btn{ flex:0 0 auto; height:32px; padding:0 8px; gap:0 }
+  .theme-btn .th-tx{ display:none }
+  #menuBtn{ width:32px !important; height:32px !important }
+}
+
+/* ---- 브랜딩 — 사파이어 글래스 · 네온 루비 (프라이빗 뱅크/퀀트 펀드 톤) ---- */
+.brand{ gap:11px }
+.logo{
+  width:34px; height:34px; border-radius:11px; overflow:hidden;
+  background:
+    radial-gradient(120% 120% at 18% 0%, rgba(129,230,255,.55) 0%, rgba(20,86,140,.30) 38%, rgba(4,12,24,.92) 78%),
+    linear-gradient(160deg,#0A2740,#050C16);
+  border:1px solid rgba(126,227,255,.42);
+  box-shadow:
+    0 0 0 1px rgba(3,9,16,.85) inset,
+    0 1px 0 rgba(214,247,255,.32) inset,
+    0 0 22px -8px rgba(56,189,248,.95),
+    0 8px 18px -12px rgba(0,0,0,1);
+  position:relative;
+}
+.logo::after{
+  content:""; position:absolute; inset:0; pointer-events:none; border-radius:inherit;
+  background:
+    linear-gradient(200deg, rgba(255,255,255,.30), rgba(255,255,255,0) 42%),
+    radial-gradient(70% 60% at 100% 100%, rgba(255,59,92,.42), rgba(255,59,92,0) 70%);
+  mix-blend-mode:screen;
+}
+html[data-theme="light"] .logo{
+  background:
+    radial-gradient(120% 120% at 18% 0%, rgba(56,189,248,.42) 0%, rgba(11,43,74,.92) 62%, rgba(4,12,24,1) 100%);
+  border-color:rgba(14,116,144,.45);
+  box-shadow:0 0 0 1px rgba(255,255,255,.10) inset, 0 6px 16px -10px rgba(15,23,42,.85);
+}
+.brand-text{ gap:1px }
+.brand-text .brand-name,
+html[data-theme="light"] .brand-text .brand-name{
+  font-size:15px; font-weight:600; letter-spacing:.13em; line-height:1.12;
+  background:linear-gradient(96deg,#F6FBFF 0%,#CFE9FF 42%,#8FD7F5 100%);
+  -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent;
+}
+html[data-theme="light"] .brand-text .brand-name{
+  background:linear-gradient(96deg,#0B1B2E 0%,#123A55 55%,#0E4A63 100%);
+  -webkit-background-clip:text; background-clip:text;
+}
+.brand-text .brand-name .ck{
+  font-weight:900; letter-spacing:0; color:var(--ck-red); -webkit-text-fill-color:var(--ck-red);
+  text-shadow:0 0 16px var(--ck-red-soft), 0 0 2px rgba(255,255,255,.25);
+}
+.brand-text .brand-name .bw{ font-weight:500; letter-spacing:.20em }
+.brand-text > span{
+  display:inline-flex; align-items:center; gap:6px; margin-top:3px;
+  font-size:10px; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color:#7FA6C4;
+}
+.brand-text > span::before{
+  content:""; width:14px; height:1px; border-radius:1px;
+  background:linear-gradient(90deg,rgba(255,59,92,.95),rgba(56,189,248,.15));
+  box-shadow:0 0 8px rgba(255,59,92,.7);
+}
+html[data-theme="light"] .brand-text > span{ color:#5C7C96 }
+html[data-theme="light"] .brand-text > span::before{ background:linear-gradient(90deg,rgba(210,16,58,.9),rgba(14,116,144,.2)); box-shadow:none }
+
+/* with ChoKo — 유리 칩 + 루비 점 */
+.with-choko{
+  position:relative; padding:5px 10px 6px; border-radius:99px; gap:5px;
+  font-size:10.5px; letter-spacing:.10em; text-transform:uppercase; color:#93B4CC;
+  border:1px solid rgba(126,227,255,.26);
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.02) 46%,rgba(4,12,22,.30)),
+    rgba(9,24,40,.55);
+  box-shadow:0 1px 0 rgba(255,255,255,.14) inset, 0 6px 16px -12px rgba(0,0,0,1);
+  backdrop-filter:blur(6px);
+}
+.with-choko::before{
+  content:""; width:5px; height:5px; border-radius:50%; flex:0 0 auto;
+  background:var(--ck-red); box-shadow:0 0 8px var(--ck-red), 0 0 2px rgba(255,255,255,.6) inset;
+}
+.with-choko b{ font-weight:800; letter-spacing:.04em; color:#EAF6FF; text-transform:none; font-size:11.5px }
+.with-choko .ck{ color:var(--ck-red); text-shadow:0 0 10px var(--ck-red-soft) }
+html[data-theme="light"] .with-choko{
+  color:#5C7C96; border-color:rgba(14,116,144,.24);
+  background:linear-gradient(180deg,#FFFFFF,#F1F8FE); box-shadow:0 2px 10px -8px rgba(15,23,42,.6)
+}
+html[data-theme="light"] .with-choko b{ color:#0B1B2E }
+
+/* 서명 배지 — 원본 디자인 유지, 바로 옆에 정렬만 맞춘다 */
+.sig-badge{ margin-left:4px }
+
+/* ---- 차트 — 모바일 커서 모드에서 세로 페이지 스크롤 허용 ---- */
+@media (max-width:900px){
+  .chart-wrap canvas, #chart{ touch-action:pan-y }
+  .chart-wrap{ touch-action:pan-y }
+}
+/* 커서 도구가 아닐 때(작도)는 캔버스가 제스처를 직접 받는다 */
+body[data-tool="trend"] #chart, body[data-tool="hline"] #chart,
+body[data-tool="fib"] #chart, body[data-tool="rect"] #chart{ touch-action:none }
+
+/* ---- 모바일 가독성 — 최소 11px / 터치 40px ---- */
+@media (max-width:760px){
+  .side-head p, .preset-note, .bp-note, .nx-foot, .foot-note, .sr-why, .srow .sub{ font-size:11.5px }
+  .pill b, .pill span{ font-size:11.5px }
+  .hero-fav{ min-width:40px; min-height:40px; display:inline-grid; place-items:center }
+  .srow .fstar{ min-width:34px; min-height:34px; display:inline-grid; place-items:center; margin:-8px 0 -8px -8px }
+  .si-head{ min-height:44px }
+  .bg-head{ min-height:46px }
+  .edu-toggle, .edu-nav button{ min-height:36px; min-width:36px }
+  .seg-pre button{ font-size:11.5px; padding:6px 6px }
+  .chart-bar .tf button{ min-height:34px }
+  .draw-tools button, .draw-actions button{ min-height:38px }
+}
+
+/* 헤더 높이 유연화 — 1440~1536px 에서 관심종목 줄이 두 번째 줄로 내려가도 사이드바가 그 아래에서 시작한다 */
+@media (min-width:901px){
+  .topbar{ height:auto; min-height:72px; padding-top:10px; padding-bottom:10px }
+  .shell{ min-height:calc(100vh - var(--hdr-h)) }
+  .sidebar{ top:var(--hdr-h); height:calc(100vh - var(--hdr-h)) }
+}
+/* 오늘 요약 스트립 — 좁은 화면에서 긴 문구(QQQ 해제 조건)가 가로로 넘치지 않게 줄바꿈 허용 */
+.today-strip{ min-width:0 }
+.today-strip .ts-i{ min-width:0 }
+@media (max-width:1100px){
+  .today-strip .ts-i{ white-space:normal; line-height:1.45 }
+  .today-strip .ts-i b, .today-strip .ts-i i{ white-space:normal }
+}
+/* 전략 바 안 '1 성향' 픽 — 좁은 화면 가로 넘침 방지 */
+@media (max-width:1100px){ .risk-pick{ min-width:0 } .risk-pick .rp-t{ display:none } }
+/* KPI — '보유중 1건 제외' 줄은 두 칸을 다 쓰고, 카드가 잘리지 않게 */
+.kpi .sub .k2o{ grid-column:1 / -1; font-size:11.5px; color:var(--txt4) }
+.kpi .sub .k2o b{ font-size:11.5px }
+
+/* 모바일 헤더 — 브랜드 부제(US TOP N ANALYZER)는 접고 이름만 한 줄로 (60px 유지) */
+@media (max-width:760px){
+  .brand-text{ flex-direction:row; align-items:center; gap:0; min-width:0 }
+  .brand-text .brand-name{ white-space:nowrap }
+  .brand-text > span{ display:none !important }
+}
+
+/* 태블릿(761~900px) 헤더도 한 줄로 — 768px 에서 113px 로 늘어나던 높이 정리 */
+@media (max-width:900px) and (min-width:761px){
+  .topbar{ flex-wrap:nowrap; align-items:center; height:64px; min-height:64px; padding:0 12px; gap:9px }
+  .topbar .brand{ padding-right:0; gap:8px; min-width:0 }
+  .brand-text{ flex-direction:row; align-items:center }
+  .brand-text > span{ display:none !important }
+  .brand-text .brand-name{ font-size:13px; white-space:nowrap }
+  .search{ flex:1 1 auto; min-width:0; max-width:none }
+  .search input{ padding:8px 10px 8px 32px }
+  .search kbd{ display:none }
+}
+@media (max-width:860px) and (min-width:761px){ .sig-badge{ display:none } }
+
+/* 오늘 요약 — 라벨은 붙여서("QQQ 해제 조건 +8.7%") 줄바꿈이 문구 중간을 끊지 않게 */
+.today-strip .ts-lbl{ white-space:nowrap; font-weight:600; color:var(--txt2) }
+html[data-theme="light"] .today-strip .ts-lbl{ color:#334155 }
+
+/* 모바일 헤더 — 테마 버튼을 34px 원형 칩으로 고정하고 브랜드는 넘치지 않게 자른다 */
+@media (max-width:760px){
+  .topbar .brand{ overflow:hidden }
+  .brand-text{ min-width:0; overflow:hidden }
+  .brand-text .brand-name{ overflow:hidden; text-overflow:ellipsis; font-size:11.5px; letter-spacing:.02em }
+  .theme-btn{ width:34px; height:34px; padding:0; display:grid; place-items:center; border-radius:11px; flex:0 0 auto }
+  .theme-btn .th-ic{ font-size:15px }
+}
+/* 모바일 헤더 — 브랜드 이름은 자르지 않고, 검색창이 먼저 줄어든다 */
+@media (max-width:760px){
+  .topbar .brand{ flex:0 0 auto }
+  .brand-text .brand-name{ overflow:visible; text-overflow:clip }
+  .search{ flex:1 1 90px; min-width:84px }
+  .search input{ font-size:12px }
+}
+/* 아주 좁은 폰(≤400px) — 상단 전략 세그먼트가 넘치지 않게 라벨을 접고 반씩 나눈다 */
+@media (max-width:400px){
+  .top-strat-seg{ flex:1 1 100% }
+  .top-strat-seg button{ flex:1 1 0; justify-content:center; padding:7px 8px; gap:0 }
+  .top-strat-seg button span{ display:none }
+  .risk-switch button{ padding:7px 10px; font-size:12px }
+  .tc-grp{ gap:7px }
+  .tc-lab{ font-size:10px; letter-spacing:.08em }
+}
+/* 모바일 로고·브랜드 크기 균형 (브랜딩 규칙 뒤에서 최종 확정) */
+@media (max-width:760px){
+  .topbar .logo{ width:28px; height:28px; border-radius:9px }
+  .brand-text .brand-name{ font-size:12.5px; letter-spacing:.04em }
+  .topbar .brand{ gap:8px }
+}
+@media (max-width:760px){ .topbar .theme-btn{ margin-left:4px } }
+/* 공포·탐욕 카드 높이 압축 — ① 성향/전략 ② 시장 2열 아래에 ③ 히어로가 최대한 올라오게 */
+@media (min-width:1100px){
+  .macro-fg-grid .fg-dial{ max-width:224px }
+  .macro-fg-grid .fg-card{ gap:6px }
+  .macro-fg-grid .fg-guide{ padding:7px 9px }
+  .macro-fg-grid .fg-guide p{ font-size:12px; line-height:1.45 }
+  .macro-fg-grid .fg-hist{ gap:4px }
+}

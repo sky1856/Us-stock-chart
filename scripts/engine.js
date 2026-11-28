@@ -486,7 +486,8 @@
     return out;
   }
   function marketStageText(tw) {
-    return tw === 1 ? { ko: '정상 100%', en: 'NORMAL' } : (tw > 0 ? { ko: '주의 50%', en: 'CAUTION' } : { ko: '위험 0%', en: 'RISK' });
+    return tw === 1 ? { ko: '정상 100%', en: 'NORMAL' }
+    : (tw > 0 ? { ko: '주의 50%', en: 'CAUTION' } : { ko: '진입 제한 · 비중 0%', en: 'RISK' });
   }
   /* bar i 종가 시점의 추세형 진입 상태 — rg 는 marketRegimeMap()[date] */
   function PANIC_EXIT_TREND(o) {
@@ -957,11 +958,15 @@
     /* ---- stats (추세형과 같은 필드) ---- */
     var bh = c[n - 1] / c[first] - 1;
     var total = cash - 1;
-    var wins = trades.filter(function (t) { return t.ret > 0; });
-    var losses = trades.filter(function (t) { return t.ret <= 0; });
+    /* 승률·PF는 **청산 완료 거래** 기준 — 마지막 봉에서 '보유중'으로 평가만 한 가상 청산은 빼고 따로 표기한다 */
+    var closed = trades.filter(function (t) { return t.reason !== '보유중'; });
+    var openT = null;
+    for (var ot = trades.length - 1; ot >= 0; ot--) { if (trades[ot].reason === '보유중') { openT = trades[ot]; break; } }
+    var wins = closed.filter(function (t) { return t.ret > 0; });
+    var losses = closed.filter(function (t) { return t.ret <= 0; });
     var gp = wins.reduce(function (a, t) { return a + t.ret; }, 0);
     var gl = Math.abs(losses.reduce(function (a, t) { return a + t.ret; }, 0));
-    var pf = gl > 0 ? gp / gl : (gp > 0 ? 99 : 0);
+    var pf = gl > 0 ? gp / gl : null;      /* 손실 0건 — PF는 '—'로 표시(99 같은 가짜 값 금지) */
     var mdd = 0, peak = 0, j;
     for (j = first; j < n; j++) {
       if (equity[j] == null) continue;
@@ -985,7 +990,7 @@
     var mean = rets.reduce(function (a, b) { return a + b; }, 0) / Math.max(rets.length, 1);
     var varr = rets.reduce(function (a, b) { return a + (b - mean) * (b - mean); }, 0) / Math.max(rets.length - 1, 1);
     var sh = Math.sqrt(varr) > 0 ? mean / Math.sqrt(varr) * Math.sqrt(252) : 0;
-    var holdAvg = trades.length ? trades.reduce(function (a, t) { return a + t.hold; }, 0) / trades.length : 0;
+    var holdAvg = closed.length ? closed.reduce(function (a, t) { return a + t.hold; }, 0) / closed.length : 0;
     var reasons = {}; trades.forEach(function (t) { reasons[t.reason] = (reasons[t.reason] || 0) + 1; });
     var wt = trades.filter(function (t) { return t.kind === 'W돌파'; });
     var wr2 = wt.length ? wt.reduce(function (a, t) { return a + t.ret; }, 0) / wt.length : null;
@@ -995,8 +1000,10 @@
       lastStopIdx: sim.lastStopIdx,       /* 손절 후 재진입 금지 — swingStatus 와 같은 기준 */
       stats: {
         totalReturn: total, bhReturn: bh, alpha: total - bh,
-        winRate: trades.length ? wins.length / trades.length : 0,
-        profitFactor: pf, mdd: mdd, bhMdd: bhmdd, trades: trades.length,
+        winRate: closed.length ? wins.length / closed.length : 0,
+        profitFactor: pf, mdd: mdd, bhMdd: bhmdd, trades: closed.length,
+        openTrade: openT ? { ret: openT.ret, entryDate: openT.entryDate, hold: openT.hold } : null,
+        closedTrades: closed.length,
         avgHold: holdAvg, cagr: cagr, sharpe: sh,
         avgWin: wins.length ? gp / wins.length : 0,
         avgLoss: losses.length ? -gl / losses.length : 0,
@@ -1128,11 +1135,15 @@
     /* ---- stats (기존과 동일 필드) ---- */
     var bh = c[n - 1] / c[first] - 1;
     var total = cash - 1;
-    var wins = trades.filter(function (t) { return t.ret > 0; });
-    var losses = trades.filter(function (t) { return t.ret <= 0; });
+    /* 승률·PF는 **청산 완료 거래** 기준 — 마지막 봉에서 '보유중'으로 평가만 한 가상 청산은 빼고 따로 표기한다 */
+    var closed = trades.filter(function (t) { return t.reason !== '보유중'; });
+    var openT = null;
+    for (var ot = trades.length - 1; ot >= 0; ot--) { if (trades[ot].reason === '보유중') { openT = trades[ot]; break; } }
+    var wins = closed.filter(function (t) { return t.ret > 0; });
+    var losses = closed.filter(function (t) { return t.ret <= 0; });
     var gp = wins.reduce(function (a, t) { return a + t.ret; }, 0);
     var gl = Math.abs(losses.reduce(function (a, t) { return a + t.ret; }, 0));
-    var pf = gl > 0 ? gp / gl : (gp > 0 ? 99 : 0);
+    var pf = gl > 0 ? gp / gl : null;      /* 손실 0건 — PF는 '—'로 표시(99 같은 가짜 값 금지) */
     var mdd = 0, peak = 0;
     for (i = first; i < n; i++) {
       if (equity[i] == null) continue;
@@ -1157,14 +1168,16 @@
     var mean = rets.reduce(function (a, b) { return a + b; }, 0) / Math.max(rets.length, 1);
     var varr = rets.reduce(function (a, b) { return a + (b - mean) * (b - mean); }, 0) / Math.max(rets.length - 1, 1);
     var sh = Math.sqrt(varr) > 0 ? mean / Math.sqrt(varr) * Math.sqrt(252) : 0;
-    var holdAvg = trades.length ? trades.reduce(function (a, t) { return a + t.hold; }, 0) / trades.length : 0;
+    var holdAvg = closed.length ? closed.reduce(function (a, t) { return a + t.hold; }, 0) / closed.length : 0;
 
     return {
       trades: trades, equity: equity, startIdx: first, live: live, entryNow: entryNow,
       stats: {
         totalReturn: total, bhReturn: bh, alpha: total - bh,
-        winRate: trades.length ? wins.length / trades.length : 0,
-        profitFactor: pf, mdd: mdd, bhMdd: bhmdd, trades: trades.length,
+        winRate: closed.length ? wins.length / closed.length : 0,
+        profitFactor: pf, mdd: mdd, bhMdd: bhmdd, trades: closed.length,
+        openTrade: openT ? { ret: openT.ret, entryDate: openT.entryDate, hold: openT.hold } : null,
+        closedTrades: closed.length,
         avgHold: holdAvg, cagr: cagr, sharpe: sh,
         avgWin: wins.length ? gp / wins.length : 0,
         avgLoss: losses.length ? -gl / losses.length : 0,
@@ -1208,7 +1221,7 @@
       stopRule: '기준 진입가 − ' + o.stopAtr + ' ATR',
       trailRule: '진입가 +' + o.trailStartAtr + ' ATR 도달 후 고점 − ' + o.trailAtr + ' ATR',
       minHold: o.minHold,
-      exitRule: '손절 ' + o.stopAtr + ' ATR·트레일 ' + o.trailAtr + ' ATR는 즉시 · 시장 위험 0% 전량 청산은 진입 후 ' +
+      exitRule: '손절 ' + o.stopAtr + ' ATR·트레일 ' + o.trailAtr + ' ATR는 즉시 · QQQ 100일선 이탈 전량 청산은 진입 후 ' +
         o.minHold + '거래일이 지나야 발동 (초단기 왕복 매매 방지) · QQQ RSI(2)<' + PANIC_EXIT_TREND(o) + '인 패닉일에는 청산을 다음 날로 미룸',
       reason: e.ok
         ? (e.panic ? '종합점수 ' + e.score.toFixed(1) + ' ≥ ' + e.need + ' · 시장 위험(' + stage.ko + ')이지만 QQQ RSI(2) ' +

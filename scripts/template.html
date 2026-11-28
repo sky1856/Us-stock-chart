@@ -31,13 +31,6 @@
     <div class="brand-text"><b class="brand-name"><span class="ck">C</span>ho<span class="ck">K</span>o <span class="bw">QUANT</span></b><span id="brandSub">US Top 100 Analyzer</span></div>
     <div class="with-choko" id="withChoko" title="ChoKo QUANT — Ji Hoon Park님의 개인 퀀트 분석기">with <b><span class="ck">C</span>ho<span class="ck">K</span>o</b></div>
   </div>
-  <div class="risk-pick risk-pick-head" title="투자 성향 — 이 화면에서 가장 먼저 고르는 첫 번째 항목입니다">
-    <span class="rp-n" aria-hidden="true">1</span><span class="rp-t">성향</span>
-    <div class="risk-switch" id="riskSwitch" role="group" aria-label="투자 성향 — 안정형·공격형">
-      <button type="button" data-risk-btn="safe" class="on" aria-pressed="true" title="🛡️ 안정형 — 검증된 기본 규칙 그대로 · 스윙 손절 상한 -10% · 손절 뒤 10거래일 재진입 금지"><span class="rk-ic" aria-hidden="true">🛡️</span><span class="rk-tx">안정형</span></button>
-      <button type="button" data-risk-btn="aggr" aria-pressed="false" title="🔥 공격형 — 긴장감 테마 · 스윙 쿨다운 0일·손절 -15% · 추세 C2 50 + 6M모멘텀 Top5 50 가이드 · 변동성이 커집니다"><span class="rk-ic" aria-hidden="true">🔥</span><span class="rk-tx">공격형</span></button>
-    </div>
-  </div>
   <div class="sig-badge" title="Created by JiHoon Park">
     <span class="sig-k">Created by</span>
     <span class="sig-n">JiHoon Park</span>
@@ -80,7 +73,8 @@
       <button data-f="buy" title="매수 — 오늘 신규 진입 조건을 충족한 종목 (이미 보유 중이면 '홀드')">매수<span class="c" id="cBuy">0</span></button>
       <button data-f="hold" title="보유시홀드 — 이미 보유 중이고 계속 들고 가는 상태">홀드<span class="c" id="cHold">0</span></button>
       <button data-f="wait" title="관망 — 진입 조건 미충족, 지금은 살 자리도 팔 자리도 아님">관망<span class="c" id="cWait">0</span></button>
-      <button data-f="sell" title="매도 — 청산·손절 조건 발동 또는 진입 제한(시장대기·손절대기)">매도<span class="c" id="cSell">0</span></button>
+      <button data-f="waitbuy" title="매수대기 — 진입 조건은 갖췄지만 시장 필터(QQQ 100일선·200일선) 또는 손절 후 재진입 금지로 신규 매수가 막힌 종목 · 매도와 구분해서 셉니다">매수대기<span class="c" id="cWaitBuy">0</span></button>
+      <button data-f="sell" title="매도 — 보유 중 청산·손절 조건이 실제로 발동한 종목 (신규 진입 제한은 '매수대기'로 따로 셉니다)">매도<span class="c" id="cSell">0</span></button>
       <button data-f="fav" title="관심종목">관심<span class="c" id="cFav">5</span></button>
     </div>
     <div class="seg seg-pre" id="presetTabs" aria-label="프리셋 필터">
@@ -150,6 +144,15 @@
       <span class="tc-now" id="tcNow" aria-live="polite"></span>
     </section>
 
+    <div class="today-strip" id="todayStrip" aria-live="polite">
+      <span class="ts-k">오늘</span>
+      <span class="ts-i" id="tsBuy">—</span>
+      <span class="ts-sep" aria-hidden="true"></span>
+      <span class="ts-i" id="tsQqq">—</span>
+      <span class="ts-sep" id="tsCandSep" aria-hidden="true" hidden></span>
+      <span class="ts-i ts-cand" id="tsCand" hidden></span>
+    </div>
+
     <div class="risk-banner" id="riskBanner" role="status" aria-live="polite" hidden>
       <span class="rbn-ico" aria-hidden="true">🔥</span>
       <b class="rbn-k">공격형 모드</b>
@@ -157,13 +160,75 @@
       <span class="rbn-warn">수익 구간이 넓어진 만큼 한 번의 손실도 커집니다 — 진입 전에 손절가를 먼저 정하세요</span>
       <button class="rbn-off" id="riskBannerOff" type="button" title="안정형(기본 규칙)으로 되돌립니다">🛡️ 안정형으로</button>
     </div>
+    <div class="macro-fg-grid">
+    <section class="fg-card card" id="fgCard" aria-label="CNN 공포·탐욕 지수">
+      <div class="fg-top">
+        <div class="fg-title">
+          <span class="fg-h">Fear &amp; Greed Index<em>공포·탐욕 시계</em></span>
+          <span class="fg-badge" id="fgBadge">—</span>
+          <span class="fg-live" id="fgLive" title="CNN 실시간 API 연결 상태"><i></i><span id="fgLiveTx">일일 갱신</span></span>
+        </div>
+        <span class="fg-src" id="fgSrc">CNN 기준 · 매일 자동갱신</span>
+      </div>
+      <div class="fg-grid">
+        <div class="fg-dial" id="fgDial"></div>
+        <div class="fg-info">
+          <div class="fg-hist" id="fgHist"></div>
+          <div class="fg-guide" id="fgGuide"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="macro-strip" id="macroStrip" aria-label="거시 지표">
+      <div class="macro-row">
+        <div class="mchip" id="mchipVix" title="VIX · CBOE 변동성지수 — 20 이상이면 주의, 30 이상이면 공포 구간">
+          <span class="mc-k">VIX<em>변동성지수</em></span>
+          <b class="mc-v" id="vixVal">—</b>
+          <span class="mc-c" id="vixChg">—</span>
+          <canvas class="mc-spark" id="vixSpark" width="76" height="26"></canvas>
+        </div>
+        <div class="mchip" id="mchipTnx" title="US 10Y · 미국 10년물 국채금리 (금리 상승은 성장주 밸류에이션에 부담)">
+          <span class="mc-k">US 10Y<em>미 10년물 금리</em></span>
+          <b class="mc-v" id="tnxVal">—</b>
+          <span class="mc-c" id="tnxChg">—</span>
+          <canvas class="mc-spark" id="tnxSpark" width="76" height="26"></canvas>
+        </div>
+        <div class="mchip" id="mchipDxy" title="DXY · 달러 인덱스 — 유로·엔 등 주요 6개 통화 대비 달러 가치. 상승(달러 강세)은 원자재·신흥국·미국 수출주에 부담">
+          <span class="mc-k">DXY<em>달러 인덱스</em></span>
+          <b class="mc-v" id="dxyVal">—</b>
+          <span class="mc-c" id="dxyChg">—</span>
+          <canvas class="mc-spark" id="dxySpark" width="76" height="26"></canvas>
+        </div>
+        <div class="mchip" id="mchipU2" title="US 2Y · 미국 2년물 국채금리(美 재무부 일별 수익률) — 연준 금리 기대에 가장 민감한 구간">
+          <span class="mc-k">US 2Y<em>미 2년물 금리</em></span>
+          <b class="mc-v" id="u2Val">—</b>
+          <span class="mc-c" id="u2Chg">—</span>
+          <canvas class="mc-spark" id="u2Spark" width="76" height="26"></canvas>
+        </div>
+        <div class="mchip mchip-slim" id="mchipSpr" title="장단기 금리차 = 미 10년물 − 미 2년물. 마이너스(역전)는 경기 둔화의 선행 신호로 봅니다">
+          <span class="mc-k">10Y−2Y<em>장단기 금리차</em></span>
+          <b class="mc-v" id="sprVal">—</b>
+          <span class="mc-c" id="sprChg">—</span>
+        </div>
+        <div class="mchip mchip-slim" id="mchipFed" title="연준 기준금리 목표 범위와 실효 연방기금금리(EFFR) — 미국 뉴욕연은 기준">
+          <span class="mc-k">FED<em>연준 기준금리</em></span>
+          <b class="mc-v" id="fedVal">—</b>
+          <span class="mc-c" id="fedChg">—</span>
+        </div>
+        <div class="mfoot"><span id="macroDate">—</span> 종가 기준 · Yahoo / 美 재무부 / NY Fed</div>
+      </div>
+      <div class="macro-events" id="macroEvents" aria-label="주요 경제지표 발표 일정"></div>
+    </section>
+
+    </div>
+
     <section class="hero card" id="hero">
       <div class="hero-main">
         <div class="hero-id">
           <span class="rank-chip" id="heroRank">#—</span>
           <h1 id="heroTicker">—</h1>
           <button class="hero-fav" id="heroFav" title="관심종목 추가/해제">☆</button>
-          <div class="cname"><span id="heroName">—</span><span class="sec" id="heroSector">—</span><span class="asof-chip" id="heroAsOf">—</span><span class="hero-mom" id="heroMom" hidden></span></div>
+          <div class="cname"><span id="heroName">—</span><span class="sec" id="heroSector">—</span><span class="asof-chip" id="heroAsOf">—</span><span class="stale-chip" id="heroStale" hidden></span><span class="sim-chip" id="heroSim" hidden title="이 화면의 보유·청산은 백테스트(가상) 포지션 기준입니다 — 실제 계좌 보유가 아닙니다">시뮬 기준</span><span class="hero-mom" id="heroMom" hidden></span></div>
         </div>
         <div class="hero-price">
           <span class="px" id="heroPrice">—</span>
@@ -209,7 +274,7 @@
             <span class="pb-state none" id="phState">포지션 없음</span>
           </div>
           <div class="pb-rows">
-            <div class="pb-row"><span class="pb-k">초기 손절가 <em class="tm" title="ATR = 하루 평균 변동폭. 손절폭을 종목 변동성에 맞춰 정하는 데 씁니다">변동성 기준</em></span><b id="phStop">—</b><span class="pb-sub" id="phStopSub">—</span></div>
+            <div class="pb-row"><span class="pb-k" id="phStopK">초기 손절가 <em class="tm" title="ATR = 하루 평균 변동폭. 손절폭을 종목 변동성에 맞춰 정하는 데 씁니다">변동성 기준</em></span><b id="phStop">—</b><span class="pb-sub" id="phStopSub">—</span></div>
             <div class="pb-row"><span class="pb-k">트레일링 스톱 발동</span><b id="phTrail">—</b><span class="pb-sub" id="phTrailSub">—</span></div>
             <div class="pb-row"><span class="pb-k">현재 청산 기준가</span><b id="phExit">미발동</b><span class="pb-sub" id="phExitSub">—</span></div>
           </div>
@@ -217,7 +282,7 @@
       </div>
 
       <div class="rr-strip" id="rrStrip">
-        <span class="rr-k">손익비<em>신규 진입 기준 R : R</em></span>
+        <span class="rr-k">손익비<em id="rrK">신규 진입 기준 R : R</em></span>
         <b class="rr-v" id="rrVal">—</b>
         <span class="rr-basis" id="rrBasis">기준 진입 — · 손절 — · 목표 —</span>
       </div>
@@ -292,68 +357,6 @@
       </div>
     </section>
 
-    <div class="macro-fg-grid">
-    <section class="fg-card card" id="fgCard" aria-label="CNN 공포·탐욕 지수">
-      <div class="fg-top">
-        <div class="fg-title">
-          <span class="fg-h">Fear &amp; Greed Index<em>공포·탐욕 시계</em></span>
-          <span class="fg-badge" id="fgBadge">—</span>
-          <span class="fg-live" id="fgLive" title="CNN 실시간 API 연결 상태"><i></i><span id="fgLiveTx">일일 갱신</span></span>
-        </div>
-        <span class="fg-src" id="fgSrc">CNN 기준 · 매일 자동갱신</span>
-      </div>
-      <div class="fg-grid">
-        <div class="fg-dial" id="fgDial"></div>
-        <div class="fg-info">
-          <div class="fg-hist" id="fgHist"></div>
-          <div class="fg-guide" id="fgGuide"></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="macro-strip" id="macroStrip" aria-label="거시 지표">
-      <div class="macro-row">
-        <div class="mchip" id="mchipVix" title="VIX · CBOE 변동성지수 — 20 이상이면 주의, 30 이상이면 공포 구간">
-          <span class="mc-k">VIX<em>변동성지수</em></span>
-          <b class="mc-v" id="vixVal">—</b>
-          <span class="mc-c" id="vixChg">—</span>
-          <canvas class="mc-spark" id="vixSpark" width="76" height="26"></canvas>
-        </div>
-        <div class="mchip" id="mchipTnx" title="US 10Y · 미국 10년물 국채금리 (금리 상승은 성장주 밸류에이션에 부담)">
-          <span class="mc-k">US 10Y<em>미 10년물 금리</em></span>
-          <b class="mc-v" id="tnxVal">—</b>
-          <span class="mc-c" id="tnxChg">—</span>
-          <canvas class="mc-spark" id="tnxSpark" width="76" height="26"></canvas>
-        </div>
-        <div class="mchip" id="mchipDxy" title="DXY · 달러 인덱스 — 유로·엔 등 주요 6개 통화 대비 달러 가치. 상승(달러 강세)은 원자재·신흥국·미국 수출주에 부담">
-          <span class="mc-k">DXY<em>달러 인덱스</em></span>
-          <b class="mc-v" id="dxyVal">—</b>
-          <span class="mc-c" id="dxyChg">—</span>
-          <canvas class="mc-spark" id="dxySpark" width="76" height="26"></canvas>
-        </div>
-        <div class="mchip" id="mchipU2" title="US 2Y · 미국 2년물 국채금리(美 재무부 일별 수익률) — 연준 금리 기대에 가장 민감한 구간">
-          <span class="mc-k">US 2Y<em>미 2년물 금리</em></span>
-          <b class="mc-v" id="u2Val">—</b>
-          <span class="mc-c" id="u2Chg">—</span>
-          <canvas class="mc-spark" id="u2Spark" width="76" height="26"></canvas>
-        </div>
-        <div class="mchip mchip-slim" id="mchipSpr" title="장단기 금리차 = 미 10년물 − 미 2년물. 마이너스(역전)는 경기 둔화의 선행 신호로 봅니다">
-          <span class="mc-k">10Y−2Y<em>장단기 금리차</em></span>
-          <b class="mc-v" id="sprVal">—</b>
-          <span class="mc-c" id="sprChg">—</span>
-        </div>
-        <div class="mchip mchip-slim" id="mchipFed" title="연준 기준금리 목표 범위와 실효 연방기금금리(EFFR) — 미국 뉴욕연은 기준">
-          <span class="mc-k">FED<em>연준 기준금리</em></span>
-          <b class="mc-v" id="fedVal">—</b>
-          <span class="mc-c" id="fedChg">—</span>
-        </div>
-        <div class="mfoot"><span id="macroDate">—</span> 종가 기준 · Yahoo / 美 재무부 / NY Fed</div>
-      </div>
-      <div class="macro-events" id="macroEvents" aria-label="주요 경제지표 발표 일정"></div>
-    </section>
-
-    </div>
-
     <section class="begin-card card" id="beginCard" aria-label="초보자 3단계 보는 법">
       <button class="bg-head" id="beginToggle" type="button" aria-expanded="true" aria-controls="beginBody" title="초보자 3단계 보는 법 접기/펼치기">
         <span class="bg-ico" aria-hidden="true">🎓</span>
@@ -424,7 +427,7 @@
       </div>
       <div class="strat-txt">
         <b id="stratTitle">추세형 (중기)</b>
-        <p id="stratDesc">종합 기술점수 50 이상 + QQQ 100일선 단계 (또는 QQQ RSI(2)&lt;5 극단 패닉 예외 · RSI(2)&lt;15 패닉일 청산 보류) → 다음 날 시가 매수 · 손절 6 ATR · 트레일 10 ATR 청산 — 둘 다 즉시 · 시장 위험 0% 청산은 진입 3거래일 이후</p>
+        <p id="stratDesc">종합 기술점수 50 이상 + QQQ 100일선 단계 (또는 QQQ RSI(2)&lt;5 극단 패닉 예외 · RSI(2)&lt;15 패닉일 청산 보류) → 다음 날 시가 매수 · 손절 6 ATR · 트레일 10 ATR 청산 — 둘 다 즉시 · QQQ 100일선 이탈 시 전량 청산은 진입 3거래일 이후</p>
       </div>
       <div class="strat-uni" id="stratUni"></div>
       <div class="strat-blend" id="stratBlend" hidden></div>

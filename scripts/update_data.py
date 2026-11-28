@@ -239,27 +239,46 @@ def parse_chart(t):
     raw = json.load(open(raw_path(t), encoding='utf-8'))['chart']['result'][0]
     ts = raw['timestamp']
     q = raw['indicators']['quote'][0]
+    meta = raw.get('meta', {}) or {}
     rows = {}
     for i, x in enumerate(ts):
         c = q['close'][i]
+        o = q['open'][i]
+        h = q['high'][i]
+        l = q['low'][i]
         if c is None:
-            continue
+            # 마지막 봉의 종가만 비어 있는 경우(Yahoo 부분 결측)는 정규장 가격으로 보완한다.
+            #  → 시가·고가·저가·거래량이 있는데 종가만 None 이라 직전 봉으로 덮여 '동일 봉'이 되던 문제
+            last = (i == len(ts) - 1)
+            rmp = meta.get('regularMarketPrice')
+            if last and rmp is not None and o is not None and h is not None and l is not None:
+                c = rmp
+            else:
+                continue
         d = datetime.fromtimestamp(x, timezone.utc).strftime('%Y-%m-%d')
-        o = q['open'][i] if q['open'][i] is not None else c
-        h = q['high'][i] if q['high'][i] is not None else c
-        l = q['low'][i] if q['low'][i] is not None else c
+        o = o if o is not None else c
+        h = h if h is not None else c
+        l = l if l is not None else c
         v = q['volume'][i] or 0
         rows[d] = [round(o, 2), round(h, 2), round(l, 2), round(c, 2), int(round(v / 1000.0))]
-    return rows, raw.get('meta', {})
+    return rows, meta
 
 
 def build_series(dates, rows, fill_forward):
-    """거래일 캘린더에 맞춘 {off,o,h,l,c,v} — 캘린더에 없는 날은 직전값 유지."""
+    """거래일 캘린더에 맞춘 {off,o,h,l,c,v} — 캘린더에 없는 날은 직전값 유지.
+
+    추가로 staleN(마지막 실제 봉 이후 직전값으로 채운 거래일 수)·miss10(최근 10봉 중 채운 봉 수)·
+    lastReal(마지막 실제 봉 날짜)을 담는다. 화면은 이 값으로 '데이터 지연/결측' 배지를 띄운다
+    (SNDK 처럼 원천(Yahoo)이 봉을 비워 보내는 종목 — 직전값이 반복돼 같은 봉처럼 보이는 문제).
+    """
     off = None
     prev = None
     o, h, l, c, v = [], [], [], [], []
+    real_idx = -1
+    real_flags = []                 # 출력 봉마다 실제 시세가 있었는지 (직전값 채움 = False)
     for i, d in enumerate(dates):
         r = rows.get(d)
+        real = r is not None
         if r is None:
             if off is None:
                 continue                      # 상장 전 — 선행 결측은 off 로 흡수
@@ -268,12 +287,20 @@ def build_series(dates, rows, fill_forward):
             r = prev
         else:
             prev = r
+            real_idx = len(c)
         if off is None:
             off = i
+        real_flags.append(real)
         o.append(r[0]); h.append(r[1]); l.append(r[2]); c.append(r[3]); v.append(r[4])
     if off is None:
         return None
-    return {'off': off, 'o': o, 'h': h, 'l': l, 'c': c, 'v': v}
+    stale = (len(c) - 1 - real_idx) if real_idx >= 0 else 0
+    win = 10
+    head = max(0, len(real_flags) - win)
+    miss10 = sum(1 for f in real_flags[head:] if not f)
+    return {'off': off, 'o': o, 'h': h, 'l': l, 'c': c, 'v': v,
+            'staleN': stale, 'miss10': miss10,
+            'lastReal': (dates[off + real_idx] if real_idx >= 0 else None)}
 
 
 def carry_series(prev, key, dates):
@@ -801,6 +828,15 @@ def build_payload(base, tickers, charts_ok, prev, fg=None):
             series[t] = s
     if len(series) < len(tickers) * 0.95:
         return None, 'only %d/%d tickers' % (len(series), len(tickers))
+
+    # 원천 결측 경고 — 직전 봉이 반복돼 '같은 봉'처럼 보이는 종목 (화면에 '데이터 지연' 배지)
+    for t in tickers:
+        sv = series.get(t)
+        if not sv:
+            continue
+        if sv.get('staleN', 0) >= 2 or sv.get('miss10', 0) >= 2:
+            print('WARN 데이터 결측 %s: 최근 10봉 중 %d봉이 비어 직전 값으로 채움 (마지막 실제 봉 %s)'
+                  % (t, sv.get('miss10', 0), sv.get('lastReal')))
 
     # 거시 지표 — 캘린더에 없는 날은 직전값 유지
     for t in INDICES:
