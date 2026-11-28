@@ -18445,11 +18445,12 @@ var EDUFIG = (function () {
       return '<div class="c"><div class="k">' + k + '</div><div class="v ' + (c || '') + '">' + v +
         '</div><div class="s">' + s + '</div></div>';
     };
+    var con = !!hqWallet;                      /* 연결 전에는 숫자 대신 — (0 으로 보이면 잔액이 0인 줄 안다) */
     $('#hqSum').innerHTML =
-      cell2('회의실 총 자산', usd(b.total, 2), '현금 + 보유 평가', '') +
-      cell2('사용 가능 현금', usd(b.cash, 2), '회의실 지갑 잔액', '') +
-      cell2('평가손익 (미실현)', hqSgn(b.unreal), b.cost ? hqQ(b.rows.length) + '종목 · ' + pct(b.unrealPct, 2) : '보유 없음', cls(b.unreal)) +
-      cell2('실현손익', hqSgn(b.realized), '매도 확정 · 회의실 prize', cls(b.realized));
+      cell2('회의실 총 자산', con ? usd(b.total, 2) : '—', con ? '현금 + 보유 평가' : '닉네임을 넣고 [연결]', '') +
+      cell2('사용 가능 현금', con ? usd(b.cash, 2) : '—', con ? '회의실 지갑 잔액' : '회의실과 같은 지갑', '') +
+      cell2('평가손익 (미실현)', con ? hqSgn(b.unreal) : '—', b.cost ? hqQ(b.rows.length) + '종목 · ' + pct(b.unrealPct, 2) : '보유 없음', cls(b.unreal)) +
+      cell2('실현손익', con ? hqSgn(b.realized) : '—', '매도 확정 · 회의실 prize', cls(b.realized));
     hqStatus(hqStatusHtml(''));
     hqRankLine();
 
