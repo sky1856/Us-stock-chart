@@ -1,6 +1,6 @@
 # ARCHITECTURE — ChoKo QUANT 미국주식 차트분석기
 
-> 최종 갱신 2026-11-28 (4축 컨트롤러 · 계좌 계산값 · 저작권 푸터 · 1안 통합 글래스 캡슐 브랜드) · 저장소 `sky1856/Us-stock-chart` · 라이브 `https://sky1856.github.io/Us-stock-chart/`
+> 최종 갱신 2026-11-28 2단계 (상단 로딩 진행바 · 계좌 보유·체결·QQQ 벤치 · 화이트 QUANT 명도 · 태블릿/모바일 공포시계 정리) · 저장소 `sky1856/Us-stock-chart` · 라이브 `https://sky1856.github.io/Us-stock-chart/`
 > 이 문서는 **화면·데이터·규칙이 어떻게 연결되어 있는지**와 **깨뜨리면 안 되는 불변 규칙**을 정리한 연결 구조표입니다.
 > 빌드 산출물은 저장소 루트 `index.html` 한 파일입니다(모든 CSS·데이터·엔진·UI 인라인).
 
@@ -23,9 +23,9 @@ scripts/ui.css  scripts/engine.js  scripts/ui.js  scripts/edufig.js ─┘
 | `scripts/update_data.py` | Yahoo 10년 일봉 수집 → 최근 1,505봉 유지, 펀더멘털·^VIX·^TNX·DXY·CNN 공포탐욕·거시지표 수집 → `data.js` | 실패 시 기존 `data.js` 유지(exit 2). 95% 미만 수집이면 폐기. 마지막 봉 종가 결측은 `regularMarketPrice`로 보완, `staleN`·`miss10`(결측 봉 수) 기록 + `WARN 데이터 결측` 로그 |
 | `scripts/data.js` | `window.MARKET` — `asOf`,`updatedAt`,`dates[]`,`tickers[]`(meta),`series{}`(`off`,`o/h/l/c/v`,`staleN`,`miss10`,`lastReal`),`fundamentals`,`fearGreed`,`macro` | meta의 `r`(시총 순위)이 **전략별 유니버스 판정 기준** |
 | `scripts/engine.js` | 기술적 분석·전략 시뮬레이션(순수 JS, DOM 없음) | 추세 C2 / 스윙 A 규칙. 성향 프로필은 파라미터만 바꾼다 |
-| `scripts/ui.js` | 화면 전체(스캐너·차트·백테스트·리플레이·모의투자) + **3축 컨트롤러·계좌 포트폴리오 시뮬레이터(`acctRun`)·운영 원칙 탭** | 유니버스 필터는 `uniList()` 한 곳, 계좌 수치는 `acctStats()` 한 곳 |
+| `scripts/ui.js` | 화면 전체(스캐너·차트·백테스트·리플레이·모의투자) + **3축 컨트롤러·계좌 포트폴리오 시뮬레이터(`acctRun`)·운영 원칙 탭·상단 로딩 진행바(`bootProgress`)** | 유니버스 필터는 `uniList()` 한 곳, 계좌 수치는 `acctStats()` 한 곳, 진행률은 `bootProgress()` 한 곳 |
 | `scripts/ui.css` | 디자인 시스템 + 테마(다크/화이트 × 안정형/공격형) | 브랜딩·성향 스위치 블록은 파일 끝(2026-11-28) |
-| `scripts/template.html` | 문서 골격(헤더·사이드바·메인·차트) | `__CSS__ __DATA__ __ENGINE__ __EDUFIG__ __UI__ __UPDATED__` 토큰 |
+| `scripts/template.html` | 문서 골격(헤더·사이드바·메인·차트) + `<body>` 첫 줄 **로딩 진행바 `#bootLoad`·`#bootTip`** | `__CSS__ __DATA__ __ENGINE__ __EDUFIG__ __UI__ __UPDATED__` 토큰 |
 | `scripts/build.py` | 위 조각을 `index.html`로 합침 | `</script>` 포함 파일은 빌드 거부 |
 | `/workspace/work/stock_daily_update.sh` | 예약 실행(매일 07:15 KST) — pull → update_data → build → 커밋·푸시 | 종목 수는 `top150.json`을 따라 자동으로 152종목 |
 
@@ -102,6 +102,7 @@ scripts/ui.css  scripts/engine.js  scripts/ui.js  scripts/edufig.js ─┘
                 (위 #topCtl 과 같은 성향·전략 버튼은 중복이라 CSS로 숨김: `.strat-bar .strat-seg, .strat-bar .risk-pick-strat{display:none}`)
    #acctCard    계좌 시뮬레이션 한 줄 스트립 — 집중1/분산3/분산10의 이 기간 수익·MDD
                 + **#acLine**(1종목 비중 · 섹터 캡 · 손절 1회 충격 · MDD 1줄 고정) + 규칙·노출·평균 보유
+                + **#acTools**(`#acBench` 동일기간 QQQ 벤치 칩 · `#acOpen` 보유·체결 내역 펼침) + **#acPanel**(보유·최근 체결)
    #todayStrip  오늘 요약: 신규 매수 N건 · 빈 슬롯 N · 보유/매수대기/매도 · QQQ 해제 조건 · 대기 후보
    #riskBanner  (공격형일 때만)
 ④ #hero        종목 히어로: 티커·가격·차트점수 → 3줄 행동 요약 → **#heroAcct(계좌 배분 가이드)** → 스트립 → 신규진입/보유관리 → 손익비
@@ -116,6 +117,12 @@ scripts/ui.css  scripts/engine.js  scripts/ui.js  scripts/edufig.js ─┘
   - 후보가 0건이면 **`#tsCand`를 비우고 숨긴다** — 전략을 바꿨을 때 이전 전략의 후보가 stale로 남지 않게
 - 데스크톱(`≥1100px`)은 공포시계/거시지표 2열(`1fr 1.15fr`), 1100px 미만은 1열(공포시계 먼저).
 - 높이 실측(1600×900, 기본 조합): 헤더 79 · 시장 2열 491 · 운영 원칙 202 · **4축 컨트롤 155(3줄 — 기간 바 37 포함)** · 전략 바 133(선택 효과 32 포함) · **계좌 스트립 105(#acLine 23 포함)** · 오늘 57 → 히어로 시작 ≈ 1300. 화면이 900이라 히어로는 스크롤 아래다.
+
+### 2-2a. 부팅 진행 바 (`#bootLoad` · `#bootTip`) — 2026-11-28 2단계
+- `template.html`의 `<body>` 첫 줄에 3px 진행바(`#bootLoad`)+상태 알약(`#bootTip`)을 두고, `ui.js`의 `bootProgress(pct,msg)` 하나가 폭·`aria-valuenow`·%·문구를 함께 갱신한다. `position:fixed`라 레이아웃·가로 넘침에 영향이 없다.
+- **실제 진행률**을 쓰기 위해 152종목 분석을 60ms 단위로 쪼갠다(`analyzeStep`) — 6%(HTML) → 26%(`start()`) → 40%(시장 지표) → 44~88%(종목 N/152) → 90%(스캐너) → 95%(첫 화면) → 100%(`bootFinish`) 후 0.4초 페이드아웃·**노드 제거**.
+- 분석 뒤 화면 조립은 `bootAfter(analyzeMs)` 로 이어지고, `start()`가 보관한 딥링크(`pendingDeep`)는 **분석이 끝난 뒤** `select()` 한다(기존 `if (h && A[h]) select(h)` 는 A가 비어 있어 동작하지 않는다).
+- **`bootReady` 게이트(중요)**: 첫 분석 전에 들어온 기간 집계(`startUniJob`)·계좌 계산(`startAcctJob`) 요청은 `deferJob()` 큐에 모아 두었다가 `bootAfter` 끝에서 `drainJobs()` 로 시작한다. 게이트가 없으면 `wire()`→`renderNotice()`→`universeStats()` 가 먼저 시작한 집계가 빈 `A` 로 끝나며 `renderStrategy()` 를 호출하고, **계좌 시뮬레이션이 3~5종목만으로 계산되는 비결정적 상태**가 된다(새로고침마다 수익률이 달라짐 — 2026-11-28 2단계에서 발견·수정). 정상 상태의 입력 종목 수는 추세 100 · 스윙 150(=`acctRun().rowN`).
 
 ### 2-3. 1️⃣ 성향(안정형/공격형) — 2곳 동기화 (2026-11-28 2차: 헤더 중복 제거)
 | 위치 | id | 비고 |
@@ -150,15 +157,21 @@ scripts/ui.css  scripts/engine.js  scripts/ui.js  scripts/edufig.js ─┘
 |---|---|
 | 입력 | `winOf(t,bars)[mode].trades` — 엔진이 계산한 종목별 전략 거래(진입=다음 날 시가, 청산가 그대로) |
 | 슬롯 | N개(1/3/10), 1포지션 목표 = 계좌 equity / N (동일가중·리밸런싱 없음) |
+| 트레이드 비중 `w` | **진입 금액 = (equity/N) × 트레이드 `w`** — 추세형 시장 주의(caution) 구간 `w=0.5` 는 절반만, 극단 패닉 예외 `w=1`, 스윙형은 항상 1. 남은 금액은 현금으로 이자 |
 | 우선순위 | **시총순위 오름차순** (data.js meta `r`) |
 | 섹터 캡 | 1슬롯 없음 · 3슬롯 1종목 · 10슬롯 3종목 (`x.sk`) |
 | 패닉 바스켓 | 패닉일(QQQ<200일선 ∧ QQQ RSI(2)<5) 신규 투입 합계 ≤ 계좌 **70%** |
 | 손절·청산·쿨다운 | 엔진 규칙 그대로(거래 기록을 재사용 — 별도 규칙 없음) |
-| 비용·이자 | 매수·매도 각 0.03% · 현금 연 4%(일 4/252% 복리) |
+| 비용·이자 | 매수·매도 각 0.03% · 현금 연 4%(일 4/252% 복리) — **이자는 현금 > 0 일 때만** |
+| 현금 하한 | 매수 금액을 `min(목표×w, 패닉 잔여, cash/(1+수수료))` 로 묶어 **현금이 음수가 되지 않는다**(음수 현금에 +4% 이자가 붙던 문제 차단, 2026-11-28 2단계) |
 | 평가 | 매일 종가 평가 → 수익·MDD·승률(청산 완료만)·거래 수·노출·평균 보유 |
+- **투명성 출력(2026-11-28 2단계)**: `acctRun()` 이 `holds`(마지막 날 보유 종목·비중·평단·현재·평가손익) · `fills`(최근 12건 매수/매도·가격·수익률) · `cashW`(현금 비중) · `rowN`(입력 종목 수) 을 함께 돌려준다.
+  - `#acBench` = `qqqBench(btBars())` — **계좌와 같은 창**(마지막 날 종가 ÷ 창 첫날 종가)의 QQQ 단순 보유 수익·MDD + 계좌와의 차이(%p). 기간을 바꾸면 함께 바뀐다.
+  - `#acOpen` → `acPanelToggle()` → `renderAcctPanel()` 이 `#acHold`·`#acFill` 을 채운다(보유 비중 합 + 현금 = 100%). 펼친 상태에서는 기간·슬롯·전략이 바뀔 때마다 다시 그린다.
 - 캐시 키 `성향|전략|기간` → 세 슬롯 결과를 한 번에 저장(`acctCache`). 기간·성향·전략이 바뀔 때만 다시 계산하고, 계산은 8ms 단위로 나눠 UI가 멈추지 않는다(`startAcctJob`, 유니버스 집계와 같은 방식).
 - 성향이 바뀌면 `acctGen++` 로 진행 중인 작업 결과를 버린다(유니버스 집계의 `uniGen` 과 동일).
 - 검증 훅 `window.APEX_ACCT = {stats, cache, panic, slot}` — 화면과 같은 값을 외부 스크립트가 읽는다.
+- **계산은 첫 분석(152종목) 뒤에만 시작한다** — `bootReady` 게이트(§2-2a). 부분 데이터로 계산한 결과가 캐시에 남지 않게 한다.
 
 ### 2-3b. 투자 운영 원칙 — 선택형 5탭 (`#nxTabs`)
 | 탭 | 내용 |
@@ -238,12 +251,15 @@ scripts/ui.css  scripts/engine.js  scripts/ui.js  scripts/edufig.js ─┘
 - **③ 확인 가격의 설명문도 같은 방향어를 쓴다** — `cf(v, text)`가 같은 `side`로 `{w}`를 치환하고, 주석 문장의 '돌파/이탈'도 `sideWord()`로 만든다. (배지는 '이탈'인데 문장은 '돌파 시 …'로 어긋나던 문제, 2026-11-28 2차 검수 P0.)
 
 - `#fgCard`: CNN 공포·탐욕(내장값 + `fgRealtime()` 5분 주기 갱신). 실패 시 내장값 유지. 게이지·이력(1주/1개월/1년)·해석 박스.
+- **태블릿 폭 넘침 금지(2026-11-28 2단계)**: `901~975px` 는 `.macro-fg-grid .fg-grid` 1열, `976~1040px` 는 `minmax(0,58%) minmax(0,1fr)` 2열. `≤1099px` 의 2열(352px+1fr) 규칙이 이 구간에 그대로 걸리면 정보 열이 94px까지 눌려 `.fg-b` 가 카드 밖으로 나가고 문서가 937px까지 넓어진다(원인·수정 모두 `.macro-fg-grid` 특이도 뒤쪽에서 처리).
+- **모바일 컴팩트화(≤760px, 2026-11-28 2단계)**: 게이지 238px(≤430px) / 252px, 이력 4행은 `.fg-rw` 를 한 줄(flex row)로 붙여 행 높이 25px, 해석문 12px·line-height 1.46, 카드 패딩·간격 축소. 390×844 실측 카드 **600 → 480px**, `1·2·3·4` 컨트롤러 y **1488 → 1368**. 항목(직전/1주/1개월/1년 · 해석문 · 출처)은 하나도 빼지 않는다.
 - 엘리어트: `#ewCard` 기본/대안 시나리오 세그먼트. 엔진은 `engine.js`의 파동 카운트.
 - 차트: 캔버스 1장(`#chart`) + HUD·MA 범례·드로잉 도구(추세선·수평선·피보나치). `window.APEX_DIAG`로 검증 스크립트가 축·라벨·오버랩을 읽는다.
 
 ## 6. 테마 · 성향 테마
 
 - `data-theme="light"` + `localStorage['apex.theme.v1']`, 첫 페인트 전 `<head>` 스크립트로 적용(깜박임 방지).
+- **화이트 모드 `QUANT` 명도(2026-11-28 2단계)**: 라이트·라이트+공격형 `.brand-text .brand-name .bw` 는 **다크 슬레이트 메탈릭**(`#2E3D4C → #364656 → #4E6176 → #74889C → #45576A`). 예전 `#AEBECB` 중간색은 흰 캡슐 대비 1.7~1.9:1 로 묻혔다 — 지금은 본체 5.7~8.7:1. 브랜드 규칙 블록 안의 라이트 섹션에서만 고친다.
 - `data-risk="aggr"` + `localStorage['apex.risk.v1']` — 공격형은 붉은 테마 레이어(`html[data-risk="aggr"] …`)를 덧입힌다.
 - 브랜딩 색: `--ck-red`(다크 #FF3B5C / 라이트 #D2103A). 성향 활성 그라데이션은 테마별로 동일(밝은 배경 위에서도 대비 확보).
 
@@ -284,3 +300,6 @@ scripts/ui.css  scripts/engine.js  scripts/ui.js  scripts/edufig.js ─┘
 20. **테마 아이콘은 지금 테마** — 다크 `🌙` · 화이트 `☀️`. 반대(전환될 테마)를 보여 주지 않는다.
 21. **명함(.sig-badge)은 폰에서도 보인다** — ≤760px는 헤더 2번째 슬림 줄(26px). 숨기는 규칙을 추가하지 않는다.
 22. **SNDK·원천 결측 종목** — `data.js`의 `staleN`/`miss10`으로 '데이터 지연/결측' 배지를 띄운다. 결측 봉을 0으로 채우거나 삭제하지 않는다(직전 봉 유지 = 기존 규칙).
+23. **첫 분석 전에는 집계·계좌 계산을 시작하지 않는다** — `bootReady` 게이트 + `deferJob`/`drainJobs`. 부분 데이터로 계산한 계좌 결과가 캐시(`acctCache`)에 남으면 안 된다(입력 종목 수 `rowN` = 추세 100 · 스윙 150).
+24. **계좌는 같은 기간 QQQ와 나란히** — `#acBench` 는 `qqqBench(btBars())` 계산값만 쓰고, `#acHold`/`#acFill` 은 `acctRun()` 의 `holds`/`fills` 만 옮겨 쓴다(보유 비중 + 현금 = 100%). 고정 수치 금지.
+25. **진입 금액은 트레이드 `w` 를 곱하고 현금을 넘기지 않는다** — `min(목표×w, 패닉 잔여, cash/(1+수수료))`, 현금 하한 0, 이자는 현금 > 0 일 때만. `w` 는 엔진 트레이드의 값(추세 caution 0.5 · 스윙 1)을 그대로 쓴다.

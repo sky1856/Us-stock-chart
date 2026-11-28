@@ -733,6 +733,61 @@
     return n;
   }
 
+  /* ---------------- 상단 슬림 로딩 진행바 (2026-11-28 2단계) ----------------
+     8.3MB 데이터 파싱 → 152종목 엔진 계산 → 첫 화면 그리기까지의 실제 진행률을
+     상단 3px 바 + 짧은 상태 문구로 보여 주고, 끝나면 스스로 사라진다.
+     · 분석 루프를 60ms 단위로 나눠 yield 하므로 바가 실제로 움직인다(끝나면 노드는 제거)
+     ------------------------------------------------------------ */
+  var bootBarLive = true;
+  function bootProgress(pct, msg) {
+    if (!bootBarLive) return;
+    var bar = $('#bootLoad'), fill = $('#bootFill'), tip = $('#bootTip'),
+      pc = $('#bootPct'), ms = $('#bootMsg');
+    var v = Math.max(0, Math.min(100, Math.round(pct)));
+    if (bar) {
+      bar.setAttribute('aria-valuenow', String(v));
+      bar.setAttribute('aria-valuetext', v + '%' + (msg ? ' · ' + msg : ''));
+    }
+    if (fill) fill.style.width = v + '%';
+    if (pc) pc.textContent = v + '%';
+    if (ms && msg) ms.textContent = msg;
+  }
+  function bootFinish() {
+    if (!bootBarLive) return;
+    bootProgress(100, '준비 완료');
+    setTimeout(function () {
+      var bar = $('#bootLoad'), tip = $('#bootTip');
+      bootBarLive = false;
+      if (bar) bar.classList.add('done');
+      if (tip) tip.classList.add('done');
+      setTimeout(function () {
+        if (bar && bar.parentNode) bar.parentNode.removeChild(bar);
+        if (tip && tip.parentNode) tip.parentNode.removeChild(tip);
+      }, 420);
+    }, 240);
+  }
+
+  /* 첫 분석(152종목) 전에 들어온 기간 집계·계좌 계산 요청은 큐에 모아 두었다가 분석 직후에 시작한다.
+     (분석이 비동기로 쪼개져 있어서, 먼저 끝난 집계가 'A 가 비어 있는' 상태로 화면을 다시 그리면
+      계좌 시뮬레이션이 일부 종목만으로 계산되는 문제가 있었다 — 2026-11-28 2단계) */
+  var bootReady = false, jobQueue = [];
+  function deferJob(kind, bars, done) {
+    for (var i = 0; i < jobQueue.length; i++) {
+      if (jobQueue[i].kind === kind && jobQueue[i].bars === bars) {
+        if (done) jobQueue[i].dones.push(done);
+        return;
+      }
+    }
+    jobQueue.push({ kind: kind, bars: bars, dones: done ? [done] : [] });
+  }
+  function drainJobs() {
+    var q = jobQueue.splice(0);
+    q.forEach(function (j) {
+      var f = j.kind === 'uni' ? startUniJob : startAcctJob;
+      try { f(j.bars, j.dones.length ? function () { j.dones.forEach(function (d) { try { d(); } catch (e) {} }); } : null); } catch (e) {}
+    });
+  }
+
   /* ---------------- boot ---------------- */
   var A = {};   // analysis by ticker
   /* 데이터 갱신 시각(KST) — 미국 휴장일에도 '오늘 확인 마침'을 배지에서 바로 알 수 있게 병기 */
@@ -771,11 +826,28 @@
     $('#footAsOf2').textContent = M.asOf;
     setUpdatedBadge();
     var pb = $('#ptBars'); if (pb) pb.textContent = M.dates.length.toLocaleString('en-US');
+    bootProgress(40, '시장 지표 그리는 중…');
     renderMacro();
     renderFearGreed(M.fearGreed, false);
     setTimeout(fgRealtime, 500);
-    var t0 = performance.now();
-    M.tickers.forEach(function (x) { A[x.t] = get(x.t); });
+    var t0 = performance.now(), nTick = M.tickers.length, xIx = 0;
+    /* 152종목 엔진 계산 — 60ms 단위로 끊어 진행률을 그리고, 끝나면 bootAfter() 로 이어진다 */
+    (function analyzeStep() {
+      var s0 = (window.performance && performance.now) ? performance.now() : Date.now();
+      while (xIx < nTick) {
+        var x = M.tickers[xIx++];
+        A[x.t] = get(x.t);
+        var nx = (window.performance && performance.now) ? performance.now() : Date.now();
+        if (nx - s0 >= 60) break;
+      }
+      bootProgress(44 + (44 * xIx) / Math.max(1, nTick), '종목 ' + xIx + '/' + nTick + ' 분석 중…');
+      if (xIx < nTick) { setTimeout(analyzeStep, 0); return; }
+      bootAfter(Math.round(performance.now() - t0));
+    })();
+  }
+  /* 분석이 끝난 뒤 첫 화면 조립 — 자동 선택·스캐너·성향/전략 버튼·히어로·계좌까지 한 번에 */
+  function bootAfter(analyzeMs) {
+    bootProgress(90, '스캐너 정리 중…');
     var topT = topScoreT();                    /* 첫 접속 = 선택한 전략(추세형/스윙형)의 추천 1위 종목 (URL로 종목을 지정한 경우는 start()에서 덮어쓴다) */
     if (topT) { state.cur = topT; autoPick = true; }
     else if (!A[state.cur]) state.cur = (M.tickers[0] || {}).t || '';
@@ -789,7 +861,16 @@
     renderStrategy();
     renderRisk();               /* 성향 버튼·경계 배지·공격형 카드를 저장된 성향으로 */
     syncHeaderHeight(); syncPeriodTitles(); btSelSync();   /* 기간 버튼 3곳 + 기간 요약(오른쪽 날짜)까지 첫 화면부터 맞춘다 */
-    select(state.cur, true);    console.log('[APEX] analyzed ' + M.tickers.length + ' tickers in ' + Math.round(performance.now() - t0) + 'ms');
+    bootProgress(95, '첫 화면 그리는 중…');
+    select(state.cur, true);    console.log('[APEX] analyzed ' + M.tickers.length + ' tickers in ' + analyzeMs + 'ms');
+    if (pendingDeep) {                      /* 딥링크(?t=·#종목) — 분석이 끝난 뒤에 선택한다 */
+      var dT = pendingDeep; pendingDeep = '';
+      if (A[dT]) select(dT);
+    }
+    bootReady = true;           /* 이제부터 기간 집계·계좌 계산을 실제로 시작한다 */
+    drainJobs();
+    renderAcct();               /* 대기 중이던 계좌 계산이 시작되면 카드도 그 상태로 다시 */
+    bootFinish();               /* 진행바 100% → 페이드아웃 */
     prefetchPeriods();          /* 3M·6M·1Y·2Y 기간 집계를 백그라운드에서 미리 계산 */
   }
 
@@ -1570,6 +1651,7 @@
   }
   /* 기간 집계를 8ms 단위로 나눠 계산 — 기간 전환 순간 UI가 멈추지 않게 */
   function startUniJob(bars, done) {
+    if (!bootReady) { deferJob('uni', bars, done); return; }   /* 152종목 첫 분석 전에는 기간 집계를 시작하지 않는다 */
     var key = 'job' + bars + '|' + riskProfile();
     if (uniRunning[key]) { if (done) uniRunning[key].push(done); return; }
     var waits = uniRunning[key] = done ? [done] : [];
@@ -1760,6 +1842,29 @@
   var acctRunning = {};      /* 진행 중인 작업(같은 키는 한 번만) */
   var acctGen = 0;           /* 성향이 바뀌면 진행 중인 결과를 버린다 */
   function acctKey(mode, bars) { return riskProfile() + '|' + mode + '|' + bars; }
+  /* 동일 기간 QQQ 단순 보유 벤치마크 — 계좌와 같은 창(마지막 날 종가 ÷ 창 첫날 종가)으로 계산한다.
+     계좌 수익·MDD 와 나란히 두어 '전략이 QQQ 를 이겼는가'를 투명하게 본다(하드코딩 금지). */
+  var _benchCache = {};
+  function qqqBench(bars) {
+    if (_benchCache[bars]) return _benchCache[bars];
+    var s = (M.series && M.series.QQQ) || null;
+    if (!s || !s.c || s.c.length < 2) return null;
+    var G = M.dates.length, start = Math.max(0, G - bars), off = s.off || 0;
+    var i0 = Math.max(0, start - off), first = null, peak = 0, mdd = 0, ret = 0;
+    for (var i = i0; i < s.c.length; i++) {
+      var v = s.c[i];
+      if (!(v > 0)) continue;
+      if (first == null) { first = v; peak = v; continue; }
+      if (v > peak) peak = v;
+      var dd = (v - peak) / peak;
+      if (dd < mdd) mdd = dd;
+      ret = v / first - 1;
+    }
+    if (first == null) return null;
+    var out = { ret: ret, mdd: mdd, bars: bars, start: M.dates[start], end: M.dates[G - 1] };
+    _benchCache[bars] = out;
+    return out;
+  }
   /* 패닉일 — QQQ 200일선 아래이면서 QQQ RSI(2) < 5 (추세·스윙 엔진의 시장 예외와 같은 정의) */
   var _panicCache = null;
   function acctPanic() {
@@ -1786,7 +1891,9 @@
       t = it.trades[i];
       if (t.entryIdx == null || !(t.entry > 0) || t.exitIdx == null || !(t.exit > 0)) continue;
       tr.push({ eG: off + t.entryIdx, xG: t.reason === '보유중' ? -1 : off + t.exitIdx,
-        eP: t.entry, xP: t.exit, hold: t.hold || 0 });
+        eP: t.entry, xP: t.exit, hold: t.hold || 0,
+        /* 트레이드 비중 w — 추세형 시장 주의(caution) 구간은 0.5, 극단 패닉 예외는 1, 스윙형은 늘 1 */
+        w: (t.w == null ? 1 : Math.max(0, Math.min(1, t.w))) });
     }
     if (!tr.length) return null;
     return { t: x.t, rank: x.r == null ? 1e9 : x.r, sec: x.sk || x.nk || '기타',
@@ -1805,7 +1912,7 @@
         if (t.xG >= start && t.xG < G) (evX[t.xG] || (evX[t.xG] = [])).push({ row: row });
       }
     }
-    var cash = 1, pos = [], curve = [], peak = 1, mdd = 0, log = [];
+    var cash = 1, pos = [], curve = [], peak = 1, mdd = 0, log = [], fills = [];
     var wins = 0, closed = 0, entries = 0, holdSum = 0, dayHold = 0, secHold = {};
     function pxAt(r2, g) { var ix = g - r2.off; return (ix >= 0 && ix < r2.c.length) ? r2.c[ix] : null; }
     function equityAt(g) {
@@ -1829,6 +1936,7 @@
         var out = pp.shares * (trade ? trade.xP : pp.entry) * (1 - FEE);
         cash += out;
         log.push({ t: pp.row.t, eG: pp.eG, xG: g, ret: out / pp.cost - 1, w: pp.shares * pp.entry * (1 + FEE) });
+        fills.push({ side: '매도', g: g, t: pp.row.t, px: trade ? trade.xP : pp.entry, ret: out / pp.cost - 1, w: pp.posW });
         closed++; holdSum += (trade ? trade.hold : 0);
         if (out - pp.cost > 0) wins++;
         secHold[pp.sec] = Math.max(0, (secHold[pp.sec] || 0) - 1);
@@ -1844,11 +1952,15 @@
           for (q = 0; q < pos.length; q++) if (pos[q].row === er.row) { busy = true; break; }
           if (busy) continue;
           if (cap > 0 && (secHold[er.row.sec] || 0) >= cap) continue;
-          var notional = Math.min(target, left);
+          /* 진입 금액 = 목표 비중(equity/N) × 트레이드 비중 w — 추세 주의 구간 w=0.5 면 절반만 산다 */
+          var tw = (er.t.w == null ? 1 : Math.max(0, Math.min(1, er.t.w)));
+          var notional = Math.min(target * tw, left, cash / (1 + FEE));   /* 현금을 넘겨 살 수 없다 */
           if (!(notional > eq * 1e-6) || !(er.t.eP > 0)) continue;
           cash -= notional * (1 + FEE);
+          if (cash < 0) cash = 0;                       /* 현금 음수 금지 — 음수 현금에 +4% 이자가 붙던 문제 차단 */
           pos.push({ row: er.row, trades: er.row.trades, eG: er.t.eG, shares: notional / er.t.eP,
-            cost: notional * (1 + FEE), entry: er.t.eP, sec: er.row.sec });
+            cost: notional * (1 + FEE), entry: er.t.eP, sec: er.row.sec, posW: tw });
+          fills.push({ side: '매수', g: g, t: er.row.t, px: er.t.eP, w: tw });
           secHold[er.row.sec] = (secHold[er.row.sec] || 0) + 1;
           left -= notional;
           entries++;
@@ -1856,7 +1968,7 @@
       }
       /* 3) 종가 평가 → 현금 이자 */
       var eqC = equityAt(g);
-      cash *= (1 + ACCT_RATE);
+      if (cash > 0) cash *= (1 + ACCT_RATE);          /* 이자는 예수금에만 — 현금이 0이면 그대로(빚 이자 금지) */
       curve.push(eqC);
       if (eqC > peak) peak = eqC;
       var dd = (eqC - peak) / peak;
@@ -1865,6 +1977,7 @@
     }
     var days = Math.max(1, G - start);
     var total = curve.length ? curve[curve.length - 1] - 1 : 0;
+    var eqEnd = curve.length ? curve[curve.length - 1] : 1;
     var open = 0, openRet = 0, endSec = {};
     for (q = 0; q < pos.length; q++) {
       endSec[pos[q].sec] = (endSec[pos[q].sec] || 0) + 1;
@@ -1872,17 +1985,30 @@
       if (last == null) continue;
       open++; openRet += pos[q].shares * last - pos[q].cost;
     }
+    /* 보유 스냅숏 — 마지막 날 종가 평가 기준. 비중 = 평가금액 ÷ 계좌 평가액(현금 포함) */
+    var holds = pos.map(function (p) {
+      var lx = pxAt(p.row, G - 1), val = lx != null ? p.shares * lx : p.cost;
+      return { t: p.row.t, sec: p.sec, w: p.posW, g: p.eG, date: M.dates[p.eG] || '',
+        entry: p.entry, last: lx, cost: p.cost, value: val,
+        weight: eqEnd > 0 ? val / eqEnd : 0,
+        pnl: p.cost > 0 ? (val - p.cost) / p.cost : 0, hold: (G - 1) - p.eG };
+    }).sort(function (h1, h2) { return h2.weight - h1.weight; });
+    var cashW = eqEnd > 0 ? Math.max(0, cash) / eqEnd : 0;
     return {
       slots: N, bars: bars, ret: total, mdd: mdd,
       win: closed ? wins / closed : null, closed: closed, entries: entries,
       avgHold: closed ? holdSum / closed : null,
       avgPos: dayHold / days, exposure: N ? (dayHold / days) / N : 0,
       cagr: Math.pow(Math.max(1 + total, 1e-6), 252 / days) - 1,
-      open: open, openPnl: openRet, endSec: endSec, log: log
+      open: open,
+      openPnl: openRet, endSec: endSec, log: log,
+      holds: holds, cashW: cashW, fills: fills.slice(-12),
+      rowN: rows.length                    /* 입력 종목 수 — 검증용(기간·성향·전략이 같으면 항상 같은 값) */
     };
   }
   /* 성향·전략·기간 조합 하나를 계산 — 두 전략 × 세 슬롯을 한 번에 캐시한다 */
   function startAcctJob(bars, done) {
+    if (!bootReady) { deferJob('acct', bars, done); return; }  /* 첫 분석 전에는 계좌 계산을 시작하지 않는다 */
     var key = 'job' + bars + '|' + riskProfile();
     if (acctRunning[key]) { if (done) acctRunning[key].push(done); return; }
     var waits = acctRunning[key] = done ? [done] : [];
@@ -2053,6 +2179,90 @@
           '<span class="ac-tip">' + acctTip(cur) + '</span>';
       }
     }
+    renderAcctBench(now);
+    if (acPanelOpen()) renderAcctPanel(now);
+  }
+  /* ---- 동일 기간 QQQ 벤치마크 칩 (계좌 수치 바로 옆에서 나란히 비교) ---- */
+  function renderAcctBench(now) {
+    var el = $('#acBench'); if (!el) return;
+    var b = qqqBench(btBars());
+    if (!b) {
+      el.innerHTML = '<span class="ab-k">QQQ 동일기간</span><span class="ab-v">데이터 없음</span>';
+      el.title = 'QQQ 시계열을 읽지 못했습니다';
+      return;
+    }
+    var html = '<span class="ab-k">QQQ 동일기간<i>단순 보유</i></span>' +
+      '<span class="ab-v">수익 <b class="' + cls(b.ret) + '">' + pct(b.ret, 1) + '</b></span>' +
+      '<span class="ab-v">MDD <b class="neg">' + pct(b.mdd, 1) + '</b></span>';
+    if (now) {
+      var dr = (now.ret - b.ret) * 100, dm = (now.mdd - b.mdd) * 100;   /* dm > 0 = 계좌 낙폭이 더 작다 */
+      html += '<span class="ab-d">계좌 <b class="' + (dr >= 0 ? 'pos' : 'neg') + '">' + (dr > 0 ? '+' : '') + dr.toFixed(1) + '%p</b>' +
+        ' · 낙폭 <b class="' + (dm >= 0 ? 'pos' : 'neg') + '">' + (dm >= 0 ? Math.abs(dm).toFixed(1) + '%p 작음' : Math.abs(dm).toFixed(1) + '%p 큼') + '</b></span>';
+    }
+    el.innerHTML = html;
+    el.title = 'QQQ 단순 보유(배당·비용 없이 종가 기준) 벤치마크 — 계좌 시뮬레이션과 같은 기간입니다\n' +
+      '기간 ' + b.start + ' ~ ' + b.end + ' (' + btTag() + ')\n' +
+      (now ? '지금 계좌(' + slotInfo().label + ') ' + pct(now.ret, 1) + ' / MDD ' + pct(now.mdd, 1) + '\n' : '') +
+      '계좌는 수수료 왕복 0.06% · 현금 연 4% 이자를 반영하므로 QQQ와 조건이 같지 않습니다(참고용).';
+  }
+  function acPanelOpen() {
+    var p = $('#acPanel');
+    return !!(p && !p.hidden);
+  }
+  function acPairDate(g, lastDate) {
+    if (g == null || g < 0) return lastDate;
+    return M.dates[g] || lastDate;
+  }
+  /* ---- '보유·체결 내역 보기' — 지금 시뮬 계좌의 실제 보유 비중 + 최근 체결 ---- */
+  function renderAcctPanel(now) {
+    var hold = $('#acHold'), fill = $('#acFill'), hn = $('#acHoldN'), fn = $('#acFillN'), note = $('#acpNote');
+    if (!hold) return;
+    var lastDate = M.dates[M.dates.length - 1] || M.asOf || '';
+    if (!now) {
+      hold.innerHTML = '<div class="acp-empty">계좌 계산 중…</div>';
+      if (fill) fill.innerHTML = '<div class="acp-empty">—</div>';
+      if (hn) hn.textContent = '—';
+      if (fn) fn.textContent = '—';
+      if (note) note.textContent = '같은 성향·전략·기간으로 계좌를 계산하고 있습니다.';
+      return;
+    }
+    var st = slotInfo(), hs = now.holds || [];
+    if (hn) hn.textContent = hs.length + '/' + st.n + '종목 · 현금 ' + (now.cashW * 100).toFixed(0) + '%';
+    if (!hs.length) {
+      hold.innerHTML = '<div class="acp-empty">보유 없음 — 마지막 날 현금 100%입니다(빈 슬롯 ' + st.n + ')</div>';
+    } else {
+      hold.innerHTML = '<table class="acp-tb"><thead><tr><th>종목</th><th>비중</th><th>평단</th><th>현재</th><th>평가손익</th></tr></thead><tbody>' +
+        hs.map(function (h) {
+          return '<tr><td class="acp-tk">' + h.t + '<em>' + (h.sec || '—') + '</em></td>' +
+            '<td>' + (h.weight * 100).toFixed(1) + '%</td>' +
+            '<td>$' + pxs(h.entry) + '</td>' +
+            '<td>' + (h.last == null ? '—' : '$' + pxs(h.last)) + '</td>' +
+            '<td><b class="' + cls(h.pnl) + '">' + pct(h.pnl, 1) + '</b></td></tr>';
+        }).join('') + '</tbody></table>';
+    }
+    var fs = (now.fills || []).slice().reverse();
+    if (fn) fn.textContent = fs.length ? ('최근 ' + fs.length + '건') : '체결 없음';
+    if (!fs.length) {
+      fill.innerHTML = '<div class="acp-empty">이 기간 체결이 없습니다</div>';
+    } else {
+      fill.innerHTML = '<table class="acp-tb"><thead><tr><th>날짜</th><th>종목</th><th>구분</th><th>가격</th><th>수익률</th></tr></thead><tbody>' +
+        fs.map(function (f) {
+          return '<tr><td>' + String(acPairDate(f.g, lastDate)).slice(5) + '</td>' +
+            '<td class="acp-tk">' + f.t + '</td>' +
+            '<td><span class="acp-side ' + (f.side === '매수' ? 'b' : 's') + '">' + f.side + '</span></td>' +
+            '<td>$' + pxs(f.px) + '</td>' +
+            '<td>' + (f.side === '매도' && f.ret != null ? '<b class="' + cls(f.ret) + '">' + pct(f.ret, 1) + '</b>' : '—') + '</td></tr>';
+        }).join('') + '</tbody></table>';
+    }
+    if (note) note.textContent = '마지막 날 ' + lastDate + ' 종가 평가 기준 · ' + st.label + ' · ' + btTag() + ' 계좌 시뮬레이션입니다(실제 보유 아님).';
+  }
+  function acPanelToggle(force) {
+    var p = $('#acPanel'), btn = $('#acOpen');
+    if (!p) return;
+    var open = force == null ? p.hidden : !!force;
+    p.hidden = !open;
+    if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) renderAcctPanel(acctStats(slotMode()));
   }
   /* 지금 조합에서 어느 슬롯의 낙폭이 가장 작은지 — 문구를 계산값으로 만든다(하드코딩 금지) */
   function acctTip(cur) {
@@ -6087,6 +6297,9 @@
         setAcctSlot(b.getAttribute('data-slot'));
       };
     });
+    /* ---- 계좌 카드 '보유·체결 내역 보기' 펼침 (2026-11-28 2단계 · 투명성) ---- */
+    var ao = $('#acOpen');
+    if (ao) ao.onclick = function () { acPanelToggle(); };
 
     /* ---- 성향 전환 (🛡️ 안정형 ↔ 🔥 공격형) — 상단 헤더·전략 바 두 곳이 같은 상태를 공유 ---- */
     $$('.risk-switch').forEach(function (seg) {
@@ -6803,6 +7016,7 @@
   }
 
   /* ---------------- go ---------------- */
+  var pendingDeep = '';                              /* 분석이 끝난 뒤 선택할 딥링크 종목 */
   function start() {
     var h = (location.hash || '').replace('#', '');   /* boot()이 기본 종목을 고르기 전에 딥링크 보관 */
     if (!h) {                                          /* ?t=SYMBOL 쿼리도 딥링크로 받는다 */
@@ -6810,6 +7024,7 @@
       if (mq) { try { h = decodeURIComponent(mq[1]).toUpperCase(); } catch (e) { h = ''; } }
     }
     cleanRestore();                                  /* 깔끔 보기 저장 상태 — 첫 draw 전에 */
+    bootProgress(26, '데이터 확인 중…');
     riskRestore();                                   /* 성향(안정형/공격형) — 첫 분석 호출 전에 복원 */
     slotRestore();                                   /* 투자방식(집중1/분산3/분산10) — 기본 분산 10 */
     applyRiskClass();                                /* html[data-risk] · theme-color */
@@ -6821,7 +7036,7 @@
     backupInit();                                    /* 가상투자·관심종목·작도·설정 백업/복원 */
     boot();
     xtogSync();                                       /* SAR · 엔벨로프 저장 상태 복원 */
-    if (h && A[h]) select(h);
+    if (h) pendingDeep = h;                            /* bootAfter() 가 분석 뒤에 선택한다 */
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
   else start();
