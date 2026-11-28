@@ -311,7 +311,7 @@ scripts/ui.css  scripts/engine.js  scripts/ui.js  scripts/edufig.js ─┘
 > `scripts/template.html`·`ui.css`·`ui.js` 3개 파일에 구현되어 `build.py` → `index.html` → GitHub Pages 라이브에 반영되었습니다. 검증은 테스트 사본 `/workspace/work/hold_test/`에서 먼저 마쳤고, 이식은 사본과 100% 동일(빌드 산출물 md5까지 일치)합니다.
 
 - **위치**: 모의투자 카드(`#paperCard`) 안의 탭 `#mhTabs` — `💼 내 실전 보유 관리`(`#mhPane`) | `🧪 모의투자`(`#ptPane`). 첫 화면 기본 탭은 **실전 보유**(마지막 선택은 `apex.myhold.v1.tab`에 저장).
-- **저장**: `localStorage['apex.myhold.v1']` = `{v:1, tab:'hold'|'paper', items:[{t, avg, qty, d, memo}]}` (최대 30종목 · 티커 중복 없음 — 같은 종목을 다시 등록하면 평단 가중평균으로 합산). 백업(`bkExport`)은 `apex.*` 전체를 담으므로 자동 포함되고, 복원 시 `mhLoad()`가 다시 읽는다.
+- **저장**: `localStorage['apex.myhold.v1']` = `{v:1, tab:'hold'|'paper', mode:'auto'|'screen', items:[{t, avg, qty, rule, d, memo}]}` (최대 30종목 · 티커 중복 없음 — 같은 종목을 다시 등록하면 평단 가중평균으로 합산). **`rule`(매수 기준 5택)·`mode`(적용 기준)는 §9-2** 참고. 백업(`bkExport`)은 `apex.*` 전체를 담으므로 자동 포함되고, 복원 시 `mhLoad()`가 다시 읽는다.
 - **계산 `mhDiag(it)`** — 성향·전략의 **실제 파라미터**(`riskParams()`)만 쓴다. 숫자를 화면에 박지 않는다.
   - `atr0` = 매수일 봉의 **직전 봉 ATR(14)**(엔진 `openPos`와 동일), 없으면 최근 봉. 매수일이 휴장일이면 다음 거래일 기준으로 계산하고 화면에 그 사실을 적는다.
   - **스윙**: 자동 손절 `max(평단 − 4.5 ATR, 평단 × (1 − 손절상한))` · 이익 `+5%` 이상에서 **20일선 2거래일 연속 이탈** → 🔴 · 1일째 → 🟡
@@ -331,3 +331,46 @@ scripts/ui.css  scripts/engine.js  scripts/ui.js  scripts/edufig.js ─┘
 - **원인**: `ui.css`의 `@media (max-width:1023px)` 안 라이트 테마 `.bw` 규칙이 `background:linear-gradient(...)` **축약**만 선언 → `background-clip`이 `border-box`로 리셋되어(글자색은 `transparent`) 그라디언트가 글자 뒤 사각형으로 칠해짐. 실측: 1600px `backgroundClip=text` / 390px `backgroundClip=border-box`.
 - **수정**: 해당 규칙을 `background-image` + 클립·채움 재선언으로 바꾸고, 브랜드 그라디언트 글자 3종(`.brand-name`·`.ck`·`.bw`) 전체 규칙의 `background:`도 `background-image:`로 통일. 파일 끝에 "어떤 폭·테마에서도 배경 박스가 아니라 글자로만 칠한다" 최종 방어 규칙(`clip:text`·`fill:transparent` 고정)을 추가.
 - **확인**: 다크/화이트 × 안정형/공격형 × 1600·1024·768·390px에서 `backgroundClip=text`이고 사각형 0.
+
+---
+
+## 9-2. ⚡ 실전보유 수익최적화 자동 적용 + 종목별 매수 기준 — 2026-11-28
+
+> `scripts/ui.js`(MY HOLD 블록)·`scripts/template.html`·`scripts/ui.css` 3개 파일 구현 → `build.py` → `index.html`. 엔진(`engine.js`)은 **수정하지 않았다** — 있는 함수를 그대로 호출만 한다.
+
+### 9-2-1. 매수 기준 5택 (`item.rule`)
+- 저장: `localStorage['apex.myhold.v1'] = {v:1, tab, mode:'auto'|'screen', items:[{t, avg, qty, rule, d, memo}]}` — `rule`이 없으면 `'auto'`(하위 호환). `mhLoad()`가 검증하고 `mhSave()`가 `mode`·`rule`을 함께 쓴다.
+- 값: `auto` · `safe_trend` · `aggr_trend` · `safe_swing` · `aggr_swing` (`MH_RULES`). 표시 문구는 `MH_RULES[k].ko`, 진단 파라미터는 `.profile`(`safe|aggr`)·`.strat`(`trend|swing`).
+- 등록·수정 폼의 `#mhRule` select, 카드 안 인라인 select(`select.mh-rsel[data-mhr="티커"]`) 두 곳에서 바꾼다. 어느 쪽이든 `mhSetRule()` 하나를 거쳐 저장 → `mhRender()` 즉시 재진단.
+
+### 9-2-2. 수익최적화 (engine.js 실제 호출)
+- 4조합 = `MH_COMBOS`(`safe_trend`·`aggr_trend`·`safe_swing`·`aggr_swing`).
+- `mhBacktestOf(t, rule)`:
+  - 추세형 `QE.backtest(a.series, a.ind, a.scoreSeries, QE.riskOpts(profile))`
+  - 스윙형 `QE.swingBacktest(a.series, a.ind, QE.riskOpts(profile), a.wsig)`
+  - 기간은 `analyze()`와 같은 1,255봉(5년) 창. **화면 성향과 같은 조합**은 `analyze()`가 이미 계산한 `a.strategy[strat].stats`를 그대로 재사용한다(같은 파라미터·같은 창 — 재계산 낭비 제거).
+- 선택 규칙 `mhBetter()`: 5년 누적수익 최고 → 동률(0.01%p 이내)이면 거래가 있는 조합 → 샤프 → MDD(덜 깊은 쪽).
+  - 공격형 프로필은 스윙의 `coolLoss`(10→0)·`stopCap`(0.10→0.15)만 바꾸므로 **추세형 두 조합은 5년 성과가 같다** → 자동은 항상 `안정·추세`를 고른다(가짜 차이를 만들지 않는다). FAQ에도 같은 문장을 넣었다.
+- 캐시: `mhBtCache['티커|asOf|기준']`(백테스트 1회) · `mhOptCache['티커|asOf']`(`{best, all, asOf}`). 기준일 `asOf`가 바뀌면(데이터 갱신) 자동으로 새로 계산한다.
+- 성능: `mhOptAsk()` → `setTimeout(16ms)` 타임슬라이스로 **2종목씩** 계산하며 `mhRender()`를 다시 부른다. 계산 전 카드는 `⏳ 계산 중` 플레이스홀더. 30종목 실측: 첫 페인트 후 **약 1.6~2.6초**에 전부 확정, 탭·모드 전환 재진단 **0회**(캐시 116건 유지).
+
+### 9-2-3. 적용 기준 모드 (`myhold.mode`)
+- `⚡ 수익최적화 자동`(기본): 종목별 저장 기준을 따른다 — `auto`면 9-2-2의 최고 조합.
+- `🎛️ 화면 기준 따르기`: 저장 기준을 **무시하고** 상단 성향·전략 버튼 규칙으로 전 종목 진단(카드의 `rule` 값은 그대로 보존). 배지는 `🎛️ 화면 기준 · …`.
+- 요약 `적용 기준` 칸: 자동이면 `⚡ 수익최적화 자동` / `종목별 설정 (자동 포함)`, 화면 기준이면 `🎛️ 화면 기준 따르기` / `안정형 · 추세형`.
+
+### 9-2-4. 카드 표시
+- 기준 배지(`.mhb-badge`): `매수 기준: 🛡️ 안정·추세` · `⚡ 자동 → 🔥 공격·추세 (5Y +248%)` · `🎛️ 화면 기준 · …` · `⏳ 5년 백테스트 계산 중…`
+- 진단(`mhDiag(it, basis)`): `basis.profile`·`basis.strat`로 `riskParams(profile)`을 읽어 손절·트레일·청산을 그 기준의 실제 규칙으로 계산한다(화면 성향과 무관).
+- 💡 추천 칩: 직접 고른 기준(`rule !== 'auto'`)이 5년 최고보다 **1%p 이상** 낮을 때만 `.mh-why` 줄에 표시 — `💡 추천: 🔥 공격·스윙 (5Y +653% vs +436%) · 전환`. 누르면 `item.rule`을 그 조합으로 바꾸고 저장·재진단(화면 기준 모드였다면 `⚡ 자동`으로 복귀).
+
+### 9-2-5. ❓ 도움말 (FAQ 5문 5답)
+- 카드 헤더 `#mhHelp`(`❓ 도움말`) → `#mhFaq` 펼침/접힘(기본 접힘, `aria-expanded` 동기화). 모의투자 탭에서도 같은 자리에 있다.
+- 5문항은 `mhFaqItems()`가 **`riskParams('safe'/'aggr')` 값으로 문장을 만든다** — 4.5 ATR·−10%/−15%·20일선 2일·−6 ATR·트레일 10 ATR·최소 3거래일이 화면 숫자와 어긋나지 않는다.
+- 맨 아래 안내 배너: `💬 더 궁금한 점이나 개선 건의가 있으신가요?` + `🏢 초코퀀트 회의실에 말하기 →` (`https://sky1856.github.io/Us-stock-chart/hq/`, `target="_blank" rel="noopener"`). **질문 입력칸·질문 복사 UI는 두지 않는다**(2026-11-28 확정).
+
+### 9-2-6. 불변 규칙 추가
+  29. **수익최적화는 엔진 함수 호출로만** — 4조합 수익률을 임의 추정·상수로 만들지 않는다. 화면 성향과 같은 조합은 `a.strategy` 재사용(같은 파라미터일 때만).
+  30. **종목별 기준이 진단의 단일 소스** — `mhDiag()`는 `basis`(profile·strat)를 인자로 받는다. `stratKey()`/`riskProfile()`을 함수 안에서 직접 읽지 않는다(읽으면 모드·기준 선택이 무시된다).
+  31. **추천 칩은 1%p 이상 차이일 때만** — 사실상 같은 전략을 "추천"으로 띄우지 않는다. 칩을 누르면 `rule` 변경·저장·재진단이 한 번에 일어난다.
+  32. **카드 폭 3단** — ≥1600px 8열 한 줄, 761~1599px 4열(기준·티커·상태·버튼 / 가격·손익·손절 / 규칙 / 사유), ≤760px 3열(상태·티커 / 기준 / 가격·손익·손절 / 규칙 / 버튼 / 사유). `.mf-fields`는 ≤1279px에서 3열 — 1024·1180px에서 폼이 카드를 넘던 문제(2026-11-28 이전부터 존재)를 함께 해소했다.
