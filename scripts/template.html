@@ -7,6 +7,8 @@
 <script>
   /* 첫 페인트 전에 저장된 테마를 적용 (깜박임 방지) */
   try { if (localStorage.getItem('apex.theme.v1') === 'light') document.documentElement.setAttribute('data-theme', 'light'); } catch (e) {}
+  /* 성향(🛡️ 안정형 / 🔥 공격형)도 첫 페인트 전에 적용 — 공격형 테마 깜박임 방지 */
+  try { if (localStorage.getItem('apex.risk.v1') === 'aggr') document.documentElement.setAttribute('data-risk', 'aggr'); } catch (e) {}
 </script>
 <meta name="apex-data-updated" content="__UPDATED__">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -36,6 +38,10 @@
   </div>
   <div class="market-badge"><i class="dot"></i><span id="asOf">—</span>&nbsp;장마감<span class="upd" id="asOfUpd"></span></div>
   <button class="theme-btn" id="themeBtn" type="button" aria-pressed="false" title="다크(검은색) 모드 사용 중 — 누르면 화이트로 전환"><span class="th-ic" aria-hidden="true">☀️</span><span class="th-tx">화이트</span></button>
+  <div class="risk-switch" id="riskSwitch" role="group" aria-label="투자 성향 — 안정형·공격형">
+    <button type="button" data-risk-btn="safe" class="on" aria-pressed="true" title="🛡️ 안정형 — 검증된 기본 규칙 그대로 · 스윙 손절 상한 -10% · 손절 뒤 10거래일 재진입 금지"><span class="rk-ic" aria-hidden="true">🛡️</span><span class="rk-tx">안정형</span></button>
+    <button type="button" data-risk-btn="aggr" aria-pressed="false" title="🔥 공격형 — 긴장감 테마 · 스윙 쿨다운 0일·손절 -15% · 추세 C2 50 + 6M모멘텀 Top5 50 가이드 · 변동성이 커집니다"><span class="rk-ic" aria-hidden="true">🔥</span><span class="rk-tx">공격형</span></button>
+  </div>
   <div class="search">
     <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
     <input id="globalSearch" type="text" placeholder="종목 검색 · 티커 또는 회사명" autocomplete="off" spellcheck="false">
@@ -122,6 +128,13 @@
   </aside>
 
   <main class="workspace">
+    <div class="risk-banner" id="riskBanner" role="status" aria-live="polite" hidden>
+      <span class="rbn-ico" aria-hidden="true">🔥</span>
+      <b class="rbn-k">공격형 모드</b>
+      <span class="rbn-t" id="riskBannerTx">—</span>
+      <span class="rbn-warn">수익 구간이 넓어진 만큼 한 번의 손실도 커집니다 — 진입 전에 손절가를 먼저 정하세요</span>
+      <button class="rbn-off" id="riskBannerOff" type="button" title="안정형(기본 규칙)으로 되돌립니다">🛡️ 안정형으로</button>
+    </div>
     <section class="macro-strip" id="macroStrip" aria-label="거시 지표">
       <div class="macro-row">
         <div class="mchip" id="mchipVix" title="VIX · CBOE 변동성지수 — 20 이상이면 주의, 30 이상이면 공포 구간">
@@ -210,7 +223,7 @@
           <span class="rank-chip" id="heroRank">#—</span>
           <h1 id="heroTicker">—</h1>
           <button class="hero-fav" id="heroFav" title="관심종목 추가/해제">☆</button>
-          <div class="cname"><span id="heroName">—</span><span class="sec" id="heroSector">—</span><span class="asof-chip" id="heroAsOf">—</span></div>
+          <div class="cname"><span id="heroName">—</span><span class="sec" id="heroSector">—</span><span class="asof-chip" id="heroAsOf">—</span><span class="hero-mom" id="heroMom" hidden></span></div>
         </div>
         <div class="hero-price">
           <span class="px" id="heroPrice">—</span>
@@ -377,11 +390,35 @@
         <button data-m="trend" class="on" role="tab" aria-selected="true"><b>추세형</b><span>(중기)</span></button>
         <button data-m="swing" role="tab" aria-selected="false"><b>스윙형</b><span>(단기)</span></button>
       </div>
+      <div class="risk-switch strat-risk" id="stratRisk" role="group" aria-label="투자 성향 — 안정형·공격형">
+        <button type="button" data-risk-btn="safe" class="on" aria-pressed="true" title="🛡️ 안정형 — 기본 규칙 그대로"><span class="rk-ic" aria-hidden="true">🛡️</span><span class="rk-tx">안정형</span></button>
+        <button type="button" data-risk-btn="aggr" aria-pressed="false" title="🔥 공격형 — 스윙 쿨다운 0일·손절 -15% · 추세 50:50 모멘텀 가이드"><span class="rk-ic" aria-hidden="true">🔥</span><span class="rk-tx">공격형</span></button>
+      </div>
       <div class="strat-txt">
         <b id="stratTitle">추세형 (중기)</b>
         <p id="stratDesc">종합 기술점수 50 이상 + QQQ 100일선 단계 (또는 QQQ RSI(2)&lt;5 극단 패닉 예외 · RSI(2)&lt;15 패닉일 청산 보류) → 다음 날 시가 매수 · 손절 6 ATR · 트레일 10 ATR 청산 — 둘 다 즉시 · 시장 위험 0% 청산은 진입 3거래일 이후</p>
       </div>
       <div class="strat-uni" id="stratUni"></div>
+      <div class="strat-blend" id="stratBlend" hidden></div>
+    </section>
+
+    <section class="card aggr-card" id="aggrCard" aria-label="공격형 전략 가이드" hidden>
+      <div class="ag-head">
+        <span class="ag-ico" aria-hidden="true">🔥</span>
+        <div class="ag-tt">
+          <b id="agTitle">공격형</b>
+          <span id="agSub">—</span>
+        </div>
+        <div class="ag-kpis" id="agKpis"></div>
+      </div>
+      <div class="ag-body">
+        <div class="ag-guide" id="agGuide"></div>
+        <div class="ag-mom">
+          <div class="ag-mom-h"><b>오늘의 6M모멘텀 Top5</b><span id="agMomAsOf">—</span></div>
+          <div class="ag-mom-list" id="agMomList"></div>
+        </div>
+      </div>
+      <p class="ag-foot" id="agFoot">—</p>
     </section>
 
     <section class="bt-period" id="btPeriod" aria-label="백테스트 검증 기간">

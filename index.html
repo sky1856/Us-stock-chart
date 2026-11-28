@@ -7,6 +7,8 @@
 <script>
   /* 첫 페인트 전에 저장된 테마를 적용 (깜박임 방지) */
   try { if (localStorage.getItem('apex.theme.v1') === 'light') document.documentElement.setAttribute('data-theme', 'light'); } catch (e) {}
+  /* 성향(🛡️ 안정형 / 🔥 공격형)도 첫 페인트 전에 적용 — 공격형 테마 깜박임 방지 */
+  try { if (localStorage.getItem('apex.risk.v1') === 'aggr') document.documentElement.setAttribute('data-risk', 'aggr'); } catch (e) {}
 </script>
 <meta name="apex-data-updated" content="2026-11-28 07:22">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2893,6 +2895,389 @@ html[data-theme="light"] .si-ico{background:#D6ECFC}
   .si-ico{width:23px;height:23px}
   .si-badge{font-size:10.5px;padding:3px 6px 3px 7px}
 }
+
+/* ============================================================
+   🛡️ 안정형 / 🔥 공격형 — 성향 스위치 · 경계 배지 · 공격형 카드
+   (2026-11-28 추가 — 안정형에서는 이 블록의 테마 규칙을 전혀 타지 않는다)
+   ============================================================ */
+.risk-switch{display:flex;gap:3px;padding:3px;border-radius:10px;flex:0 0 auto;white-space:nowrap;
+  background:rgba(255,255,255,.03);border:1px solid var(--line)}
+.risk-switch button{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border-radius:7px;
+  font-size:12px;font-weight:700;letter-spacing:-.01em;color:var(--txt3);border:1px solid transparent;
+  transition:color .16s,background .16s,border-color .16s,box-shadow .16s}
+.risk-switch button .rk-ic{font-size:12.5px;line-height:1;filter:grayscale(.35)}
+.risk-switch button:hover{color:var(--txt);background:rgba(255,255,255,.05)}
+.risk-switch button.on{color:#EAF4FF;border-color:rgba(56,189,248,.5);
+  background:linear-gradient(180deg,rgba(56,189,248,.22),rgba(56,189,248,.06));
+  box-shadow:0 0 14px -6px rgba(56,189,248,.9)}
+.risk-switch button.on .rk-ic{filter:none}
+.risk-switch button[data-risk-btn="aggr"].on{color:#FFE8D6;border-color:rgba(255,122,90,.72);
+  background:linear-gradient(180deg,rgba(255,122,90,.32),rgba(150,24,34,.22));
+  box-shadow:0 0 16px -5px rgba(255,110,80,.95)}
+.risk-switch button[data-risk-btn="aggr"]:hover{color:#FFD9C6;background:rgba(255,122,90,.12);border-color:rgba(255,122,90,.34)}
+html[data-theme="light"] .risk-switch{background:rgba(15,23,42,.03);border-color:rgba(15,23,42,.12)}
+html[data-theme="light"] .risk-switch button{color:#5A677A}
+html[data-theme="light"] .risk-switch button:hover{color:#0F172A;background:rgba(15,23,42,.06)}
+html[data-theme="light"] .risk-switch button.on{color:#075985;border-color:rgba(14,116,144,.45);
+  background:linear-gradient(180deg,#E0F2FE,#D3EBFA);box-shadow:0 0 12px -7px rgba(14,116,144,.8)}
+html[data-theme="light"] .risk-switch button[data-risk-btn="aggr"].on{color:#9F1239;border-color:rgba(190,18,60,.45);
+  background:linear-gradient(180deg,#FFE4E6,#FED7DA);box-shadow:0 0 12px -7px rgba(190,18,60,.7)}
+/* 전략 바 안의 성향 스위치 — 전략 버튼과 같은 높이 */
+.strat-risk{align-self:stretch;align-items:center;padding:3px;background:rgba(3,7,12,.9);border-color:rgba(96,205,255,.16)}
+.strat-risk button{padding:8px 12px;font-size:12.5px}
+
+/* 경계 배지 — 공격형일 때만 */
+.risk-banner{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:10px 13px;border-radius:12px;
+  border:1px solid rgba(255,122,90,.5);font-size:12.5px;color:#FFD9CC;line-height:1.45;
+  background:linear-gradient(100deg,rgba(126,16,30,.92),rgba(74,12,20,.9) 52%,rgba(32,9,13,.92));
+  box-shadow:0 0 28px -16px rgba(255,90,60,.95),0 1px 0 rgba(255,180,140,.14) inset}
+.risk-banner[hidden]{display:none}
+.risk-banner .rbn-ico{font-size:15px;line-height:1;filter:drop-shadow(0 0 8px rgba(255,120,80,.9))}
+.risk-banner .rbn-k{font-weight:800;font-size:12.5px;letter-spacing:.01em;color:#FFB199;white-space:nowrap}
+.risk-banner .rbn-t{color:#FFD3C4}
+.risk-banner .rbn-t b{color:#FFE6A8;font-weight:800}
+.risk-banner .rbn-warn{flex:1 1 300px;min-width:0;font-size:11.5px;color:#F0A493}
+.risk-banner .rbn-off{margin-left:auto;flex:0 0 auto;font-size:11.5px;font-weight:700;color:#FFD9CC;
+  padding:5px 10px;border-radius:99px;border:1px solid rgba(255,138,110,.45);background:rgba(0,0,0,.28);transition:.16s}
+.risk-banner .rbn-off:hover{background:rgba(255,138,110,.18);color:#FFF3EC;border-color:rgba(255,160,130,.8)}
+html[data-theme="light"] .risk-banner{color:#7F1D2D;border-color:rgba(190,18,60,.4);
+  background:linear-gradient(100deg,#FFE9E4,#FFF4EF 55%,#FFF9F6);
+  box-shadow:0 0 20px -16px rgba(190,18,60,.6),0 1px 0 #fff inset}
+html[data-theme="light"] .risk-banner .rbn-k{color:#9F1239}
+html[data-theme="light"] .risk-banner .rbn-t{color:#7F1D2D}
+html[data-theme="light"] .risk-banner .rbn-t b{color:#92400E}
+html[data-theme="light"] .risk-banner .rbn-warn{color:#9A5A44}
+html[data-theme="light"] .risk-banner .rbn-off{color:#9F1239;border-color:rgba(190,18,60,.4);background:#fff}
+html[data-theme="light"] .risk-banner .rbn-off:hover{background:#FFE4E6}
+
+/* 종목 카드 — 공격형 모멘텀 Top5 칩 */
+.hero-mom{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;letter-spacing:-.01em;
+  padding:2px 7px;border-radius:99px;border:1px solid rgba(255,150,90,.5);color:#FFD9A8;
+  background:linear-gradient(180deg,rgba(255,150,90,.18),rgba(150,24,34,.14));white-space:nowrap}
+.hero-mom[hidden]{display:none}
+.hero-mom b{color:#FFE6A8}
+html[data-theme="light"] .hero-mom{color:#92400E;border-color:rgba(180,83,9,.4);background:#FEF3C7}
+html[data-theme="light"] .hero-mom b{color:#7C2D12}
+
+/* 스캐너 6M모멘텀 배지 — 공격형에서 더 세게 */
+.risk-switch .rk-tx{letter-spacing:-.01em}
+
+/* 공격형 카드 */
+.aggr-card{display:block;padding:13px 15px 12px;overflow:hidden;position:relative}
+.aggr-card[hidden]{display:none}
+.aggr-card:before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(420px 130px at 100% 0%,rgba(255,110,70,.16),transparent 70%),
+             radial-gradient(360px 120px at 0% 100%,rgba(180,20,40,.16),transparent 72%)}
+.ag-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:relative}
+.ag-ico{width:30px;height:30px;flex:0 0 auto;display:grid;place-items:center;border-radius:10px;font-size:15px;
+  border:1px solid rgba(255,140,90,.5);background:linear-gradient(180deg,rgba(255,120,80,.26),rgba(140,20,30,.24));
+  box-shadow:0 0 18px -8px rgba(255,110,70,.95)}
+.ag-tt{flex:0 1 auto;min-width:0;display:flex;flex-direction:column;gap:1px}
+.ag-tt b{font-size:13.5px;font-weight:800;letter-spacing:-.01em;color:#FFE1D0}
+.ag-tt b em{font-style:normal;font-weight:700;font-size:11.5px;color:#FFC08A;margin-left:6px;
+  padding:1px 6px;border-radius:99px;border:1px solid rgba(255,160,90,.4);background:rgba(255,150,80,.12)}
+.ag-tt span{font-size:11.5px;color:var(--txt3);line-height:1.4}
+.ag-kpis{margin-left:auto;display:flex;gap:16px;flex-wrap:wrap;align-items:baseline;
+  border-left:1px solid rgba(255,140,90,.22);padding-left:14px}
+.ag-kpis span{display:flex;flex-direction:column;line-height:1.25}
+.ag-kpis b{font-size:15px;font-weight:800;color:#FFD9A8;font-variant-numeric:tabular-nums}
+.ag-kpis em{font-style:normal;font-size:10.5px;color:var(--txt3);white-space:nowrap}
+.ag-body{position:relative;display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:12px;margin-top:10px}
+.ag-row{display:grid;grid-template-columns:52px minmax(0,1fr);gap:8px;align-items:start;
+  padding:5px 0;border-bottom:1px dashed rgba(255,140,90,.14);font-size:12px;line-height:1.5;color:var(--txt2)}
+.ag-row:last-child{border-bottom:0}
+.ag-row b{font-size:11px;font-weight:800;letter-spacing:.02em;padding:1px 0;text-align:center;border-radius:6px;
+  color:#FFD9C4;background:rgba(255,140,90,.14);border:1px solid rgba(255,140,90,.3)}
+.ag-row.buy b{color:#FFE6A8;background:rgba(255,180,60,.16);border-color:rgba(255,180,60,.34)}
+.ag-row.stop b{color:#FFB4C0;background:rgba(244,63,94,.16);border-color:rgba(244,63,94,.34)}
+.ag-row.rebal b{color:#FFD2A8;background:rgba(255,150,80,.14)}
+.ag-row.risk b{color:#FFC0A8;background:rgba(255,110,70,.16)}
+.ag-row span b{background:none;border:0;padding:0;color:#FFDCA8;font-weight:800;text-align:left}
+.ag-mom{border:1px solid rgba(255,140,90,.22);border-radius:11px;padding:8px 9px;background:rgba(255,120,80,.05)}
+.ag-mom-h{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.ag-mom-h b{font-size:11.5px;font-weight:800;color:#FFD9C4;letter-spacing:-.01em}
+.ag-mom-h span{font-size:10.5px;color:var(--txt4)}
+.ag-mom-list{display:grid;grid-template-columns:1fr;gap:4px;margin-top:6px}
+.ag-mom-b{display:grid;grid-template-columns:16px minmax(0,1fr) auto;align-items:center;gap:7px;width:100%;
+  padding:5px 8px;border-radius:8px;border:1px solid rgba(255,140,90,.16);background:rgba(255,255,255,.02);
+  font-size:12px;text-align:left;transition:.14s}
+.ag-mom-b em{font-style:normal;font-size:10px;font-weight:800;color:#FFC08A}
+.ag-mom-b b{font-weight:800;letter-spacing:.01em;color:var(--txt)}
+.ag-mom-b span{font-variant-numeric:tabular-nums;font-weight:700}
+.ag-mom-b:hover{border-color:rgba(255,160,110,.5);background:rgba(255,120,80,.12)}
+.ag-mom-b.on{border-color:rgba(255,160,110,.7);background:rgba(255,120,80,.18);box-shadow:0 0 16px -10px rgba(255,110,70,1)}
+.ag-foot{position:relative;margin:9px 0 0;font-size:10.8px;line-height:1.55;color:var(--txt4);word-break:keep-all}
+html[data-theme="light"] .aggr-card:before{background:radial-gradient(420px 130px at 100% 0%,rgba(251,113,133,.14),transparent 70%),
+  radial-gradient(360px 120px at 0% 100%,rgba(245,158,11,.10),transparent 72%)}
+html[data-theme="light"] .ag-tt b{color:#9F1239}
+html[data-theme="light"] .ag-tt b em{color:#9A3412;border-color:rgba(180,83,9,.35);background:#FEF3C7}
+html[data-theme="light"] .ag-kpis{border-left-color:rgba(190,18,60,.18)}
+html[data-theme="light"] .ag-kpis b{color:#9F1239}
+html[data-theme="light"] .ag-row{border-bottom-color:rgba(190,18,60,.12);color:#3B4A5E}
+html[data-theme="light"] .ag-row b{color:#9F1239;background:#FFE4E6;border-color:rgba(190,18,60,.3)}
+html[data-theme="light"] .ag-row span b{color:#7C2D12}
+html[data-theme="light"] .ag-mom{border-color:rgba(190,18,60,.18);background:#FFF7F4}
+html[data-theme="light"] .ag-mom-h b{color:#9F1239}
+html[data-theme="light"] .ag-mom-b{border-color:rgba(190,18,60,.14);background:#fff}
+html[data-theme="light"] .ag-mom-b em{color:#B45309}
+html[data-theme="light"] .ag-mom-b:hover{background:#FFF1EC;border-color:rgba(190,18,60,.32)}
+html[data-theme="light"] .ag-mom-b.on{background:#FFE4E6;border-color:rgba(190,18,60,.45)}
+
+@media (max-width:900px){
+  .risk-switch button .rk-tx{font-size:11.5px}
+  .risk-switch button{padding:5px 8px}
+  .strat-risk{width:100%;justify-content:stretch}
+  .strat-risk button{flex:1 1 0;justify-content:center;padding:9px 6px}
+  .risk-banner{gap:7px;padding:9px 11px;font-size:12px}
+  .risk-banner .rbn-warn{flex:1 1 100%;font-size:11px}
+  .risk-banner .rbn-off{margin-left:0;flex:1 1 100%;text-align:center;padding:7px 10px}
+  .ag-body{grid-template-columns:1fr}
+  .ag-kpis{margin-left:0;border-left:0;padding-left:0;width:100%;gap:12px;
+    border-top:1px solid rgba(255,140,90,.18);padding-top:8px;flex:1 1 100%}
+  .ag-kpis b{font-size:14px}
+}
+@media (max-width:430px){
+  .risk-switch{padding:2px;gap:2px}
+  .risk-switch button{padding:4px 6px;font-size:11px;gap:4px}
+  .risk-switch button .rk-ic{font-size:11.5px}
+  .risk-banner .rbn-k{font-size:12px}
+}
+
+/* ============================================================
+   🔥 공격형 긴장감 테마 — html[data-risk="aggr"]
+   · 다크: 다크 레드·버건디 바탕 + 앰버·크림슨 악센트 + 붉은 글로우
+   · 화이트: 종이톤 바탕 + 진한 크림슨·앰버 악센트
+   · 안정형(속성 없음)은 이 규칙을 타지 않는다
+   ============================================================ */
+html[data-risk="aggr"]{
+  color-scheme:dark;
+  --bg:#170A0D; --bg2:#12070A;
+  --card:#1E1014; --card2:#180C10; --elev:#281419;
+  --hover:#331A21;
+  --line:rgba(255,138,110,.20); --line2:rgba(255,138,110,.11);
+  --btn:#221115;
+  --txt:#F6E7E2; --txt2:#C9ADA6; --txt3:#9A8179; --txt4:#6E5751;
+  --cyan:#FFB020; --hud-ln:rgba(255,152,112,.74); --hud-glow:rgba(244,63,94,.48);
+  --shadow:0 26px 52px -32px rgba(0,0,0,.96), 0 1px 0 rgba(255,160,120,.07) inset;
+}
+html[data-risk="aggr"] body{
+  background-color:#170A0D;
+  background-image:
+    radial-gradient(1100px 560px at 82% -12%, rgba(244,63,94,.22), transparent 62%),
+    radial-gradient(900px 500px at -4% 0%, rgba(245,158,11,.14), transparent 60%),
+    radial-gradient(1200px 700px at 50% 116%, rgba(120,20,34,.34), transparent 66%),
+    linear-gradient(rgba(255,150,120,.030) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,150,120,.030) 1px, transparent 1px);
+  background-size:auto, auto, auto, 46px 46px, 46px 46px;
+  background-attachment:fixed;
+}
+html[data-risk="aggr"] ::selection{background:rgba(255,140,90,.34)}
+html[data-risk="aggr"] ::-webkit-scrollbar-thumb{background:#3A1F26;border-color:#170A0D}
+html[data-risk="aggr"] ::-webkit-scrollbar-thumb:hover{background:#4A2830}
+html[data-risk="aggr"] .topbar{background:rgba(23,10,13,.86);border-bottom-color:rgba(255,138,110,.22);
+  box-shadow:0 1px 0 rgba(255,160,120,.07) inset,0 14px 34px -28px rgba(244,63,94,.95)}
+html[data-risk="aggr"] .logo{background:linear-gradient(145deg,#42121C,#1C0A0F);border-color:rgba(255,138,110,.3);
+  box-shadow:0 0 26px -7px rgba(244,63,94,.85)}
+html[data-risk="aggr"] .brand-text b{background:linear-gradient(90deg,#FFE6C8,#FF7A5A);
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+html[data-risk="aggr"] .market-badge{background:rgba(255,140,90,.07);border-color:rgba(255,138,110,.24)}
+html[data-risk="aggr"] .market-badge .dot{background:#FFB020;box-shadow:0 0 0 3px rgba(255,176,32,.16)}
+html[data-risk="aggr"] .search input{background:#1B0E12;border-color:rgba(255,138,110,.22)}
+html[data-risk="aggr"] .search input:focus{background:#221116;border-color:rgba(255,150,90,.6);
+  box-shadow:0 0 0 3px rgba(255,120,80,.14)}
+html[data-risk="aggr"] .search kbd{background:#26141A;border-color:rgba(255,138,110,.22)}
+html[data-risk="aggr"] .sig-badge{border-color:rgba(255,150,100,.3)}
+html[data-risk="aggr"] .sig-n{background:linear-gradient(96deg,#FFE1C4,#FF8A5C 42%,#FFB020 74%,#FFE1C4);
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+html[data-risk="aggr"] .theme-btn{background:rgba(255,140,90,.07);border-color:rgba(255,138,110,.24)}
+html[data-risk="aggr"] .theme-btn:hover{color:#FFE1D0;border-color:rgba(255,150,90,.6);background:rgba(255,120,80,.14)}
+html[data-risk="aggr"] .sidebar{background:linear-gradient(180deg,#1C0F13,#160A0E);border-right-color:rgba(255,138,110,.18)}
+html[data-risk="aggr"] .sidebar::after{background:linear-gradient(180deg,transparent,rgba(255,150,100,.55) 18%,rgba(255,176,32,.3) 72%,transparent)}
+html[data-risk="aggr"] .side-head h2{text-shadow:0 0 14px rgba(255,120,80,.24)}
+html[data-risk="aggr"] .scan-head{background:rgba(24,11,15,.96);border-color:rgba(255,138,110,.16);color:#9C7C74}
+html[data-risk="aggr"] .srow{border-bottom-color:rgba(255,138,110,.09)}
+html[data-risk="aggr"] .srow:hover{background:rgba(255,120,80,.08)}
+html[data-risk="aggr"] .srow.on{background:linear-gradient(90deg,rgba(255,120,80,.20),rgba(255,120,80,.04) 62%,transparent)}
+html[data-risk="aggr"] .srow.on::before{background:linear-gradient(180deg,#FFC46B,#FF7A5A);box-shadow:0 0 10px rgba(255,140,90,.95)}
+html[data-risk="aggr"] .side-foot{border-top-color:rgba(255,138,110,.14);color:#7E655F}
+html[data-risk="aggr"] .side-tools input,html[data-risk="aggr"] .side-tools select{background:#1B0E12;border-color:rgba(255,138,110,.2)}
+html[data-risk="aggr"] .seg button.on{color:#FFEDE2;background:linear-gradient(180deg,rgba(255,120,80,.24),rgba(255,120,80,.07));
+  border-color:rgba(255,150,90,.55);box-shadow:0 0 0 1px rgba(255,140,90,.18) inset,0 0 20px -12px rgba(255,110,70,1)}
+html[data-risk="aggr"] .seg button:hover{color:#FFE6D8;background:rgba(255,120,80,.1)}
+html[data-risk="aggr"] .seg-pre button{border-color:rgba(255,140,90,.28);color:#C6A89F;
+  background:linear-gradient(180deg,rgba(255,120,80,.08),rgba(255,120,80,.02))}
+html[data-risk="aggr"] .seg-pre button:hover{border-color:rgba(255,160,110,.6);background:rgba(255,120,80,.14);color:#FFE6D8}
+html[data-risk="aggr"] .seg-pre button.on{color:#FFE6D8;background:linear-gradient(180deg,rgba(255,140,90,.26),rgba(255,140,90,.08));
+  border-color:rgba(255,170,110,.66);box-shadow:0 0 0 1px rgba(255,140,90,.2) inset,0 0 22px -12px rgba(255,120,70,1)}
+html[data-risk="aggr"] .seg-pre button.on .c{color:#FFD9BA}
+html[data-risk="aggr"] .card{border-color:rgba(255,150,110,.30);
+  background-image:
+    linear-gradient(var(--hud-ln),var(--hud-ln)),linear-gradient(var(--hud-ln),var(--hud-ln)),
+    linear-gradient(var(--hud-ln),var(--hud-ln)),linear-gradient(var(--hud-ln),var(--hud-ln)),
+    linear-gradient(var(--hud-ln),var(--hud-ln)),linear-gradient(var(--hud-ln),var(--hud-ln)),
+    linear-gradient(var(--hud-ln),var(--hud-ln)),linear-gradient(var(--hud-ln),var(--hud-ln)),
+    linear-gradient(180deg,rgba(38,17,22,.80),rgba(20,9,13,.92));
+  background-position:10px 10px,10px 10px,calc(100% - 10px) 10px,calc(100% - 10px) 10px,
+    10px calc(100% - 10px),10px calc(100% - 10px),calc(100% - 10px) calc(100% - 10px),calc(100% - 10px) calc(100% - 10px),0 0;
+  background-size:15px 1px,1px 15px,15px 1px,1px 15px,15px 1px,1px 15px,15px 1px,1px 15px,auto;
+  background-repeat:no-repeat;
+  box-shadow:0 24px 48px -34px rgba(0,0,0,.98),0 0 26px -16px rgba(244,63,94,.55),
+    0 0 0 1px rgba(255,150,110,.06),0 1px 0 rgba(255,170,130,.09) inset}
+html[data-risk="aggr"] .card.kpi{background-size:12px 1px,1px 12px,12px 1px,1px 12px,12px 1px,1px 12px,12px 1px,1px 12px,auto;
+  background-position:9px 9px,9px 9px,calc(100% - 9px) 9px,calc(100% - 9px) 9px,
+    9px calc(100% - 9px),9px calc(100% - 9px),calc(100% - 9px) calc(100% - 9px),calc(100% - 9px) calc(100% - 9px),0 0}
+html[data-risk="aggr"] .hero{border-color:rgba(255,165,120,.52);
+  box-shadow:0 24px 48px -34px rgba(0,0,0,.98),0 0 34px -18px rgba(255,100,70,.85),
+    0 0 0 1px rgba(255,150,110,.08),0 1px 0 rgba(255,170,130,.1) inset}
+html[data-risk="aggr"] .hero:before{background:
+  radial-gradient(560px 150px at 100% 0%,rgba(255,120,80,.18),transparent 70%),
+  radial-gradient(420px 120px at 0% 100%,rgba(180,20,44,.16),transparent 72%)}
+html[data-risk="aggr"] .notice-card{border-color:rgba(255,150,110,.28)}
+html[data-risk="aggr"] .notice-card:before{background:linear-gradient(180deg,#FFB020,#F43F5E 60%,rgba(244,63,94,0));
+  box-shadow:0 0 18px -4px rgba(255,130,80,.9)}
+html[data-risk="aggr"] .panel-h h3::before{background:linear-gradient(180deg,#FFC978,#F0563F);box-shadow:0 0 9px rgba(255,140,90,.9)}
+html[data-risk="aggr"] .fund-h{border-bottom-color:rgba(255,138,110,.14)}
+html[data-risk="aggr"] .fund-tag{color:#FFC978;border-color:rgba(255,170,110,.4);background:rgba(255,140,90,.14)}
+html[data-risk="aggr"] .fund-cell{background:linear-gradient(180deg,rgba(255,140,90,.05),rgba(255,255,255,.004))}
+html[data-risk="aggr"] .fund-pill{border-color:rgba(255,140,90,.2);background:rgba(255,140,90,.07)}
+html[data-risk="aggr"] .tf button.on{background:linear-gradient(180deg,rgba(255,140,90,.26),rgba(255,140,90,.08));
+  color:#FFEDE2;box-shadow:0 0 0 1px rgba(255,150,100,.26) inset}
+html[data-risk="aggr"] .tf button:hover{color:#FFE6D8;background:rgba(255,120,80,.1)}
+html[data-risk="aggr"] .tg.on{border-color:rgba(255,150,100,.5);background:rgba(255,120,80,.14);color:#FFE6D8}
+html[data-risk="aggr"] .strat-bar{border-color:rgba(255,150,100,.34);
+  background:radial-gradient(430px 92px at 6% 0%,rgba(255,120,80,.16),transparent 72%),
+    linear-gradient(180deg,rgba(38,17,22,.96),rgba(21,9,13,.96));
+  box-shadow:0 1px 0 rgba(255,170,130,.06) inset,0 18px 40px -34px rgba(255,110,70,.85)}
+html[data-risk="aggr"] .strat-bar:before{background:linear-gradient(180deg,#FFB020,rgba(244,63,94,.2));
+  box-shadow:0 0 14px rgba(255,130,80,.65)}
+html[data-risk="aggr"] .strat-bar[data-m="trend"] .strat-seg button[data-m="trend"].on{
+  background:linear-gradient(180deg,rgba(255,150,90,.38),rgba(255,150,90,.12));
+  border-color:rgba(255,170,110,.9);
+  box-shadow:0 0 0 1px rgba(255,150,100,.25) inset,0 0 24px -5px rgba(255,130,80,.9)}
+html[data-risk="aggr"] .strat-seg{background:rgba(12,5,7,.94);border-color:rgba(255,150,100,.22)}
+html[data-risk="aggr"] .strat-txt b{color:#FFE9DC}
+html[data-risk="aggr"] .strat-uni .uni-per{color:#FFD2A8}
+html[data-risk="aggr"] .bt-period{border-color:rgba(255,150,100,.34);
+  background:linear-gradient(90deg,rgba(255,120,80,.16),rgba(255,120,80,.04));
+  box-shadow:0 0 26px -20px rgba(255,110,70,1)}
+html[data-risk="aggr"] .bp-tag{color:#FFE9D2;background:rgba(255,140,90,.24);border-color:rgba(255,170,110,.5);
+  box-shadow:0 0 14px -6px rgba(255,120,70,.95)}
+html[data-risk="aggr"] .bp-btns button.on{background:rgba(255,140,90,.22);color:#FFEEDF;
+  box-shadow:0 0 0 1px rgba(255,150,100,.3) inset}
+html[data-risk="aggr"] .kpi .lab{color:#C2A79E}
+html[data-risk="aggr"] .eq-hint{color:#8D7169}
+html[data-risk="aggr"] .fav-add{border-color:rgba(255,140,90,.28);color:#C0A399}
+html[data-risk="aggr"] .fav-add:hover{color:#FFE6D8;border-color:rgba(255,170,110,.6);background:rgba(255,120,80,.14)}
+html[data-risk="aggr"] .pill{background:linear-gradient(180deg,rgba(255,140,90,.08),rgba(255,140,90,.02))}
+html[data-risk="aggr"] .pill.on{border-color:rgba(255,150,100,.55)}
+html[data-risk="aggr"] .mchip{background:rgba(255,140,90,.04);border-color:rgba(255,138,110,.18)}
+html[data-risk="aggr"] .side-info{--si-ac:rgba(255,140,90,.55);--si-bd:rgba(255,140,90,.2);
+  --si-ac2:#FFC978;--si-bg1:rgba(255,120,80,.09);--si-bg2:rgba(255,120,80,.02)}
+
+/* 화이트 + 공격형 */
+html[data-theme="light"][data-risk="aggr"]{
+  color-scheme:light;
+  --bg:#FBF2EF; --bg2:#FFF9F7;
+  --card:#FFFFFF; --card2:#FFF8F5; --elev:#FFFFFF;
+  --hover:#F8E6E0;
+  --line:rgba(190,18,60,.16); --line2:rgba(190,18,60,.09);
+  --txt:#2A1216; --txt2:#5B3A3F; --txt3:#7A5A5E; --txt4:#9A7C7E;
+  --cyan:#B31340; --amber:#B45309; --hud-ln:rgba(190,18,60,.5);
+}
+html[data-theme="light"][data-risk="aggr"] body{
+  background-color:#FBF2EF;
+  background-image:
+    radial-gradient(1100px 480px at 84% -10%, rgba(244,63,94,.16), transparent 62%),
+    radial-gradient(900px 400px at 0% 0%, rgba(245,158,11,.13), transparent 60%);
+}
+html[data-theme="light"][data-risk="aggr"] .topbar{background:rgba(255,249,247,.9);border-bottom-color:rgba(190,18,60,.14)}
+html[data-theme="light"][data-risk="aggr"] .logo{background:linear-gradient(145deg,#FFE7E2,#FFF6F3);border-color:rgba(190,18,60,.2)}
+html[data-theme="light"][data-risk="aggr"] .brand-text b{background:linear-gradient(90deg,#7F1D2D,#B31340 55%,#B45309);
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+html[data-theme="light"][data-risk="aggr"] .sidebar{background:linear-gradient(180deg,#FFF8F6,#FDF1ED);border-right-color:rgba(190,18,60,.12)}
+html[data-theme="light"][data-risk="aggr"] .scan-head{background:rgba(255,250,248,.96);border-color:rgba(190,18,60,.12);color:#8A6A6C}
+html[data-theme="light"][data-risk="aggr"] .srow{border-bottom-color:rgba(190,18,60,.08)}
+html[data-theme="light"][data-risk="aggr"] .srow:hover{background:rgba(190,18,60,.05)}
+html[data-theme="light"][data-risk="aggr"] .srow.on{background:linear-gradient(90deg,rgba(244,63,94,.16),rgba(244,63,94,.04) 60%,transparent)}
+html[data-theme="light"][data-risk="aggr"] .srow.on::before{background:linear-gradient(180deg,#F43F5E,#B31340);box-shadow:0 0 10px rgba(244,63,94,.55)}
+html[data-theme="light"][data-risk="aggr"] .card{border-color:rgba(190,18,60,.16);
+  background:linear-gradient(180deg,#FFFFFF,#FFF8F5);
+  box-shadow:0 10px 26px -24px rgba(80,10,25,.45),0 0 22px -18px rgba(244,63,94,.5)}
+html[data-theme="light"][data-risk="aggr"] .hero{border-color:rgba(190,18,60,.3);
+  box-shadow:0 18px 38px -30px rgba(80,10,25,.5),0 0 0 1px rgba(190,18,60,.07)}
+html[data-theme="light"][data-risk="aggr"] .panel-h h3::before{background:linear-gradient(180deg,#F43F5E,#9F1239);box-shadow:0 0 9px rgba(244,63,94,.5)}
+html[data-theme="light"][data-risk="aggr"] .seg button.on{background:#FFE4E6;border-color:rgba(190,18,60,.28);color:#9F1239}
+html[data-theme="light"][data-risk="aggr"] .seg-pre button.on{background:#FFE4E6;border-color:rgba(190,18,60,.4);color:#9F1239}
+html[data-theme="light"][data-risk="aggr"] .seg-pre button.on .c{color:#B31340}
+html[data-theme="light"][data-risk="aggr"] .tf button.on,html[data-theme="light"][data-risk="aggr"] .bp-btns button.on{background:#FFE4E6;color:#9F1239;border-color:rgba(190,18,60,.3)}
+html[data-theme="light"][data-risk="aggr"] .tg.on{border-color:rgba(190,18,60,.3);background:#FFF1EE;color:#9F1239}
+html[data-theme="light"][data-risk="aggr"] .strat-bar{border-color:rgba(190,18,60,.26);
+  background:linear-gradient(180deg,#FFF6F2,#FFFBF9);
+  box-shadow:0 10px 26px -24px rgba(80,10,25,.5)}
+html[data-theme="light"][data-risk="aggr"] .strat-bar:before{background:linear-gradient(180deg,#F43F5E,rgba(180,83,9,.3));box-shadow:0 0 14px rgba(244,63,94,.45)}
+html[data-theme="light"][data-risk="aggr"] .strat-bar[data-m="trend"] .strat-seg button[data-m="trend"].on{
+  background:linear-gradient(180deg,#FFD9DB,#FFE9E7);border-color:rgba(190,18,60,.5);color:#9F1239;
+  box-shadow:0 0 0 1px rgba(190,18,60,.14) inset,0 0 18px -8px rgba(244,63,94,.6)}
+html[data-theme="light"][data-risk="aggr"] .strat-seg{background:#FFF6F3;border-color:rgba(190,18,60,.14)}
+html[data-theme="light"][data-risk="aggr"] .bt-period{border-color:rgba(190,18,60,.28);
+  background:linear-gradient(90deg,rgba(244,63,94,.12),rgba(245,158,11,.05))}
+html[data-theme="light"][data-risk="aggr"] .bp-tag{color:#9F1239;background:#FFE4E6;border-color:rgba(190,18,60,.34);box-shadow:none}
+html[data-theme="light"][data-risk="aggr"] .theme-btn:hover{border-color:rgba(190,18,60,.45);background:#FFE4E6}
+html[data-theme="light"][data-risk="aggr"] .fav-add:hover,.html[data-theme="light"][data-risk="aggr"] .pill.on{border-color:rgba(190,18,60,.4);color:#9F1239}
+html[data-theme="light"][data-risk="aggr"] .search input:focus{border-color:rgba(190,18,60,.45);box-shadow:0 0 0 3px rgba(244,63,94,.12)}
+html[data-theme="light"][data-risk="aggr"] .notice-card:before{background:linear-gradient(180deg,#F43F5E,#B45309 60%,transparent)}
+html[data-theme="light"][data-risk="aggr"] .mchip{border-color:rgba(190,18,60,.14);background:rgba(244,63,94,.03)}
+
+/* 전략 바 — 공격형 추세 블렌드 성과 줄 */
+.strat-blend{display:flex;align-items:baseline;gap:5px 12px;flex-wrap:wrap;flex:1 1 100%;margin-top:2px;
+  padding:7px 10px;border-radius:10px;border:1px solid rgba(255,150,100,.34);
+  background:linear-gradient(90deg,rgba(255,120,80,.14),rgba(150,24,34,.10) 60%,rgba(255,176,32,.08));
+  font-size:11.5px;color:var(--txt2);font-variant-numeric:tabular-nums}
+.strat-blend[hidden]{display:none}
+.strat-blend .sb-k{font-weight:800;color:#FFC08A;letter-spacing:-.01em;white-space:nowrap}
+.strat-blend .sb-t{color:#EED9CE;white-space:nowrap}
+.strat-blend .sb-t b{color:#FFE0B8;font-weight:800}
+.strat-blend .sb-v{white-space:nowrap;color:var(--txt3)}
+.strat-blend .sb-v b{color:#FFD9A8;font-weight:800}
+.strat-blend .sb-v b.neg{color:#FFA0A8}
+.strat-blend .sb-n{flex:1 1 100%;font-size:10.5px;color:var(--txt4);white-space:normal;line-height:1.45}
+html[data-theme="light"] .strat-blend{border-color:rgba(190,18,60,.24);
+  background:linear-gradient(90deg,rgba(244,63,94,.10),rgba(245,158,11,.08) 70%,#FFF9F6);color:#5B3A3F}
+html[data-theme="light"] .strat-blend .sb-k{color:#9F1239}
+html[data-theme="light"] .strat-blend .sb-t{color:#4B2A2E}
+html[data-theme="light"] .strat-blend .sb-t b{color:#7C2D12}
+html[data-theme="light"] .strat-blend .sb-v{color:#7A5A5E}
+html[data-theme="light"] .strat-blend .sb-v b{color:#9F1239}
+html[data-theme="light"] .strat-blend .sb-v b.neg{color:#B31340}
+@media (max-width:900px){.strat-blend{gap:4px 10px;padding:7px 9px;font-size:11px}}
+
+/* 공격형 카드 — 라벨 칸·목록 정렬 보정 */
+.ag-row{grid-template-columns:64px minmax(0,1fr)}
+.ag-row>b{white-space:nowrap;font-size:10.5px;padding:2px 4px;line-height:1.4}
+.ag-mom-list{align-content:start}
+.risk-banner .rbn-t,.risk-banner .rbn-warn{word-break:keep-all;overflow-wrap:anywhere}
+
+/* 화이트 + 공격형 — 다크 전용으로 덮은 입력·버튼을 다시 밝게 */
+html[data-theme="light"][data-risk="aggr"] .search input{background:#FFFFFF}
+html[data-theme="light"][data-risk="aggr"] .search input:focus{background:#FFFFFF}
+html[data-theme="light"][data-risk="aggr"] .search kbd{background:#FFFFFF}
+html[data-theme="light"][data-risk="aggr"] .side-tools input,
+html[data-theme="light"][data-risk="aggr"] .side-tools select{background:#FFFFFF}
+html[data-theme="light"][data-risk="aggr"] .theme-btn{background:#FFFFFF;border-color:rgba(190,18,60,.2)}
+html[data-theme="light"][data-risk="aggr"] .market-badge{background:rgba(244,63,94,.06);border-color:rgba(190,18,60,.2)}
+html[data-theme="light"][data-risk="aggr"] .market-badge .dot{background:#B31340;box-shadow:0 0 0 3px rgba(190,18,60,.14)}
+html[data-theme="light"][data-risk="aggr"] .pill{background:linear-gradient(180deg,rgba(244,63,94,.07),rgba(244,63,94,.02))}
+html[data-theme="light"][data-risk="aggr"] .pill::before,html[data-theme="light"][data-risk="aggr"] .fav-add{background:#FFFFFF}
+html[data-theme="light"][data-risk="aggr"] .strat-seg{background:#FFF6F3;border-color:rgba(190,18,60,.16)}
+html[data-theme="light"][data-risk="aggr"] .strat-risk{background:#FFF6F3;border-color:rgba(190,18,60,.16)}
+html[data-theme="light"][data-risk="aggr"] .side-tools select option{background:#FFFFFF;color:#2A1216}
+html[data-theme="light"] .strat-risk{background:#F4F8FC;border-color:rgba(14,116,144,.18)}
+
+/* 공격형 카드 — 2열 목록 행 높이·제목 칩 줄바꿈 보정 (모바일) */
+.ag-mom-list{grid-auto-rows:min-content}
+.ag-tt{flex:1 1 220px}
+.ag-tt b em{white-space:nowrap;display:inline-block}
+.ag-tt b{display:block}
 </style>
 </head>
 <body>
@@ -2917,6 +3302,10 @@ html[data-theme="light"] .si-ico{background:#D6ECFC}
   </div>
   <div class="market-badge"><i class="dot"></i><span id="asOf">—</span>&nbsp;장마감<span class="upd" id="asOfUpd"></span></div>
   <button class="theme-btn" id="themeBtn" type="button" aria-pressed="false" title="다크(검은색) 모드 사용 중 — 누르면 화이트로 전환"><span class="th-ic" aria-hidden="true">☀️</span><span class="th-tx">화이트</span></button>
+  <div class="risk-switch" id="riskSwitch" role="group" aria-label="투자 성향 — 안정형·공격형">
+    <button type="button" data-risk-btn="safe" class="on" aria-pressed="true" title="🛡️ 안정형 — 검증된 기본 규칙 그대로 · 스윙 손절 상한 -10% · 손절 뒤 10거래일 재진입 금지"><span class="rk-ic" aria-hidden="true">🛡️</span><span class="rk-tx">안정형</span></button>
+    <button type="button" data-risk-btn="aggr" aria-pressed="false" title="🔥 공격형 — 긴장감 테마 · 스윙 쿨다운 0일·손절 -15% · 추세 C2 50 + 6M모멘텀 Top5 50 가이드 · 변동성이 커집니다"><span class="rk-ic" aria-hidden="true">🔥</span><span class="rk-tx">공격형</span></button>
+  </div>
   <div class="search">
     <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
     <input id="globalSearch" type="text" placeholder="종목 검색 · 티커 또는 회사명" autocomplete="off" spellcheck="false">
@@ -3003,6 +3392,13 @@ html[data-theme="light"] .si-ico{background:#D6ECFC}
   </aside>
 
   <main class="workspace">
+    <div class="risk-banner" id="riskBanner" role="status" aria-live="polite" hidden>
+      <span class="rbn-ico" aria-hidden="true">🔥</span>
+      <b class="rbn-k">공격형 모드</b>
+      <span class="rbn-t" id="riskBannerTx">—</span>
+      <span class="rbn-warn">수익 구간이 넓어진 만큼 한 번의 손실도 커집니다 — 진입 전에 손절가를 먼저 정하세요</span>
+      <button class="rbn-off" id="riskBannerOff" type="button" title="안정형(기본 규칙)으로 되돌립니다">🛡️ 안정형으로</button>
+    </div>
     <section class="macro-strip" id="macroStrip" aria-label="거시 지표">
       <div class="macro-row">
         <div class="mchip" id="mchipVix" title="VIX · CBOE 변동성지수 — 20 이상이면 주의, 30 이상이면 공포 구간">
@@ -3091,7 +3487,7 @@ html[data-theme="light"] .si-ico{background:#D6ECFC}
           <span class="rank-chip" id="heroRank">#—</span>
           <h1 id="heroTicker">—</h1>
           <button class="hero-fav" id="heroFav" title="관심종목 추가/해제">☆</button>
-          <div class="cname"><span id="heroName">—</span><span class="sec" id="heroSector">—</span><span class="asof-chip" id="heroAsOf">—</span></div>
+          <div class="cname"><span id="heroName">—</span><span class="sec" id="heroSector">—</span><span class="asof-chip" id="heroAsOf">—</span><span class="hero-mom" id="heroMom" hidden></span></div>
         </div>
         <div class="hero-price">
           <span class="px" id="heroPrice">—</span>
@@ -3258,11 +3654,35 @@ html[data-theme="light"] .si-ico{background:#D6ECFC}
         <button data-m="trend" class="on" role="tab" aria-selected="true"><b>추세형</b><span>(중기)</span></button>
         <button data-m="swing" role="tab" aria-selected="false"><b>스윙형</b><span>(단기)</span></button>
       </div>
+      <div class="risk-switch strat-risk" id="stratRisk" role="group" aria-label="투자 성향 — 안정형·공격형">
+        <button type="button" data-risk-btn="safe" class="on" aria-pressed="true" title="🛡️ 안정형 — 기본 규칙 그대로"><span class="rk-ic" aria-hidden="true">🛡️</span><span class="rk-tx">안정형</span></button>
+        <button type="button" data-risk-btn="aggr" aria-pressed="false" title="🔥 공격형 — 스윙 쿨다운 0일·손절 -15% · 추세 50:50 모멘텀 가이드"><span class="rk-ic" aria-hidden="true">🔥</span><span class="rk-tx">공격형</span></button>
+      </div>
       <div class="strat-txt">
         <b id="stratTitle">추세형 (중기)</b>
         <p id="stratDesc">종합 기술점수 50 이상 + QQQ 100일선 단계 (또는 QQQ RSI(2)&lt;5 극단 패닉 예외 · RSI(2)&lt;15 패닉일 청산 보류) → 다음 날 시가 매수 · 손절 6 ATR · 트레일 10 ATR 청산 — 둘 다 즉시 · 시장 위험 0% 청산은 진입 3거래일 이후</p>
       </div>
       <div class="strat-uni" id="stratUni"></div>
+      <div class="strat-blend" id="stratBlend" hidden></div>
+    </section>
+
+    <section class="card aggr-card" id="aggrCard" aria-label="공격형 전략 가이드" hidden>
+      <div class="ag-head">
+        <span class="ag-ico" aria-hidden="true">🔥</span>
+        <div class="ag-tt">
+          <b id="agTitle">공격형</b>
+          <span id="agSub">—</span>
+        </div>
+        <div class="ag-kpis" id="agKpis"></div>
+      </div>
+      <div class="ag-body">
+        <div class="ag-guide" id="agGuide"></div>
+        <div class="ag-mom">
+          <div class="ag-mom-h"><b>오늘의 6M모멘텀 Top5</b><span id="agMomAsOf">—</span></div>
+          <div class="ag-mom-list" id="agMomList"></div>
+        </div>
+      </div>
+      <p class="ag-foot" id="agFoot">—</p>
     </section>
 
     <section class="bt-period" id="btPeriod" aria-label="백테스트 검증 기간">
@@ -6359,6 +6779,62 @@ html[data-theme="light"] .si-ico{background:#D6ECFC}
     return rec;
   }
 
+  /* ============================================================
+     성향(위험 선호) 프로필 — 🛡️ 안정형 / 🔥 공격형
+     ------------------------------------------------------------
+     안정형은 위 TREND_P·SWING_P 기본값 그대로입니다(기존 동작 100% 보존).
+     공격형은 10년 비교 검증(work/stock/v5_upgrade/REPORT_RISK_PROFILE.md)에서
+     세 창(5년·표본밖·10년) 모두 기준선보다 나았던 조합만 덮어씁니다.
+       스윙 S2 : coolLoss 10→0 · stopCap 0.10→0.15
+                 종목별 5년 +144.86→+157.26% · 표본밖 +58.37→+67.87% · 10년 +249.36→+324.91%
+                 (계좌 10슬롯 10년 +503.1→+605.4% · 10년 승률 57.8→63.2%)
+       추세    : 규칙 변경 없음 — 손절·트레일 완화는 최대 +3.6%p로 효과가 미미해 넣지 않는다.
+                 대신 '추세 C2 50% + 6M모멘텀 Top5 50%' 블렌드 가이드를 화면에 표시한다
+                 (계좌 10슬롯 10년 +2,165.2% · MDD −27.90% · 샤프 1.46 · 2022 −5.73%).
+     프로필 값은 기존 swingOpts()/trendOpts() 경로에 opts 로 그대로 섞여 들어가므로
+     새 분기나 별도 시뮬레이터 없이 스캐너·종목카드·백테스트가 같은 숫자를 씁니다.
+     ============================================================ */
+  var RISK_P = {
+    safe: {
+      key: 'safe', ko: '안정형', en: 'SAFE',
+      swing: {},                     /* 기본값 = SWING_P (쿨다운 10일 · 손절 상한 −10%) */
+      trend: {}                      /* 기본값 = TREND_P (6 ATR · 트레일 10 ATR) */
+    },
+    aggr: {
+      key: 'aggr', ko: '공격형', en: 'AGGRESSIVE',
+      swing: { coolLoss: 0, stopCap: 0.15 },   /* S2 — 손절 후 재진입 금지 0일 · 손절 상한 −15% */
+      trend: {}
+    }
+  };
+  /* 프로필 → opts (전략 시뮬레이터에 그대로 넘기는 값만) */
+  function riskOpts(profile) {
+    var p = RISK_P[profile] || RISK_P.safe, out = {}, g, k;
+    for (g in { swing: 1, trend: 1 }) {
+      var src = p[g] || {};
+      for (k in src) out[k] = src[k];
+    }
+    return out;
+  }
+  /* 프로필별 실효 파라미터 — 화면 문구가 실제 계산값과 어긋나지 않도록 UI 가 읽어 간다 */
+  function riskParams(profile) {
+    var o = riskOpts(profile);
+    var sw = swingOpts(o), tr = trendOpts(o);
+    return {
+      key: (RISK_P[profile] || RISK_P.safe).key,
+      swing: { coolLoss: sw.coolLoss, stopCap: sw.stopCap, stopAtr: sw.stopAtr, rsiEntry: sw.rsiEntry,
+        ma20Gate: sw.ma20Gate, ma20Confirm: sw.ma20Confirm, qqqMa: sw.qqqMa, mktRsiExc: sw.mktRsiExc },
+      trend: { entry: tr.entry, stopAtr: tr.stopAtr, trailAtr: tr.trailAtr, trailStartAtr: tr.trailStartAtr, minHold: tr.minHold }
+    };
+  }
+  /* 공격형 안내 숫자 — 10년 계좌(10슬롯) 검증 결과. 화면 표시 전용(계산에 쓰지 않음). 수익률은 배수 표기(21.652 = +2,165.2%) */
+  var RISK_GUIDE = {
+    swing: { coolLoss: 0, stopCap: 0.15,
+      ret5: 1.5726, oos: 0.6787, ret10: 3.2491, win10: 0.632, pf10: 1.93 },
+    trend: { c2: 50, mom: 50, rebalance: '월간', years: 10,
+      ret5: 5.0880, oos: 2.6270, ret10: 21.652, mdd10: -0.2790, sharpe10: 1.46, y2022: -0.0573,
+      phaseMin: 14.27, phaseMax: 28.32 }   /* 리밸런싱 시작일 0~20일 이동 시 10년 총수익 범위(위상 민감도) */
+  };
+
   var api = {
     sma: sma, ema: ema, rsi: rsi, macd: macd, atr: atr, stdev: stdev,
     bollinger: bollinger, obv: obv, parabolicSAR: parabolicSAR, envelope: envelope,
@@ -6373,7 +6849,8 @@ html[data-theme="light"] .si-ico{background:#D6ECFC}
     triDetect: triDetect, TRI_P: TRI_P,
     divScan: divScan, DIV_P: DIV_P,
     bkScan: bkScan, BK_P: BK_P,
-    clamp: clamp, elliott: ewAnalyze
+    clamp: clamp, elliott: ewAnalyze,
+    riskOpts: riskOpts, riskParams: riskParams, RISK_P: RISK_P, RISK_GUIDE: RISK_GUIDE
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
@@ -7436,7 +7913,7 @@ var EDUFIG = (function () {
     var root = document.documentElement;
     if (light) root.setAttribute('data-theme', 'light'); else root.removeAttribute('data-theme');
     var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', light ? '#EEF2F7' : '#0B0E14');
+    if (meta) meta.setAttribute('content', themeMetaColor());
     themeLabel(light);
     if (persist) { try { localStorage.setItem(THEME_KEY, light ? 'light' : 'dark'); } catch (e) {} }
     if (window.EDUFIG && EDUFIG.setTheme) EDUFIG.setTheme(light);
@@ -7537,7 +8014,7 @@ var EDUFIG = (function () {
     maOn: { 5: true, 20: true, 60: true, 120: true, 240: true },
     simIdx: 0, tool: 'cursor', ewMode: 0, clean: false,
     ewShow: { sub: true, ch: true, clu: true },
-    watch: [], strategy: 'trend'
+    watch: [], strategy: 'trend', risk: 'safe'
   };
   watchRestore();
 
@@ -7628,26 +8105,47 @@ var EDUFIG = (function () {
     var df = p.panicExitRsi == null ? 15 : p.panicExitRsi;
     return 'QQQ 100일선 단계 (또는 QQQ RSI(2)<' + ex + ' 극단 패닉 예외 · RSI(2)<' + df + ' 패닉일 청산 보류)';
   }
+  /* 실효 스윙 파라미터 = 엔진 기본값(SWING_P) + 성향 프로필(안정형은 빈 값 → 기본값 그대로) */
+  function effSwingP() {
+    var base = QE.swingParams || { rsiEntry: 10, qqqMa: 200, stopAtr: 4.5, stopCap: 0.1, ma20Gate: 0.05, ma20Confirm: 2, coolLoss: 10 };
+    var out = {}, k;
+    for (k in base) out[k] = base[k];
+    var rp = riskParams();
+    if (rp && rp.swing) for (k in rp.swing) out[k] = rp.swing[k];
+    return out;
+  }
   function swingDesc() {
-    var p = QE.swingParams || { rsiEntry: 10, qqqMa: 200, stopAtr: 4.5, stopCap: 0.1, ma20Gate: 0.05, ma20Confirm: 2, coolLoss: 10 };
+    var p = effSwingP();
     var exc = p.mktRsiExc == null ? 5 : p.mktRsiExc;
     return 'RSI(2) ' + p.rsiEntry + ' 미만 + QQQ ' + p.qqqMa + '일선 위(또는 QQQ RSI(2)<' + exc + ' 극단 패닉) → 다음 날 시가 매수 · W 쌍바닥 넥라인 돌파 보조' +
-      (p.coolLoss ? ' · 손절 후 ' + p.coolLoss + '거래일 재진입 금지' : '') +
+      (p.coolLoss ? ' · 손절 후 ' + p.coolLoss + '거래일 재진입 금지' : ' · 손절 후 재진입 금지 없음(공격형)') +
       ' · 이익 +' + Math.round(p.ma20Gate * 100) + '% 이상에서 20일선 아래 ' + p.ma20Confirm + '거래일 연속 마감 → 다음 날 시가 청산 · 손절 ' + p.stopAtr + ' ATR (최대 -' +
       Math.round(p.stopCap * 100) + '%)';
   }
+  /* 전략 머리말 — desc·logSub 는 지금 성향(안정형/공격형)의 실효 파라미터로 매번 만든다 */
   var STRAT = {
-    trend: {
-      key: 'trend', title: '추세형', sub: '중기',
-      desc: trendDesc(),
-      logSub: '종합점수 50 이상 매수 · ' + trendMktRule() + ' · 손절 6 ATR·트레일 10 ATR 즉시 · 시장약세 전량 청산은 진입 3거래일 이후'
-    },
-    swing: {
-      key: 'swing', title: '스윙형', sub: '단기',
-      desc: swingDesc(),
-      logSub: 'RSI(2) 10 미만 + QQQ 200일선 위(또는 QQQ RSI(2)<5 극단 패닉) 매수 · W 쌍바닥 넥라인 돌파 보조 루트 · 손절 후 10거래일 재진입 금지 · 손절 4.5 ATR (최대 -10%) · 이익 중 20일선 아래 2거래일 연속 마감 시 다음 날 시가 청산'
-    }
+    trend: { key: 'trend', title: '추세형', sub: '중기' },
+    swing: { key: 'swing', title: '스윙형', sub: '단기' }
   };
+  function stratInfo(key) {
+    var k = key === 'swing' ? 'swing' : 'trend';
+    var s = STRAT[k];
+    if (k === 'swing') {
+      var p = effSwingP();
+      return {
+        key: s.key, title: s.title, sub: s.sub, desc: swingDesc(),
+        logSub: 'RSI(2) ' + p.rsiEntry + ' 미만 + QQQ ' + p.qqqMa + '일선 위(또는 QQQ RSI(2)<' + (p.mktRsiExc == null ? 5 : p.mktRsiExc) + ' 극단 패닉) 매수 · W 쌍바닥 넥라인 돌파 보조 루트 · ' +
+          (p.coolLoss ? '손절 후 ' + p.coolLoss + '거래일 재진입 금지 · ' : '손절 후 재진입 금지 없음 · ') +
+          '손절 ' + p.stopAtr + ' ATR (최대 -' + Math.round(p.stopCap * 100) + '%) · 이익 중 20일선 아래 ' + p.ma20Confirm + '거래일 연속 마감 시 다음 날 시가 청산'
+      };
+    }
+    var tp = QE.trendParams || {};
+    return {
+      key: s.key, title: s.title, sub: s.sub, desc: trendDesc(),
+      logSub: '종합점수 ' + (tp.entry == null ? 50 : tp.entry) + ' 이상 매수 · ' + trendMktRule() + ' · 손절 ' + (tp.stopAtr || 6) +
+        ' ATR·트레일 ' + (tp.trailAtr || 10) + ' ATR 즉시 · 시장약세 전량 청산은 진입 ' + (tp.minHold || 3) + '거래일 이후'
+    };
+  }
   function stratKey() { return state.strategy === 'swing' ? 'swing' : 'trend'; }
   function stratRestore() {
     try {
@@ -7657,6 +8155,160 @@ var EDUFIG = (function () {
   }
   function stratPersist() {
     try { localStorage.setItem(STRAT_KEY, state.strategy); } catch (e) {}
+  }
+
+  /* ============================================================
+     성향(위험 선호) — 🛡️ 안정형 / 🔥 공격형
+     ------------------------------------------------------------
+     · state.risk: 'safe' | 'aggr'  (localStorage 'apex.risk.v1', 기본 'safe')
+     · 화면은 html[data-risk="aggr"] 로 긴장감 테마(CSS) 전환
+     · 계산은 엔진 프로필(QE.riskOpts)을 분석 호출 opts 로 넘긴다
+         공격형 스윙 = coolLoss 0 · stopCap 0.15 → 스캐너·종목카드·백테스트·기간집계 재계산
+         공격형 추세 = 규칙 불변 C2 그대로 + 6M모멘텀 Top5 50:50 블렌드 가이드 표시
+     · 성향을 바꾸면 지금 전략(추세형/스윙형)의 추천순 1위 종목으로 자동 선택
+     ============================================================ */
+  var RISK_KEY = 'apex.risk.v1';
+  function riskProfile() { return state.risk === 'aggr' ? 'aggr' : 'safe'; }
+  function riskAggr() { return riskProfile() === 'aggr'; }
+  /* 분석 호출에 넘기는 프로필 값 — 안정형은 {} (기존과 완전히 같은 계산) */
+  function riskOpts() { return (QE.riskOpts ? QE.riskOpts(riskProfile()) : {}); }
+  function riskParams() {
+    if (QE.riskParams) return QE.riskParams(riskProfile());
+    return { swing: QE.swingParams || {}, trend: QE.trendParams || {} };
+  }
+  function riskGuide() {
+    return QE.RISK_GUIDE || { swing: {}, trend: {} };
+  }
+  function riskRestore() {
+    try {
+      var v = localStorage.getItem(RISK_KEY);
+      if (v === 'aggr' || v === 'safe') state.risk = v;
+    } catch (e) { /* 저장소 차단 환경에서는 안정형 */ }
+  }
+  function riskPersist() {
+    try { localStorage.setItem(RISK_KEY, riskProfile()); } catch (e) {}
+  }
+  /* 다크/화이트 × 성향 — 모바일 상단 상태바 색(theme-color)까지 함께 */
+  function themeMetaColor() {
+    if (isLightTheme()) return riskAggr() ? '#FBEFEC' : '#EEF2F7';
+    return riskAggr() ? '#16090C' : '#0B0E14';
+  }
+  function applyRiskClass() {
+    var root = document.documentElement;
+    if (riskAggr()) root.setAttribute('data-risk', 'aggr');
+    else root.removeAttribute('data-risk');
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', themeMetaColor());
+  }
+  /* 성향 변경 — 재분석 → 스캐너·종목카드·백테스트·기간집계를 새 기준으로 다시 그린 뒤 1위 종목 선택 */
+  function setRisk(profile) {
+    var next = profile === 'aggr' ? 'aggr' : 'safe';
+    if (next === riskProfile()) { renderRisk(); return; }
+    state.risk = next;
+    riskPersist();
+    applyRiskClass();
+    var top = riskRebuild();                        /* 이 함수가 renderRisk·renderAggrCard 까지 마친다 */
+    var t = top || topScoreT();
+    if (t) { state.cur = t; autoPick = true; clearDeepLink(); }
+    if (state.cur && A[state.cur]) select(state.cur, true);
+    renderScanner();
+  }
+  /* 성향이 바뀌었으므로 모든 종목 분석을 새 프로필로 다시 돌린다 (102종목 약 1.2초) */
+  function riskRebuild() {
+    var t0 = (window.performance && performance.now) ? performance.now() : 0;
+    cache.clear();
+    viewCache.clear();
+    for (var k in winCache) if (Object.prototype.hasOwnProperty.call(winCache, k)) delete winCache[k];
+    for (var u in uniCache) if (Object.prototype.hasOwnProperty.call(uniCache, u)) delete uniCache[u];
+    uniGen++;                                       /* 진행 중인 기간 집계 작업 결과는 버린다 */
+    mom6Cache = null;
+    M.tickers.forEach(function (x) { A[x.t] = get(x.t); });
+    renderFavs();
+    renderScanner();
+    renderRisk();
+    renderStrategy();
+    renderAggrCard();
+    if (window.performance && performance.now) {
+      console.log('[APEX] risk=' + riskProfile() + ' re-analyzed ' + M.tickers.length + ' tickers in ' + Math.round(performance.now() - t0) + 'ms');
+    }
+    prefetchPeriods();                              /* 바뀐 성향으로 3M·6M·1Y·2Y 집계를 다시 준비 */
+    return topScoreT();
+  }
+  /* 성향 버튼·경계 배지 상태 동기화 (상단 헤더 + 전략 바 두 곳) */
+  function renderRisk() {
+    var aggr = riskAggr();
+    $$('[data-risk-btn]').forEach(function (b) {
+      var on = b.getAttribute('data-risk-btn') === riskProfile();
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    var bn = $('#riskBanner');
+    if (bn) {
+      bn.hidden = !aggr;
+      bn.classList.toggle('on', aggr);
+    }
+    if (aggr) {
+      var p = riskParams(), tx = $('#riskBannerTx');
+      if (tx) tx.innerHTML = '스윙 손절 <b>-' + Math.round((p.swing.stopCap || 0.15) * 100) + '%</b> · 쿨다운 <b>' + (p.swing.coolLoss || 0) + '일</b> · 추세 <b>C2 50 : 6M모멘텀 Top5 50</b> · 변동성 주의';
+    }
+    var seg = $('#stratBar');
+    if (seg) seg.setAttribute('data-risk', riskProfile());
+    renderAggrCard();
+  }
+  /* 공격형 카드 — 추세형은 50:50 블렌드 가이드 + 오늘의 모멘텀 Top5, 스윙형은 S2 파라미터 요약 */
+  function renderAggrCard() {
+    var el = $('#aggrCard');
+    if (!el) return;
+    var aggr = riskAggr();
+    el.hidden = !aggr;
+    if (!aggr) return;
+    var g = riskGuide(), p = riskParams();
+    var swing = state.strategy === 'swing';
+    var m6 = mom6Counts();
+    var ti = $('#agTitle'), su = $('#agSub'), kp = $('#agKpis'), gd = $('#agGuide'), ft = $('#agFoot'), ao = $('#agMomAsOf');
+    if (swing) {
+      if (ti) ti.innerHTML = '공격형 · 스윙형 S2 <em>쿨다운 0일 · 손절 상한 -' + Math.round((p.swing.stopCap || 0.15) * 100) + '%</em>';
+      if (su) su.textContent = 'RSI(2) ' + (p.swing.rsiEntry || 10) + ' 미만 진입 규칙은 그대로 — 손절 -' +
+        Math.round((p.swing.stopCap || 0.15) * 100) + '% · 손절 후 재진입 금지 0일로 바꾼 조합 (10년 비교 검증 S2)';
+      if (kp) kp.innerHTML =
+        '<span><b>5년 ' + pct(g.swing.ret5, 1) + '</b><em>안정형 +144.86%</em></span>' +
+        '<span><b>10년 ' + pct(g.swing.ret10, 0) + '</b><em>안정형 +249.36%</em></span>' +
+        '<span><b>' + pct(g.swing.win10, 1) + '</b><em>10년 승률 · PF ' + (g.swing.pf10 || 0).toFixed(2) + '</em></span>';
+      if (gd) gd.innerHTML =
+        '<div class="ag-row buy"><b>매수</b><span>RSI(2) ' + (p.swing.rsiEntry || 10) + ' 미만 + QQQ ' + (p.swing.qqqMa || 200) +
+          '일선 위(또는 QQQ RSI(2)<' + (p.swing.mktRsiExc == null ? 5 : p.swing.mktRsiExc) + ' 극단 패닉) → 다음 날 시가 — 신호 규칙 불변</span></div>' +
+        '<div class="ag-row stop"><b>손절</b><span>진입가 − ' + (p.swing.stopAtr || 4.5) + ' ATR 또는 −' + Math.round((p.swing.stopCap || 0.15) * 100) + '% 중 가까운 쪽 · <b>손절 뒤 재진입 금지 없음</b> (안정형 10거래일 → 0일)</span></div>' +
+        '<div class="ag-row sell"><b>청산</b><span>이익 +' + Math.round((p.swing.ma20Gate || 0.05) * 100) + '% 이상에서 20일선 아래 ' + (p.swing.ma20Confirm || 2) + '거래일 연속 마감 → 다음 날 시가 — 신호 규칙 불변</span></div>';
+      if (ft) ft.innerHTML = '손절 폭을 −10% → −15%로 넓히고 손절 뒤 대기(10거래일)를 없앤 대신, 한 번의 손실이 더 커지고 같은 종목에서 연속 손절이 날 수 있습니다. 종목별 5년 ' +
+        pct(0.14486, 2) + ' → ' + pct(g.swing.ret5, 2) + ' · 표본밖 ' + pct(0.5837, 1) + ' → ' + pct(g.swing.oos, 1) +
+        ' · 계좌 10슬롯 5년은 오히려 낮아질 수 있습니다(슬롯 경쟁). 참고용이며 미래 수익을 보장하지 않습니다.';
+    } else {
+      if (ti) ti.innerHTML = '공격형 · 추세 C2 50% + 6M모멘텀 Top5 50% <em>월간 리밸런싱</em>';
+      if (su) su.textContent = '추세 신호(C2)는 그대로 두고, 6개월 모멘텀 Top5 바스켓을 절반 섞는 계좌 운용 가이드 — 10년 계좌(10슬롯) 검증 결과';
+      if (kp) kp.innerHTML =
+        '<span><b>10년 ' + pctK(g.trend.ret10, 0) + '</b><em>MDD ' + pct(g.trend.mdd10, 1) + '</em></span>' +
+        '<span><b>샤프 ' + (g.trend.sharpe10 || 0).toFixed(2) + '</b><em>C2 단독 1.45</em></span>' +
+        '<span><b>5년 ' + pctK(g.trend.ret5, 0) + '</b><em>표본밖 ' + pctK(g.trend.oos, 0) + '</em></span>';
+      if (gd) gd.innerHTML =
+        '<div class="ag-row buy"><b>계좌</b><span>추세 C2 신호 자금 <b>50%</b> + 6개월 모멘텀 Top5 바스켓 <b>50%</b> — 매수·손절은 지금 추세형 신호 그대로</span></div>' +
+        '<div class="ag-row rebal"><b>리밸런싱</b><span>월 1회 — 6개월(126거래일) 수익률 상위 5종목을 다시 고르고 비중을 절반으로 맞춥니다</span></div>' +
+        '<div class="ag-row risk"><b>주의</b><span>수익은 C2 단독의 2배 이상이지만 MDD도 −21.3% → ' + pct(g.trend.mdd10, 1) + '로 커집니다 · 2022년 ' + pct(g.trend.y2022, 1) + '</span></div>';
+      if (ft) ft.innerHTML = '10년 계좌(10슬롯) 기준 · 리밸런싱 시작일을 0~20일 옮기면 10년 총수익이 ' +
+        pctK(g.trend.phaseMin, 0) + '~' + pctK(g.trend.phaseMax, 0) + '로 흔들립니다(샤프 1.30~1.56). ' +
+        '샤프가 가장 좋은 조합은 C2 70% + 모멘텀 30%(1.52)이고, 50:50은 더 높은 수익을 원할 때의 선택입니다. 참고용이며 미래 수익을 보장하지 않습니다.';
+    }
+    if (ao) ao.textContent = m6.asOf + ' 종가 · ' + m6.pool + '종목 중 상위 ' + m6.n + ' · ' + MOM6_BARS + '거래일 수익률';
+    var list = $('#agMomList');
+    if (list) {
+      list.innerHTML = m6.top.map(function (r) {
+        return '<button type="button" class="ag-mom-b' + (state.cur === r.t ? ' on' : '') + '" data-t="' + r.t + '" title="' + r.t + ' · ' + MOM6_BARS + '거래일 ' + pct(r.r, 2) + ' · 클릭하면 이 종목 차트">' +
+          '<em>' + r.k + '</em><b>' + r.t + '</b><span class="' + cls(r.r) + '">' + pct(r.r, 1) + '</span></button>';
+      }).join('');
+      list.onclick = function (e) {
+        var b = e.target.closest('[data-t]');
+        if (b) select(b.getAttribute('data-t'));
+      };
+    }
   }
   /* ---------------- 기간 (차트 표시 = 백테스트 검증 기간) ----------------
      차트 기간 버튼(#tf)과 자료 기간 버튼(#btf)은 같은 값(state.range = state.btRange)을 쓰고,
@@ -7691,14 +8343,14 @@ var EDUFIG = (function () {
     btSelSync();                            /* 두 버튼 그룹의 선택 표시를 같은 값으로 */
     if (a) { var v = stratView(viewOf(state.cur)); renderBtPeriod(v); }
   }
-  var winCache = Object.create(null);      /* 'TICKER|bars' → { trend, swing } */
+  var winCache = Object.create(null);      /* 'TICKER|bars|성향' → { trend, swing } */
   function winOf(t, bars) {
     var a = A[t];
     if (!a || !a.series || !a.ind || !a.wsig) return null;
     if (!bars || bars >= 1255) return a.strategy;
-    var k = t + '|' + bars, c = winCache[k];
+    var k = t + '|' + bars + '|' + riskProfile(), c = winCache[k];
     if (c) return c;
-    c = QE.strategyWindow(a.series, a.ind, a.scoreSeries, a.wsig, bars);
+    c = QE.strategyWindow(a.series, a.ind, a.scoreSeries, a.wsig, bars, riskOpts());
     winCache[k] = c;
     return c;
   }
@@ -7706,7 +8358,7 @@ var EDUFIG = (function () {
     if (!a || !a.strategy) return null;
     var bars = btBars();
     if (!a.replay && bars < 1255 && a.sym) {                 /* 기간 집계가 이미 있으면 그것을 쓴다 */
-      var w = winCache[a.sym + '|' + bars];
+      var w = winCache[a.sym + '|' + bars + '|' + riskProfile()];
       if (w && w[stratKey()]) return w[stratKey()];
     }
     return a.strategy[stratKey()] || a.strategy.trend;
@@ -7754,7 +8406,7 @@ var EDUFIG = (function () {
     if (cache.has(t)) return cache.get(t);
     var s = seriesOf(t);
     if (!s) return null;
-    var a = QE.analyze(t, info(t).n , s);
+    var a = QE.analyze(t, info(t).n , s, riskOpts());   /* 성향 프로필(안정형 {})을 그대로 전달 — 공격형은 스윙 파라미터만 다름 */
     a.sym = t;
     a.series = s;
     a.limited = s.c.length < 260;
@@ -7795,7 +8447,7 @@ var EDUFIG = (function () {
     var v = QE.analyze(t, a.meta.n, {
       d: s.d.slice(0, i + 1), o: s.o.slice(0, i + 1), h: s.h.slice(0, i + 1),
       l: s.l.slice(0, i + 1), c: s.c.slice(0, i + 1), v: s.v.slice(0, i + 1)
-    });
+    }, riskOpts());
     v.sym = t;
     v.meta = a.meta;
     v.series = { d: s.d.slice(0, i + 1), o: s.o.slice(0, i + 1), h: s.h.slice(0, i + 1), l: s.l.slice(0, i + 1), c: s.c.slice(0, i + 1), v: s.v.slice(0, i + 1) };
@@ -7825,6 +8477,13 @@ var EDUFIG = (function () {
     if (v == null || isNaN(v)) return '—';
     d = d === undefined ? 2 : d;
     return (v > 0 ? '+' : '') + (v * 100).toFixed(d) + '%';
+  }
+  /* 큰 수익률용 — 천단위 구분(+2,165%) */
+  function pctK(v, d) {
+    if (v == null || isNaN(v)) return '—';
+    d = d === undefined ? 0 : d;
+    var x = v * 100;
+    return (x > 0 ? '+' : '') + x.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }) + '%';
   }
   function pctP(v) { return v == null ? '—' : (v * 100).toFixed(2) + '%'; }
   function vol(v) {
@@ -7920,6 +8579,7 @@ var EDUFIG = (function () {
     renderFavs();
     renderScanner();
     renderStrategy();
+    renderRisk();               /* 성향 버튼·경계 배지·공격형 카드를 저장된 성향으로 */
     select(state.cur, true);    console.log('[APEX] analyzed ' + M.tickers.length + ' tickers in ' + Math.round(performance.now() - t0) + 'ms');
     prefetchPeriods();          /* 3M·6M·1Y·2Y 기간 집계를 백그라운드에서 미리 계산 */
   }
@@ -8169,7 +8829,8 @@ var EDUFIG = (function () {
   function mom6Badge(a) {
     var c = mom6Counts(), r = a && c.byT[a.sym];
     if (!r || r.k > MOM6_TOP) return '';
-    return '<i class="mom6" title="' + mom6Tip(r) + '">6M Top5</i>';
+    var aggr = riskAggr();                 /* 공격형에서는 모멘텀 Top5를 더 세게 강조(테마가 레드·앰버) */
+    return '<i class="mom6' + (aggr ? ' onaggr' : '') + '" title="' + mom6Tip(r) + '">6M Top' + r.k + '</i>';
   }
   function bkLevelTxt(b) { return b.level + '일 신고가'; }
   function bkTip(a) {
@@ -8617,9 +9278,10 @@ var EDUFIG = (function () {
     var b = a.slice().sort(function (x, y) { return x - y; }), m = b.length >> 1;
     return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2;
   }
-  var uniCache = {};          /* 'mode|bars' → 종목 성과 분포 */
+  var uniCache = {};          /* '성향|mode|bars' → 종목 성과 분포 */
   var uniRunning = {};        /* 진행 중인 기간 집계 */
-  function uniKey(mode, bars) { return mode + '|' + bars; }
+  var uniGen = 0;             /* 성향을 바꾸면 진행 중인 집계 결과를 버린다 */
+  function uniKey(mode, bars) { return riskProfile() + '|' + mode + '|' + bars; }
   function accNew() { return { rets: [], mdds: [], bhs: [], wrs: [], beat: 0, ntr: 0 }; }
   function accAdd(acc, it, covered, bars) {
     if (!it || !it.stats) return;
@@ -8648,9 +9310,10 @@ var EDUFIG = (function () {
   }
   /* 기간 집계를 8ms 단위로 나눠 계산 — 기간 전환 순간 UI가 멈추지 않게 */
   function startUniJob(bars, done) {
-    var key = 'job' + bars;
+    var key = 'job' + bars + '|' + riskProfile();
     if (uniRunning[key]) { if (done) uniRunning[key].push(done); return; }
     var waits = uniRunning[key] = done ? [done] : [];
+    var gen = uniGen;
     var order = M.tickers.slice(), idx = 0;
     var accs = { trend: accNew(), swing: accNew() };
     function step() {
@@ -8665,6 +9328,7 @@ var EDUFIG = (function () {
         });
       }
       if (idx < order.length) { setTimeout(step, 0); return; }
+      if (gen !== uniGen) { delete uniRunning[key]; return; }   /* 성향이 바뀌어 결과가 무효 — 버린다 */
       uniCache[uniKey('trend', bars)] = accEnd(accs.trend);
       uniCache[uniKey('swing', bars)] = accEnd(accs.swing);
       delete uniRunning[key];
@@ -8692,8 +9356,35 @@ var EDUFIG = (function () {
       startUniJob(bars, next);
     })();
   }
+  /* ============================================================
+     🔥 공격형 · 추세 전략 바 성과 줄
+     · 공격형 + 추세형일 때만: 'C2 50% + 6M모멘텀 Top5 50%'(월간 리밸런싱) 계좌 성과를
+       상단 유니버스 비교 옆에 함께 보여 준다(10년 계좌 10슬롯 검증 · 참고용).
+     · 안정형으로 돌아가면 숨겨져 기존 C2 수치만 남는다.
+     ============================================================ */
+  function renderStratBlend(key) {
+    var el = $('#stratBlend');
+    if (!el) return;
+    var show = riskAggr() && key === 'trend';
+    el.hidden = !show;
+    el.classList.toggle('on', show);
+    if (!show) { el.innerHTML = ''; return; }
+    var g = riskGuide().trend;
+    el.innerHTML =
+      '<span class="sb-k">🔥 공격형 블렌드</span>' +
+      '<span class="sb-t">추세 C2 <b>50%</b> + 6M모멘텀 Top5 <b>50%</b> · 월간 리밸런싱</span>' +
+      '<span class="sb-v">5년 <b>' + pctK(g.ret5, 1) + '</b></span>' +
+      '<span class="sb-v">10년 <b>' + pctK(g.ret10, 0) + '</b></span>' +
+      '<span class="sb-v">MDD <b class="neg">' + pct(g.mdd10, 1) + '</b></span>' +
+      '<span class="sb-v">샤프 <b>' + (g.sharpe10 || 0).toFixed(2) + '</b></span>' +
+      '<span class="sb-n">계좌 10슬롯 10년 검증 · 종목별 수익률이 아닌 포트폴리오 기준 · 참고용</span>';
+    el.title = '공격형 추세형 = C2 신호 그대로 + 6개월 모멘텀 Top5 바스켓을 절반 섞는 운용 가이드\n' +
+      '같은 10년에서 C2 단독 +914.1% / MDD −21.3% / 샤프 1.45 → 블렌드 ' + pctK(g.ret10, 0) + ' / MDD ' + pct(g.mdd10, 1) + ' / 샤프 ' + (g.sharpe10 || 0).toFixed(2) + '\n' +
+      '리밸런싱 시작일을 0~20일 옮기면 10년 총수익 ' + pctK(g.phaseMin, 0) + '~' + pctK(g.phaseMax, 0) + '(샤프 1.30~1.56) · 2022년 ' + pct(g.y2022, 1) + '\n' +
+      '샤프 정점은 C2 70% + 모멘텀 30%(1.52) — 50:50은 수익을 더 원할 때의 선택';
+  }
   function renderStrategy() {
-    var info = STRAT[stratKey()];
+    var info = stratInfo(stratKey());
     var bar = $('#stratBar'); if (bar) bar.setAttribute('data-m', info.key);
     $$('#stratSeg button').forEach(function (b) {
       var on = b.getAttribute('data-m') === info.key;
@@ -8721,6 +9412,7 @@ var EDUFIG = (function () {
       if (meta) meta.innerHTML = '전략 비교 · 같은 종목·같은 기간·거래비용 <b>0.03%</b> · 체결 <b>신호 다음 날 시가</b> · ' + btTag() + ' 종목 집계 중…';
     }
     renderPresetGuide();          /* 전략을 바꾸면 스캐너 3줄 가이드도 그 전략 것으로 */
+    renderStratBlend(info.key);   /* 🔥 공격형 — 추세는 50:50 모멘텀 블렌드 성과를 전략 바에 함께 */
   }
   /* 전략 버튼(추세형 ↔ 스윙형) — 누를 때마다 그 전략의 추천 1위 종목으로 자동 전환한다.
      앞서 다른 종목을 직접 골라 두었어도 그 전략 기준 1위(= 좌측 스캐너 추천순 1행)를 보여 준다.
@@ -8734,6 +9426,7 @@ var EDUFIG = (function () {
     if (top) { state.cur = top; autoPick = true; clearDeepLink(); }
     renderStrategy();
     renderScanner();                                          /* 좌측 스캐너 신호·순위를 새 전략 기준으로 즉시 재집계 */
+    renderAggrCard();                                         /* 공격형 카드(추세 50:50 / 스윙 S2)도 선택 전략에 맞춰 */
     if (state.cur && A[state.cur]) select(state.cur, true);    /* 위에서 고른 1위 종목을 그대로 표시 (기간 유지) */
   }
   /* 자동 선택 시 주소에 박힌 종목(#종목 · ?t=종목)을 지운다 — 화면(전략 1위)과 주소가 어긋나지 않게 */
@@ -8826,17 +9519,20 @@ var EDUFIG = (function () {
   /* ---- 전략 3줄 가이드 (엔진 파라미터에서 생성 — 상단 카드와 같은 단일 소스) ---- */
   function strategyGuide(key) {
     if (key === 'swing') {
-      var p = QE.swingParams || {};
+      var p = effSwingP();
       var rsiIn = p.rsiEntry || 10, ma = p.qqqMa || 200, exc = p.mktRsiExc == null ? 5 : p.mktRsiExc;
       var stopAtr = p.stopAtr || 4.5, cap = Math.round((p.stopCap || 0.1) * 100);
-      var gate = Math.round((p.ma20Gate || 0.05) * 100), cfm = p.ma20Confirm || 2, cool = p.coolLoss || 10;
+      var gate = Math.round((p.ma20Gate || 0.05) * 100), cfm = p.ma20Confirm || 2, cool = p.coolLoss || 0;
+      var aggr = riskAggr();
       return {
-        key: 'swing', name: '스윙형(단기)', live: true,
+        key: 'swing', name: '스윙형(단기)' + (aggr ? ' · 공격형' : ''), live: true,
         buy: 'RSI(2) ' + rsiIn + ' 미만(단기 과매도) + QQQ ' + ma + '일선 위 — 다음 날 시가 매수. QQQ가 ' + ma +
           '일선 아래여도 QQQ RSI(2)가 ' + exc + ' 미만인 극단 패닉 날은 허용(W 쌍바닥 넥라인 돌파는 보조 루트)',
-        stop: '진입가 − ' + stopAtr + ' ATR(변동성 기준 손절폭) 또는 −' + cap + '% 중 가까운 쪽 · 손절 뒤 ' + cool + '거래일 재진입 금지',
+        stop: '진입가 − ' + stopAtr + ' ATR(변동성 기준 손절폭) 또는 −' + cap + '% 중 가까운 쪽 · ' +
+          (cool ? '손절 뒤 ' + cool + '거래일 재진입 금지' : '손절 뒤 재진입 금지 없음(공격형 — 같은 종목 연속 손절 가능)'),
         sell: '이익 +' + gate + '% 이상일 때 종가가 20일선 아래로 ' + cfm + '거래일 연속 마감하면 다음 날 시가 청산 (고정 보유기간 없음)',
-        foot: '기준선은 20일선, 손절선은 4.5 ATR과 −' + cap + '% 중 가까운 쪽입니다.'
+        foot: '기준선은 20일선, 손절선은 ' + stopAtr + ' ATR과 −' + cap + '% 중 가까운 쪽입니다.' +
+          (aggr ? ' 공격형은 손절 상한만 −15%로 넓혔을 뿐 진입·청산 신호는 안정형과 같습니다.' : '')
       };
     }
     var t = QE.trendParams || {};
@@ -8844,13 +9540,14 @@ var EDUFIG = (function () {
     var exTh = t.panicEntryRsi == null ? 5 : t.panicEntryRsi;
     var exDf = t.panicExitRsi == null ? 15 : t.panicExitRsi;
     return {
-      key: 'trend', name: '추세형(중기)', live: true,
+      key: 'trend', name: '추세형(중기)' + (riskAggr() ? ' · 공격형' : ''), live: true,
       buy: '종합 기술점수 ' + e + ' 이상 + ' + trendMktRule() + ' 100/50% — 다음 날 시가 매수. 시장 위험 0%여도 QQQ RSI(2)가 ' +
         exTh + ' 미만인 극단 패닉 날은 전액 비중으로 허용',
       stop: '진입가 − ' + (t.stopAtr || 6) + ' ATR(변동성 기준 손절폭) — 진입 직후부터 즉시 적용',
       sell: '진입 +' + (t.trailStartAtr || 6) + ' ATR 이후 트레일링 ' + (t.trailAtr || 10) + ' ATR 청산 · 시장 위험 0%면 진입 ' +
         (t.minHold || 3) + '거래일 뒤 전량 청산 (단, QQQ RSI(2)<' + exDf + '인 패닉일은 그날 청산을 보류하고 다음 날 재판정)',
-      foot: '점수는 차트 참고 점수이고, 실제 매매는 이 신호 기준입니다.'
+      foot: '점수는 차트 참고 점수이고, 실제 매매는 이 신호 기준입니다.' +
+        (riskAggr() ? ' 공격형 추세형은 C2 신호를 그대로 두고 계좌를 ‘C2 50% + 6M모멘텀 Top5 50%(월간 리밸런싱)’로 섮는 가이드를 함께 보여 줍니다 — 아래 공격형 카드 참고.' : '')
     };
   }
 
@@ -8894,6 +9591,12 @@ var EDUFIG = (function () {
     var p = state.preset, g = null;
     if (p && TGUIDE[p]) g = TGUIDE[p];
     else g = strategyGuide(state.strategy);        /* 전체 · Top 30 · 실적 우량주 · 승률 70%+ → 선택한 전략 가이드 */
+    if (p === 'w' && g) {                          /* W 돌파는 스윙형 보조 루트 — 손절·쿨다운은 지금 성향의 실효 파라미터 */
+      var wp = effSwingP();
+      g = { name: g.name, live: g.live, buy: g.buy, sell: g.sell, foot: g.foot,
+        stop: '진입가 − ' + (wp.stopAtr || 4.5) + ' ATR 또는 −' + Math.round((wp.stopCap || 0.1) * 100) + '% 중 가까운 쪽 · ' +
+          (wp.coolLoss ? '손절 뒤 ' + wp.coolLoss + '거래일 재진입 금지' : '손절 뒤 재진입 금지 없음(공격형)') };
+    }
     if (!g) { el.className = 'pguide'; el.innerHTML = ''; return; }
     var isWin = p === 'win70', isMom = p === 'mom6';
     var w7 = isWin ? win70Counts() : null;
@@ -9062,6 +9765,18 @@ var EDUFIG = (function () {
     $('#heroName').textContent = a.meta.nk;
     $('#heroSector').textContent = a.meta.sk;
     var ha = $('#heroAsOf'); if (ha) ha.textContent = a.dates[a.dates.length - 1] + ' 종가';
+    /* 공격형 · 6M모멘텀 Top5 강조 칩 (추세형에서 특히 — 블렌드 가이드의 모멘텀 슬리브 후보) */
+    var hm = $('#heroMom');
+    if (hm) {
+      var m6 = mom6Counts(), mr = m6.byT[a.sym];
+      var showMom = riskAggr() && mr && mr.k <= MOM6_TOP;
+      hm.hidden = !showMom;
+      hm.className = 'hero-mom' + (showMom ? ' on' : '');
+      if (showMom) {
+        hm.innerHTML = '🔥 6M모멘텀 ' + mr.k + '위 <b>' + pct(mr.r, 1) + '</b>';
+        hm.title = mom6Tip(mr) + (state.strategy === 'swing' ? '' : ' — 공격형 추세 블렌드의 모멘텀 50% 후보');
+      } else hm.innerHTML = '';
+    }
     $('#heroPrice').textContent = usd(a.price);
     var c = $('#heroChg');
     c.className = 'chg ' + cls(a.change);
@@ -10383,7 +11098,7 @@ var EDUFIG = (function () {
     if (sub) {
       var per = a.replay ? '리플레이'
         : (btName() + ' · ' + a.dates[a.startIdx] + ' ~ ' + a.dates[a.dates.length - 1] + ' · ' + (a.dates.length - a.startIdx) + '거래일');
-      sub.innerHTML = STRAT[a.stratKey || 'trend'].logSub + ' · <b class="bt-chip">' + per + '</b>';
+      sub.innerHTML = stratInfo(a.stratKey || 'trend').logSub + ' · <b class="bt-chip">' + per + '</b>';
     }
     var s = a.stats;
     $('#logStats').innerHTML = s && !a.limited ?
@@ -12346,6 +13061,27 @@ var EDUFIG = (function () {
       },
       priceAt: function (py) { return chart.priceAt(py); },
       state: function () { return { clean: !!state.clean, show: JSON.parse(JSON.stringify(state.show)), cur: state.cur, range: state.range }; },
+      /* 성향(🛡️ 안정형 / 🔥 공격형) 검증용 — 프로필·실효 파라미터·배지·카드·모멘텀 Top5 (읽기 전용) */
+      risk: function () {
+        var b = $('#riskBanner'), c = $('#aggrCard');
+        var m6 = mom6Counts();
+        return {
+          profile: riskProfile(), attr: document.documentElement.getAttribute('data-risk'),
+          strategy: stratKey(), swing: riskParams().swing, trend: riskParams().trend,
+          bannerShown: b ? !b.hidden : null, cardShown: c ? !c.hidden : null,
+          cardText: c && !c.hidden ? c.innerText.replace(/\s+/g, ' ').slice(0, 600) : '',
+          stratUni: ($('#stratUni') || {}).innerText || '',
+          mom: m6.top.map(function (r) { return { t: r.t, k: r.k, r: r.r }; })
+        };
+      },
+      /* 유니버스(99종목) 평균 — 성향·전략별 즉시 계산 (검증 스크립트용) */
+      uni: function (mode, bars) { return computeUniNow(mode === 'swing' ? 'swing' : 'trend', bars || 1255); },
+      /* 선택 종목의 전략 성과 스냅숏 (캐시가 성향별로 갈리는지 확인용) */
+      ticker: function (t) {
+        var a = A[t || state.cur]; if (!a || !a.strategy) return null;
+        function pick(b) { return b ? { ret: b.stats.totalReturn, win: b.stats.winRate, mdd: b.stats.mdd, trades: b.stats.trades } : null; }
+        return { sym: a.sym, trend: pick(a.strategy.trend), swing: pick(a.strategy.swing), plan: a.swing ? { coolLeft: a.swing.coolLeft, coolTotal: a.swing.coolTotal, stopCap: a.swing.stopCap, exitRule: a.swing.exitRule } : null };
+      },
       /* 엔벨로프 검증용 — 마지막 봉의 20일선·상/하한과 배율(±8% 인지) */
       env: function () {
         var a = chart.a; if (!a || !a.ind || !a.ind.env) return null;
@@ -12368,6 +13104,16 @@ var EDUFIG = (function () {
       var b = e.target.closest('button'); if (!b) return;
       setStrategy(b.getAttribute('data-m'));
     };
+
+    /* ---- 성향 전환 (🛡️ 안정형 ↔ 🔥 공격형) — 상단 헤더·전략 바 두 곳이 같은 상태를 공유 ---- */
+    $$('.risk-switch').forEach(function (seg) {
+      seg.onclick = function (e) {
+        var b = e.target.closest('button[data-risk-btn]'); if (!b) return;
+        setRisk(b.getAttribute('data-risk-btn'));
+      };
+    });
+    var rbOff = $('#riskBannerOff');
+    if (rbOff) rbOff.onclick = function () { setRisk('safe'); };
 
     /* ---- 관심종목 추가·삭제 바인딩 ---- */
     var heroFav = $('#heroFav');
@@ -13076,6 +13822,8 @@ var EDUFIG = (function () {
       if (mq) { try { h = decodeURIComponent(mq[1]).toUpperCase(); } catch (e) { h = ''; } }
     }
     cleanRestore();                                  /* 깔끔 보기 저장 상태 — 첫 draw 전에 */
+    riskRestore();                                   /* 성향(안정형/공격형) — 첫 분석 호출 전에 복원 */
+    applyRiskClass();                                /* html[data-risk] · theme-color */
     accBuild();                                       /* 접힘 상태를 먼저 복원해 화면 깜빡임 방지 */
     beginInit();                                      /* 초보자 3단계 보는 법 — 접기/펼치기 저장 상태 */
     eduInit();                                        /* 오늘의 주식 공부 카드 (날짜별 자동 변경) */

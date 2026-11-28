@@ -78,7 +78,7 @@
     var root = document.documentElement;
     if (light) root.setAttribute('data-theme', 'light'); else root.removeAttribute('data-theme');
     var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', light ? '#EEF2F7' : '#0B0E14');
+    if (meta) meta.setAttribute('content', themeMetaColor());
     themeLabel(light);
     if (persist) { try { localStorage.setItem(THEME_KEY, light ? 'light' : 'dark'); } catch (e) {} }
     if (window.EDUFIG && EDUFIG.setTheme) EDUFIG.setTheme(light);
@@ -179,7 +179,7 @@
     maOn: { 5: true, 20: true, 60: true, 120: true, 240: true },
     simIdx: 0, tool: 'cursor', ewMode: 0, clean: false,
     ewShow: { sub: true, ch: true, clu: true },
-    watch: [], strategy: 'trend'
+    watch: [], strategy: 'trend', risk: 'safe'
   };
   watchRestore();
 
@@ -270,26 +270,47 @@
     var df = p.panicExitRsi == null ? 15 : p.panicExitRsi;
     return 'QQQ 100일선 단계 (또는 QQQ RSI(2)<' + ex + ' 극단 패닉 예외 · RSI(2)<' + df + ' 패닉일 청산 보류)';
   }
+  /* 실효 스윙 파라미터 = 엔진 기본값(SWING_P) + 성향 프로필(안정형은 빈 값 → 기본값 그대로) */
+  function effSwingP() {
+    var base = QE.swingParams || { rsiEntry: 10, qqqMa: 200, stopAtr: 4.5, stopCap: 0.1, ma20Gate: 0.05, ma20Confirm: 2, coolLoss: 10 };
+    var out = {}, k;
+    for (k in base) out[k] = base[k];
+    var rp = riskParams();
+    if (rp && rp.swing) for (k in rp.swing) out[k] = rp.swing[k];
+    return out;
+  }
   function swingDesc() {
-    var p = QE.swingParams || { rsiEntry: 10, qqqMa: 200, stopAtr: 4.5, stopCap: 0.1, ma20Gate: 0.05, ma20Confirm: 2, coolLoss: 10 };
+    var p = effSwingP();
     var exc = p.mktRsiExc == null ? 5 : p.mktRsiExc;
     return 'RSI(2) ' + p.rsiEntry + ' 미만 + QQQ ' + p.qqqMa + '일선 위(또는 QQQ RSI(2)<' + exc + ' 극단 패닉) → 다음 날 시가 매수 · W 쌍바닥 넥라인 돌파 보조' +
-      (p.coolLoss ? ' · 손절 후 ' + p.coolLoss + '거래일 재진입 금지' : '') +
+      (p.coolLoss ? ' · 손절 후 ' + p.coolLoss + '거래일 재진입 금지' : ' · 손절 후 재진입 금지 없음(공격형)') +
       ' · 이익 +' + Math.round(p.ma20Gate * 100) + '% 이상에서 20일선 아래 ' + p.ma20Confirm + '거래일 연속 마감 → 다음 날 시가 청산 · 손절 ' + p.stopAtr + ' ATR (최대 -' +
       Math.round(p.stopCap * 100) + '%)';
   }
+  /* 전략 머리말 — desc·logSub 는 지금 성향(안정형/공격형)의 실효 파라미터로 매번 만든다 */
   var STRAT = {
-    trend: {
-      key: 'trend', title: '추세형', sub: '중기',
-      desc: trendDesc(),
-      logSub: '종합점수 50 이상 매수 · ' + trendMktRule() + ' · 손절 6 ATR·트레일 10 ATR 즉시 · 시장약세 전량 청산은 진입 3거래일 이후'
-    },
-    swing: {
-      key: 'swing', title: '스윙형', sub: '단기',
-      desc: swingDesc(),
-      logSub: 'RSI(2) 10 미만 + QQQ 200일선 위(또는 QQQ RSI(2)<5 극단 패닉) 매수 · W 쌍바닥 넥라인 돌파 보조 루트 · 손절 후 10거래일 재진입 금지 · 손절 4.5 ATR (최대 -10%) · 이익 중 20일선 아래 2거래일 연속 마감 시 다음 날 시가 청산'
-    }
+    trend: { key: 'trend', title: '추세형', sub: '중기' },
+    swing: { key: 'swing', title: '스윙형', sub: '단기' }
   };
+  function stratInfo(key) {
+    var k = key === 'swing' ? 'swing' : 'trend';
+    var s = STRAT[k];
+    if (k === 'swing') {
+      var p = effSwingP();
+      return {
+        key: s.key, title: s.title, sub: s.sub, desc: swingDesc(),
+        logSub: 'RSI(2) ' + p.rsiEntry + ' 미만 + QQQ ' + p.qqqMa + '일선 위(또는 QQQ RSI(2)<' + (p.mktRsiExc == null ? 5 : p.mktRsiExc) + ' 극단 패닉) 매수 · W 쌍바닥 넥라인 돌파 보조 루트 · ' +
+          (p.coolLoss ? '손절 후 ' + p.coolLoss + '거래일 재진입 금지 · ' : '손절 후 재진입 금지 없음 · ') +
+          '손절 ' + p.stopAtr + ' ATR (최대 -' + Math.round(p.stopCap * 100) + '%) · 이익 중 20일선 아래 ' + p.ma20Confirm + '거래일 연속 마감 시 다음 날 시가 청산'
+      };
+    }
+    var tp = QE.trendParams || {};
+    return {
+      key: s.key, title: s.title, sub: s.sub, desc: trendDesc(),
+      logSub: '종합점수 ' + (tp.entry == null ? 50 : tp.entry) + ' 이상 매수 · ' + trendMktRule() + ' · 손절 ' + (tp.stopAtr || 6) +
+        ' ATR·트레일 ' + (tp.trailAtr || 10) + ' ATR 즉시 · 시장약세 전량 청산은 진입 ' + (tp.minHold || 3) + '거래일 이후'
+    };
+  }
   function stratKey() { return state.strategy === 'swing' ? 'swing' : 'trend'; }
   function stratRestore() {
     try {
@@ -299,6 +320,160 @@
   }
   function stratPersist() {
     try { localStorage.setItem(STRAT_KEY, state.strategy); } catch (e) {}
+  }
+
+  /* ============================================================
+     성향(위험 선호) — 🛡️ 안정형 / 🔥 공격형
+     ------------------------------------------------------------
+     · state.risk: 'safe' | 'aggr'  (localStorage 'apex.risk.v1', 기본 'safe')
+     · 화면은 html[data-risk="aggr"] 로 긴장감 테마(CSS) 전환
+     · 계산은 엔진 프로필(QE.riskOpts)을 분석 호출 opts 로 넘긴다
+         공격형 스윙 = coolLoss 0 · stopCap 0.15 → 스캐너·종목카드·백테스트·기간집계 재계산
+         공격형 추세 = 규칙 불변 C2 그대로 + 6M모멘텀 Top5 50:50 블렌드 가이드 표시
+     · 성향을 바꾸면 지금 전략(추세형/스윙형)의 추천순 1위 종목으로 자동 선택
+     ============================================================ */
+  var RISK_KEY = 'apex.risk.v1';
+  function riskProfile() { return state.risk === 'aggr' ? 'aggr' : 'safe'; }
+  function riskAggr() { return riskProfile() === 'aggr'; }
+  /* 분석 호출에 넘기는 프로필 값 — 안정형은 {} (기존과 완전히 같은 계산) */
+  function riskOpts() { return (QE.riskOpts ? QE.riskOpts(riskProfile()) : {}); }
+  function riskParams() {
+    if (QE.riskParams) return QE.riskParams(riskProfile());
+    return { swing: QE.swingParams || {}, trend: QE.trendParams || {} };
+  }
+  function riskGuide() {
+    return QE.RISK_GUIDE || { swing: {}, trend: {} };
+  }
+  function riskRestore() {
+    try {
+      var v = localStorage.getItem(RISK_KEY);
+      if (v === 'aggr' || v === 'safe') state.risk = v;
+    } catch (e) { /* 저장소 차단 환경에서는 안정형 */ }
+  }
+  function riskPersist() {
+    try { localStorage.setItem(RISK_KEY, riskProfile()); } catch (e) {}
+  }
+  /* 다크/화이트 × 성향 — 모바일 상단 상태바 색(theme-color)까지 함께 */
+  function themeMetaColor() {
+    if (isLightTheme()) return riskAggr() ? '#FBEFEC' : '#EEF2F7';
+    return riskAggr() ? '#16090C' : '#0B0E14';
+  }
+  function applyRiskClass() {
+    var root = document.documentElement;
+    if (riskAggr()) root.setAttribute('data-risk', 'aggr');
+    else root.removeAttribute('data-risk');
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', themeMetaColor());
+  }
+  /* 성향 변경 — 재분석 → 스캐너·종목카드·백테스트·기간집계를 새 기준으로 다시 그린 뒤 1위 종목 선택 */
+  function setRisk(profile) {
+    var next = profile === 'aggr' ? 'aggr' : 'safe';
+    if (next === riskProfile()) { renderRisk(); return; }
+    state.risk = next;
+    riskPersist();
+    applyRiskClass();
+    var top = riskRebuild();                        /* 이 함수가 renderRisk·renderAggrCard 까지 마친다 */
+    var t = top || topScoreT();
+    if (t) { state.cur = t; autoPick = true; clearDeepLink(); }
+    if (state.cur && A[state.cur]) select(state.cur, true);
+    renderScanner();
+  }
+  /* 성향이 바뀌었으므로 모든 종목 분석을 새 프로필로 다시 돌린다 (102종목 약 1.2초) */
+  function riskRebuild() {
+    var t0 = (window.performance && performance.now) ? performance.now() : 0;
+    cache.clear();
+    viewCache.clear();
+    for (var k in winCache) if (Object.prototype.hasOwnProperty.call(winCache, k)) delete winCache[k];
+    for (var u in uniCache) if (Object.prototype.hasOwnProperty.call(uniCache, u)) delete uniCache[u];
+    uniGen++;                                       /* 진행 중인 기간 집계 작업 결과는 버린다 */
+    mom6Cache = null;
+    M.tickers.forEach(function (x) { A[x.t] = get(x.t); });
+    renderFavs();
+    renderScanner();
+    renderRisk();
+    renderStrategy();
+    renderAggrCard();
+    if (window.performance && performance.now) {
+      console.log('[APEX] risk=' + riskProfile() + ' re-analyzed ' + M.tickers.length + ' tickers in ' + Math.round(performance.now() - t0) + 'ms');
+    }
+    prefetchPeriods();                              /* 바뀐 성향으로 3M·6M·1Y·2Y 집계를 다시 준비 */
+    return topScoreT();
+  }
+  /* 성향 버튼·경계 배지 상태 동기화 (상단 헤더 + 전략 바 두 곳) */
+  function renderRisk() {
+    var aggr = riskAggr();
+    $$('[data-risk-btn]').forEach(function (b) {
+      var on = b.getAttribute('data-risk-btn') === riskProfile();
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    var bn = $('#riskBanner');
+    if (bn) {
+      bn.hidden = !aggr;
+      bn.classList.toggle('on', aggr);
+    }
+    if (aggr) {
+      var p = riskParams(), tx = $('#riskBannerTx');
+      if (tx) tx.innerHTML = '스윙 손절 <b>-' + Math.round((p.swing.stopCap || 0.15) * 100) + '%</b> · 쿨다운 <b>' + (p.swing.coolLoss || 0) + '일</b> · 추세 <b>C2 50 : 6M모멘텀 Top5 50</b> · 변동성 주의';
+    }
+    var seg = $('#stratBar');
+    if (seg) seg.setAttribute('data-risk', riskProfile());
+    renderAggrCard();
+  }
+  /* 공격형 카드 — 추세형은 50:50 블렌드 가이드 + 오늘의 모멘텀 Top5, 스윙형은 S2 파라미터 요약 */
+  function renderAggrCard() {
+    var el = $('#aggrCard');
+    if (!el) return;
+    var aggr = riskAggr();
+    el.hidden = !aggr;
+    if (!aggr) return;
+    var g = riskGuide(), p = riskParams();
+    var swing = state.strategy === 'swing';
+    var m6 = mom6Counts();
+    var ti = $('#agTitle'), su = $('#agSub'), kp = $('#agKpis'), gd = $('#agGuide'), ft = $('#agFoot'), ao = $('#agMomAsOf');
+    if (swing) {
+      if (ti) ti.innerHTML = '공격형 · 스윙형 S2 <em>쿨다운 0일 · 손절 상한 -' + Math.round((p.swing.stopCap || 0.15) * 100) + '%</em>';
+      if (su) su.textContent = 'RSI(2) ' + (p.swing.rsiEntry || 10) + ' 미만 진입 규칙은 그대로 — 손절 -' +
+        Math.round((p.swing.stopCap || 0.15) * 100) + '% · 손절 후 재진입 금지 0일로 바꾼 조합 (10년 비교 검증 S2)';
+      if (kp) kp.innerHTML =
+        '<span><b>5년 ' + pct(g.swing.ret5, 1) + '</b><em>안정형 +144.86%</em></span>' +
+        '<span><b>10년 ' + pct(g.swing.ret10, 0) + '</b><em>안정형 +249.36%</em></span>' +
+        '<span><b>' + pct(g.swing.win10, 1) + '</b><em>10년 승률 · PF ' + (g.swing.pf10 || 0).toFixed(2) + '</em></span>';
+      if (gd) gd.innerHTML =
+        '<div class="ag-row buy"><b>매수</b><span>RSI(2) ' + (p.swing.rsiEntry || 10) + ' 미만 + QQQ ' + (p.swing.qqqMa || 200) +
+          '일선 위(또는 QQQ RSI(2)<' + (p.swing.mktRsiExc == null ? 5 : p.swing.mktRsiExc) + ' 극단 패닉) → 다음 날 시가 — 신호 규칙 불변</span></div>' +
+        '<div class="ag-row stop"><b>손절</b><span>진입가 − ' + (p.swing.stopAtr || 4.5) + ' ATR 또는 −' + Math.round((p.swing.stopCap || 0.15) * 100) + '% 중 가까운 쪽 · <b>손절 뒤 재진입 금지 없음</b> (안정형 10거래일 → 0일)</span></div>' +
+        '<div class="ag-row sell"><b>청산</b><span>이익 +' + Math.round((p.swing.ma20Gate || 0.05) * 100) + '% 이상에서 20일선 아래 ' + (p.swing.ma20Confirm || 2) + '거래일 연속 마감 → 다음 날 시가 — 신호 규칙 불변</span></div>';
+      if (ft) ft.innerHTML = '손절 폭을 −10% → −15%로 넓히고 손절 뒤 대기(10거래일)를 없앤 대신, 한 번의 손실이 더 커지고 같은 종목에서 연속 손절이 날 수 있습니다. 종목별 5년 ' +
+        pct(0.14486, 2) + ' → ' + pct(g.swing.ret5, 2) + ' · 표본밖 ' + pct(0.5837, 1) + ' → ' + pct(g.swing.oos, 1) +
+        ' · 계좌 10슬롯 5년은 오히려 낮아질 수 있습니다(슬롯 경쟁). 참고용이며 미래 수익을 보장하지 않습니다.';
+    } else {
+      if (ti) ti.innerHTML = '공격형 · 추세 C2 50% + 6M모멘텀 Top5 50% <em>월간 리밸런싱</em>';
+      if (su) su.textContent = '추세 신호(C2)는 그대로 두고, 6개월 모멘텀 Top5 바스켓을 절반 섞는 계좌 운용 가이드 — 10년 계좌(10슬롯) 검증 결과';
+      if (kp) kp.innerHTML =
+        '<span><b>10년 ' + pctK(g.trend.ret10, 0) + '</b><em>MDD ' + pct(g.trend.mdd10, 1) + '</em></span>' +
+        '<span><b>샤프 ' + (g.trend.sharpe10 || 0).toFixed(2) + '</b><em>C2 단독 1.45</em></span>' +
+        '<span><b>5년 ' + pctK(g.trend.ret5, 0) + '</b><em>표본밖 ' + pctK(g.trend.oos, 0) + '</em></span>';
+      if (gd) gd.innerHTML =
+        '<div class="ag-row buy"><b>계좌</b><span>추세 C2 신호 자금 <b>50%</b> + 6개월 모멘텀 Top5 바스켓 <b>50%</b> — 매수·손절은 지금 추세형 신호 그대로</span></div>' +
+        '<div class="ag-row rebal"><b>리밸런싱</b><span>월 1회 — 6개월(126거래일) 수익률 상위 5종목을 다시 고르고 비중을 절반으로 맞춥니다</span></div>' +
+        '<div class="ag-row risk"><b>주의</b><span>수익은 C2 단독의 2배 이상이지만 MDD도 −21.3% → ' + pct(g.trend.mdd10, 1) + '로 커집니다 · 2022년 ' + pct(g.trend.y2022, 1) + '</span></div>';
+      if (ft) ft.innerHTML = '10년 계좌(10슬롯) 기준 · 리밸런싱 시작일을 0~20일 옮기면 10년 총수익이 ' +
+        pctK(g.trend.phaseMin, 0) + '~' + pctK(g.trend.phaseMax, 0) + '로 흔들립니다(샤프 1.30~1.56). ' +
+        '샤프가 가장 좋은 조합은 C2 70% + 모멘텀 30%(1.52)이고, 50:50은 더 높은 수익을 원할 때의 선택입니다. 참고용이며 미래 수익을 보장하지 않습니다.';
+    }
+    if (ao) ao.textContent = m6.asOf + ' 종가 · ' + m6.pool + '종목 중 상위 ' + m6.n + ' · ' + MOM6_BARS + '거래일 수익률';
+    var list = $('#agMomList');
+    if (list) {
+      list.innerHTML = m6.top.map(function (r) {
+        return '<button type="button" class="ag-mom-b' + (state.cur === r.t ? ' on' : '') + '" data-t="' + r.t + '" title="' + r.t + ' · ' + MOM6_BARS + '거래일 ' + pct(r.r, 2) + ' · 클릭하면 이 종목 차트">' +
+          '<em>' + r.k + '</em><b>' + r.t + '</b><span class="' + cls(r.r) + '">' + pct(r.r, 1) + '</span></button>';
+      }).join('');
+      list.onclick = function (e) {
+        var b = e.target.closest('[data-t]');
+        if (b) select(b.getAttribute('data-t'));
+      };
+    }
   }
   /* ---------------- 기간 (차트 표시 = 백테스트 검증 기간) ----------------
      차트 기간 버튼(#tf)과 자료 기간 버튼(#btf)은 같은 값(state.range = state.btRange)을 쓰고,
@@ -333,14 +508,14 @@
     btSelSync();                            /* 두 버튼 그룹의 선택 표시를 같은 값으로 */
     if (a) { var v = stratView(viewOf(state.cur)); renderBtPeriod(v); }
   }
-  var winCache = Object.create(null);      /* 'TICKER|bars' → { trend, swing } */
+  var winCache = Object.create(null);      /* 'TICKER|bars|성향' → { trend, swing } */
   function winOf(t, bars) {
     var a = A[t];
     if (!a || !a.series || !a.ind || !a.wsig) return null;
     if (!bars || bars >= 1255) return a.strategy;
-    var k = t + '|' + bars, c = winCache[k];
+    var k = t + '|' + bars + '|' + riskProfile(), c = winCache[k];
     if (c) return c;
-    c = QE.strategyWindow(a.series, a.ind, a.scoreSeries, a.wsig, bars);
+    c = QE.strategyWindow(a.series, a.ind, a.scoreSeries, a.wsig, bars, riskOpts());
     winCache[k] = c;
     return c;
   }
@@ -348,7 +523,7 @@
     if (!a || !a.strategy) return null;
     var bars = btBars();
     if (!a.replay && bars < 1255 && a.sym) {                 /* 기간 집계가 이미 있으면 그것을 쓴다 */
-      var w = winCache[a.sym + '|' + bars];
+      var w = winCache[a.sym + '|' + bars + '|' + riskProfile()];
       if (w && w[stratKey()]) return w[stratKey()];
     }
     return a.strategy[stratKey()] || a.strategy.trend;
@@ -396,7 +571,7 @@
     if (cache.has(t)) return cache.get(t);
     var s = seriesOf(t);
     if (!s) return null;
-    var a = QE.analyze(t, info(t).n , s);
+    var a = QE.analyze(t, info(t).n , s, riskOpts());   /* 성향 프로필(안정형 {})을 그대로 전달 — 공격형은 스윙 파라미터만 다름 */
     a.sym = t;
     a.series = s;
     a.limited = s.c.length < 260;
@@ -437,7 +612,7 @@
     var v = QE.analyze(t, a.meta.n, {
       d: s.d.slice(0, i + 1), o: s.o.slice(0, i + 1), h: s.h.slice(0, i + 1),
       l: s.l.slice(0, i + 1), c: s.c.slice(0, i + 1), v: s.v.slice(0, i + 1)
-    });
+    }, riskOpts());
     v.sym = t;
     v.meta = a.meta;
     v.series = { d: s.d.slice(0, i + 1), o: s.o.slice(0, i + 1), h: s.h.slice(0, i + 1), l: s.l.slice(0, i + 1), c: s.c.slice(0, i + 1), v: s.v.slice(0, i + 1) };
@@ -467,6 +642,13 @@
     if (v == null || isNaN(v)) return '—';
     d = d === undefined ? 2 : d;
     return (v > 0 ? '+' : '') + (v * 100).toFixed(d) + '%';
+  }
+  /* 큰 수익률용 — 천단위 구분(+2,165%) */
+  function pctK(v, d) {
+    if (v == null || isNaN(v)) return '—';
+    d = d === undefined ? 0 : d;
+    var x = v * 100;
+    return (x > 0 ? '+' : '') + x.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }) + '%';
   }
   function pctP(v) { return v == null ? '—' : (v * 100).toFixed(2) + '%'; }
   function vol(v) {
@@ -562,6 +744,7 @@
     renderFavs();
     renderScanner();
     renderStrategy();
+    renderRisk();               /* 성향 버튼·경계 배지·공격형 카드를 저장된 성향으로 */
     select(state.cur, true);    console.log('[APEX] analyzed ' + M.tickers.length + ' tickers in ' + Math.round(performance.now() - t0) + 'ms');
     prefetchPeriods();          /* 3M·6M·1Y·2Y 기간 집계를 백그라운드에서 미리 계산 */
   }
@@ -811,7 +994,8 @@
   function mom6Badge(a) {
     var c = mom6Counts(), r = a && c.byT[a.sym];
     if (!r || r.k > MOM6_TOP) return '';
-    return '<i class="mom6" title="' + mom6Tip(r) + '">6M Top5</i>';
+    var aggr = riskAggr();                 /* 공격형에서는 모멘텀 Top5를 더 세게 강조(테마가 레드·앰버) */
+    return '<i class="mom6' + (aggr ? ' onaggr' : '') + '" title="' + mom6Tip(r) + '">6M Top' + r.k + '</i>';
   }
   function bkLevelTxt(b) { return b.level + '일 신고가'; }
   function bkTip(a) {
@@ -1259,9 +1443,10 @@
     var b = a.slice().sort(function (x, y) { return x - y; }), m = b.length >> 1;
     return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2;
   }
-  var uniCache = {};          /* 'mode|bars' → 종목 성과 분포 */
+  var uniCache = {};          /* '성향|mode|bars' → 종목 성과 분포 */
   var uniRunning = {};        /* 진행 중인 기간 집계 */
-  function uniKey(mode, bars) { return mode + '|' + bars; }
+  var uniGen = 0;             /* 성향을 바꾸면 진행 중인 집계 결과를 버린다 */
+  function uniKey(mode, bars) { return riskProfile() + '|' + mode + '|' + bars; }
   function accNew() { return { rets: [], mdds: [], bhs: [], wrs: [], beat: 0, ntr: 0 }; }
   function accAdd(acc, it, covered, bars) {
     if (!it || !it.stats) return;
@@ -1290,9 +1475,10 @@
   }
   /* 기간 집계를 8ms 단위로 나눠 계산 — 기간 전환 순간 UI가 멈추지 않게 */
   function startUniJob(bars, done) {
-    var key = 'job' + bars;
+    var key = 'job' + bars + '|' + riskProfile();
     if (uniRunning[key]) { if (done) uniRunning[key].push(done); return; }
     var waits = uniRunning[key] = done ? [done] : [];
+    var gen = uniGen;
     var order = M.tickers.slice(), idx = 0;
     var accs = { trend: accNew(), swing: accNew() };
     function step() {
@@ -1307,6 +1493,7 @@
         });
       }
       if (idx < order.length) { setTimeout(step, 0); return; }
+      if (gen !== uniGen) { delete uniRunning[key]; return; }   /* 성향이 바뀌어 결과가 무효 — 버린다 */
       uniCache[uniKey('trend', bars)] = accEnd(accs.trend);
       uniCache[uniKey('swing', bars)] = accEnd(accs.swing);
       delete uniRunning[key];
@@ -1334,8 +1521,35 @@
       startUniJob(bars, next);
     })();
   }
+  /* ============================================================
+     🔥 공격형 · 추세 전략 바 성과 줄
+     · 공격형 + 추세형일 때만: 'C2 50% + 6M모멘텀 Top5 50%'(월간 리밸런싱) 계좌 성과를
+       상단 유니버스 비교 옆에 함께 보여 준다(10년 계좌 10슬롯 검증 · 참고용).
+     · 안정형으로 돌아가면 숨겨져 기존 C2 수치만 남는다.
+     ============================================================ */
+  function renderStratBlend(key) {
+    var el = $('#stratBlend');
+    if (!el) return;
+    var show = riskAggr() && key === 'trend';
+    el.hidden = !show;
+    el.classList.toggle('on', show);
+    if (!show) { el.innerHTML = ''; return; }
+    var g = riskGuide().trend;
+    el.innerHTML =
+      '<span class="sb-k">🔥 공격형 블렌드</span>' +
+      '<span class="sb-t">추세 C2 <b>50%</b> + 6M모멘텀 Top5 <b>50%</b> · 월간 리밸런싱</span>' +
+      '<span class="sb-v">5년 <b>' + pctK(g.ret5, 1) + '</b></span>' +
+      '<span class="sb-v">10년 <b>' + pctK(g.ret10, 0) + '</b></span>' +
+      '<span class="sb-v">MDD <b class="neg">' + pct(g.mdd10, 1) + '</b></span>' +
+      '<span class="sb-v">샤프 <b>' + (g.sharpe10 || 0).toFixed(2) + '</b></span>' +
+      '<span class="sb-n">계좌 10슬롯 10년 검증 · 종목별 수익률이 아닌 포트폴리오 기준 · 참고용</span>';
+    el.title = '공격형 추세형 = C2 신호 그대로 + 6개월 모멘텀 Top5 바스켓을 절반 섞는 운용 가이드\n' +
+      '같은 10년에서 C2 단독 +914.1% / MDD −21.3% / 샤프 1.45 → 블렌드 ' + pctK(g.ret10, 0) + ' / MDD ' + pct(g.mdd10, 1) + ' / 샤프 ' + (g.sharpe10 || 0).toFixed(2) + '\n' +
+      '리밸런싱 시작일을 0~20일 옮기면 10년 총수익 ' + pctK(g.phaseMin, 0) + '~' + pctK(g.phaseMax, 0) + '(샤프 1.30~1.56) · 2022년 ' + pct(g.y2022, 1) + '\n' +
+      '샤프 정점은 C2 70% + 모멘텀 30%(1.52) — 50:50은 수익을 더 원할 때의 선택';
+  }
   function renderStrategy() {
-    var info = STRAT[stratKey()];
+    var info = stratInfo(stratKey());
     var bar = $('#stratBar'); if (bar) bar.setAttribute('data-m', info.key);
     $$('#stratSeg button').forEach(function (b) {
       var on = b.getAttribute('data-m') === info.key;
@@ -1363,6 +1577,7 @@
       if (meta) meta.innerHTML = '전략 비교 · 같은 종목·같은 기간·거래비용 <b>0.03%</b> · 체결 <b>신호 다음 날 시가</b> · ' + btTag() + ' 종목 집계 중…';
     }
     renderPresetGuide();          /* 전략을 바꾸면 스캐너 3줄 가이드도 그 전략 것으로 */
+    renderStratBlend(info.key);   /* 🔥 공격형 — 추세는 50:50 모멘텀 블렌드 성과를 전략 바에 함께 */
   }
   /* 전략 버튼(추세형 ↔ 스윙형) — 누를 때마다 그 전략의 추천 1위 종목으로 자동 전환한다.
      앞서 다른 종목을 직접 골라 두었어도 그 전략 기준 1위(= 좌측 스캐너 추천순 1행)를 보여 준다.
@@ -1376,6 +1591,7 @@
     if (top) { state.cur = top; autoPick = true; clearDeepLink(); }
     renderStrategy();
     renderScanner();                                          /* 좌측 스캐너 신호·순위를 새 전략 기준으로 즉시 재집계 */
+    renderAggrCard();                                         /* 공격형 카드(추세 50:50 / 스윙 S2)도 선택 전략에 맞춰 */
     if (state.cur && A[state.cur]) select(state.cur, true);    /* 위에서 고른 1위 종목을 그대로 표시 (기간 유지) */
   }
   /* 자동 선택 시 주소에 박힌 종목(#종목 · ?t=종목)을 지운다 — 화면(전략 1위)과 주소가 어긋나지 않게 */
@@ -1468,17 +1684,20 @@
   /* ---- 전략 3줄 가이드 (엔진 파라미터에서 생성 — 상단 카드와 같은 단일 소스) ---- */
   function strategyGuide(key) {
     if (key === 'swing') {
-      var p = QE.swingParams || {};
+      var p = effSwingP();
       var rsiIn = p.rsiEntry || 10, ma = p.qqqMa || 200, exc = p.mktRsiExc == null ? 5 : p.mktRsiExc;
       var stopAtr = p.stopAtr || 4.5, cap = Math.round((p.stopCap || 0.1) * 100);
-      var gate = Math.round((p.ma20Gate || 0.05) * 100), cfm = p.ma20Confirm || 2, cool = p.coolLoss || 10;
+      var gate = Math.round((p.ma20Gate || 0.05) * 100), cfm = p.ma20Confirm || 2, cool = p.coolLoss || 0;
+      var aggr = riskAggr();
       return {
-        key: 'swing', name: '스윙형(단기)', live: true,
+        key: 'swing', name: '스윙형(단기)' + (aggr ? ' · 공격형' : ''), live: true,
         buy: 'RSI(2) ' + rsiIn + ' 미만(단기 과매도) + QQQ ' + ma + '일선 위 — 다음 날 시가 매수. QQQ가 ' + ma +
           '일선 아래여도 QQQ RSI(2)가 ' + exc + ' 미만인 극단 패닉 날은 허용(W 쌍바닥 넥라인 돌파는 보조 루트)',
-        stop: '진입가 − ' + stopAtr + ' ATR(변동성 기준 손절폭) 또는 −' + cap + '% 중 가까운 쪽 · 손절 뒤 ' + cool + '거래일 재진입 금지',
+        stop: '진입가 − ' + stopAtr + ' ATR(변동성 기준 손절폭) 또는 −' + cap + '% 중 가까운 쪽 · ' +
+          (cool ? '손절 뒤 ' + cool + '거래일 재진입 금지' : '손절 뒤 재진입 금지 없음(공격형 — 같은 종목 연속 손절 가능)'),
         sell: '이익 +' + gate + '% 이상일 때 종가가 20일선 아래로 ' + cfm + '거래일 연속 마감하면 다음 날 시가 청산 (고정 보유기간 없음)',
-        foot: '기준선은 20일선, 손절선은 4.5 ATR과 −' + cap + '% 중 가까운 쪽입니다.'
+        foot: '기준선은 20일선, 손절선은 ' + stopAtr + ' ATR과 −' + cap + '% 중 가까운 쪽입니다.' +
+          (aggr ? ' 공격형은 손절 상한만 −15%로 넓혔을 뿐 진입·청산 신호는 안정형과 같습니다.' : '')
       };
     }
     var t = QE.trendParams || {};
@@ -1486,13 +1705,14 @@
     var exTh = t.panicEntryRsi == null ? 5 : t.panicEntryRsi;
     var exDf = t.panicExitRsi == null ? 15 : t.panicExitRsi;
     return {
-      key: 'trend', name: '추세형(중기)', live: true,
+      key: 'trend', name: '추세형(중기)' + (riskAggr() ? ' · 공격형' : ''), live: true,
       buy: '종합 기술점수 ' + e + ' 이상 + ' + trendMktRule() + ' 100/50% — 다음 날 시가 매수. 시장 위험 0%여도 QQQ RSI(2)가 ' +
         exTh + ' 미만인 극단 패닉 날은 전액 비중으로 허용',
       stop: '진입가 − ' + (t.stopAtr || 6) + ' ATR(변동성 기준 손절폭) — 진입 직후부터 즉시 적용',
       sell: '진입 +' + (t.trailStartAtr || 6) + ' ATR 이후 트레일링 ' + (t.trailAtr || 10) + ' ATR 청산 · 시장 위험 0%면 진입 ' +
         (t.minHold || 3) + '거래일 뒤 전량 청산 (단, QQQ RSI(2)<' + exDf + '인 패닉일은 그날 청산을 보류하고 다음 날 재판정)',
-      foot: '점수는 차트 참고 점수이고, 실제 매매는 이 신호 기준입니다.'
+      foot: '점수는 차트 참고 점수이고, 실제 매매는 이 신호 기준입니다.' +
+        (riskAggr() ? ' 공격형 추세형은 C2 신호를 그대로 두고 계좌를 ‘C2 50% + 6M모멘텀 Top5 50%(월간 리밸런싱)’로 섮는 가이드를 함께 보여 줍니다 — 아래 공격형 카드 참고.' : '')
     };
   }
 
@@ -1536,6 +1756,12 @@
     var p = state.preset, g = null;
     if (p && TGUIDE[p]) g = TGUIDE[p];
     else g = strategyGuide(state.strategy);        /* 전체 · Top 30 · 실적 우량주 · 승률 70%+ → 선택한 전략 가이드 */
+    if (p === 'w' && g) {                          /* W 돌파는 스윙형 보조 루트 — 손절·쿨다운은 지금 성향의 실효 파라미터 */
+      var wp = effSwingP();
+      g = { name: g.name, live: g.live, buy: g.buy, sell: g.sell, foot: g.foot,
+        stop: '진입가 − ' + (wp.stopAtr || 4.5) + ' ATR 또는 −' + Math.round((wp.stopCap || 0.1) * 100) + '% 중 가까운 쪽 · ' +
+          (wp.coolLoss ? '손절 뒤 ' + wp.coolLoss + '거래일 재진입 금지' : '손절 뒤 재진입 금지 없음(공격형)') };
+    }
     if (!g) { el.className = 'pguide'; el.innerHTML = ''; return; }
     var isWin = p === 'win70', isMom = p === 'mom6';
     var w7 = isWin ? win70Counts() : null;
@@ -1704,6 +1930,18 @@
     $('#heroName').textContent = a.meta.nk;
     $('#heroSector').textContent = a.meta.sk;
     var ha = $('#heroAsOf'); if (ha) ha.textContent = a.dates[a.dates.length - 1] + ' 종가';
+    /* 공격형 · 6M모멘텀 Top5 강조 칩 (추세형에서 특히 — 블렌드 가이드의 모멘텀 슬리브 후보) */
+    var hm = $('#heroMom');
+    if (hm) {
+      var m6 = mom6Counts(), mr = m6.byT[a.sym];
+      var showMom = riskAggr() && mr && mr.k <= MOM6_TOP;
+      hm.hidden = !showMom;
+      hm.className = 'hero-mom' + (showMom ? ' on' : '');
+      if (showMom) {
+        hm.innerHTML = '🔥 6M모멘텀 ' + mr.k + '위 <b>' + pct(mr.r, 1) + '</b>';
+        hm.title = mom6Tip(mr) + (state.strategy === 'swing' ? '' : ' — 공격형 추세 블렌드의 모멘텀 50% 후보');
+      } else hm.innerHTML = '';
+    }
     $('#heroPrice').textContent = usd(a.price);
     var c = $('#heroChg');
     c.className = 'chg ' + cls(a.change);
@@ -3025,7 +3263,7 @@
     if (sub) {
       var per = a.replay ? '리플레이'
         : (btName() + ' · ' + a.dates[a.startIdx] + ' ~ ' + a.dates[a.dates.length - 1] + ' · ' + (a.dates.length - a.startIdx) + '거래일');
-      sub.innerHTML = STRAT[a.stratKey || 'trend'].logSub + ' · <b class="bt-chip">' + per + '</b>';
+      sub.innerHTML = stratInfo(a.stratKey || 'trend').logSub + ' · <b class="bt-chip">' + per + '</b>';
     }
     var s = a.stats;
     $('#logStats').innerHTML = s && !a.limited ?
@@ -4988,6 +5226,27 @@
       },
       priceAt: function (py) { return chart.priceAt(py); },
       state: function () { return { clean: !!state.clean, show: JSON.parse(JSON.stringify(state.show)), cur: state.cur, range: state.range }; },
+      /* 성향(🛡️ 안정형 / 🔥 공격형) 검증용 — 프로필·실효 파라미터·배지·카드·모멘텀 Top5 (읽기 전용) */
+      risk: function () {
+        var b = $('#riskBanner'), c = $('#aggrCard');
+        var m6 = mom6Counts();
+        return {
+          profile: riskProfile(), attr: document.documentElement.getAttribute('data-risk'),
+          strategy: stratKey(), swing: riskParams().swing, trend: riskParams().trend,
+          bannerShown: b ? !b.hidden : null, cardShown: c ? !c.hidden : null,
+          cardText: c && !c.hidden ? c.innerText.replace(/\s+/g, ' ').slice(0, 600) : '',
+          stratUni: ($('#stratUni') || {}).innerText || '',
+          mom: m6.top.map(function (r) { return { t: r.t, k: r.k, r: r.r }; })
+        };
+      },
+      /* 유니버스(99종목) 평균 — 성향·전략별 즉시 계산 (검증 스크립트용) */
+      uni: function (mode, bars) { return computeUniNow(mode === 'swing' ? 'swing' : 'trend', bars || 1255); },
+      /* 선택 종목의 전략 성과 스냅숏 (캐시가 성향별로 갈리는지 확인용) */
+      ticker: function (t) {
+        var a = A[t || state.cur]; if (!a || !a.strategy) return null;
+        function pick(b) { return b ? { ret: b.stats.totalReturn, win: b.stats.winRate, mdd: b.stats.mdd, trades: b.stats.trades } : null; }
+        return { sym: a.sym, trend: pick(a.strategy.trend), swing: pick(a.strategy.swing), plan: a.swing ? { coolLeft: a.swing.coolLeft, coolTotal: a.swing.coolTotal, stopCap: a.swing.stopCap, exitRule: a.swing.exitRule } : null };
+      },
       /* 엔벨로프 검증용 — 마지막 봉의 20일선·상/하한과 배율(±8% 인지) */
       env: function () {
         var a = chart.a; if (!a || !a.ind || !a.ind.env) return null;
@@ -5010,6 +5269,16 @@
       var b = e.target.closest('button'); if (!b) return;
       setStrategy(b.getAttribute('data-m'));
     };
+
+    /* ---- 성향 전환 (🛡️ 안정형 ↔ 🔥 공격형) — 상단 헤더·전략 바 두 곳이 같은 상태를 공유 ---- */
+    $$('.risk-switch').forEach(function (seg) {
+      seg.onclick = function (e) {
+        var b = e.target.closest('button[data-risk-btn]'); if (!b) return;
+        setRisk(b.getAttribute('data-risk-btn'));
+      };
+    });
+    var rbOff = $('#riskBannerOff');
+    if (rbOff) rbOff.onclick = function () { setRisk('safe'); };
 
     /* ---- 관심종목 추가·삭제 바인딩 ---- */
     var heroFav = $('#heroFav');
@@ -5718,6 +5987,8 @@
       if (mq) { try { h = decodeURIComponent(mq[1]).toUpperCase(); } catch (e) { h = ''; } }
     }
     cleanRestore();                                  /* 깔끔 보기 저장 상태 — 첫 draw 전에 */
+    riskRestore();                                   /* 성향(안정형/공격형) — 첫 분석 호출 전에 복원 */
+    applyRiskClass();                                /* html[data-risk] · theme-color */
     accBuild();                                       /* 접힘 상태를 먼저 복원해 화면 깜빡임 방지 */
     beginInit();                                      /* 초보자 3단계 보는 법 — 접기/펼치기 저장 상태 */
     eduInit();                                        /* 오늘의 주식 공부 카드 (날짜별 자동 변경) */

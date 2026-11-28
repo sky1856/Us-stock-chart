@@ -2834,6 +2834,62 @@
     return rec;
   }
 
+  /* ============================================================
+     성향(위험 선호) 프로필 — 🛡️ 안정형 / 🔥 공격형
+     ------------------------------------------------------------
+     안정형은 위 TREND_P·SWING_P 기본값 그대로입니다(기존 동작 100% 보존).
+     공격형은 10년 비교 검증(work/stock/v5_upgrade/REPORT_RISK_PROFILE.md)에서
+     세 창(5년·표본밖·10년) 모두 기준선보다 나았던 조합만 덮어씁니다.
+       스윙 S2 : coolLoss 10→0 · stopCap 0.10→0.15
+                 종목별 5년 +144.86→+157.26% · 표본밖 +58.37→+67.87% · 10년 +249.36→+324.91%
+                 (계좌 10슬롯 10년 +503.1→+605.4% · 10년 승률 57.8→63.2%)
+       추세    : 규칙 변경 없음 — 손절·트레일 완화는 최대 +3.6%p로 효과가 미미해 넣지 않는다.
+                 대신 '추세 C2 50% + 6M모멘텀 Top5 50%' 블렌드 가이드를 화면에 표시한다
+                 (계좌 10슬롯 10년 +2,165.2% · MDD −27.90% · 샤프 1.46 · 2022 −5.73%).
+     프로필 값은 기존 swingOpts()/trendOpts() 경로에 opts 로 그대로 섞여 들어가므로
+     새 분기나 별도 시뮬레이터 없이 스캐너·종목카드·백테스트가 같은 숫자를 씁니다.
+     ============================================================ */
+  var RISK_P = {
+    safe: {
+      key: 'safe', ko: '안정형', en: 'SAFE',
+      swing: {},                     /* 기본값 = SWING_P (쿨다운 10일 · 손절 상한 −10%) */
+      trend: {}                      /* 기본값 = TREND_P (6 ATR · 트레일 10 ATR) */
+    },
+    aggr: {
+      key: 'aggr', ko: '공격형', en: 'AGGRESSIVE',
+      swing: { coolLoss: 0, stopCap: 0.15 },   /* S2 — 손절 후 재진입 금지 0일 · 손절 상한 −15% */
+      trend: {}
+    }
+  };
+  /* 프로필 → opts (전략 시뮬레이터에 그대로 넘기는 값만) */
+  function riskOpts(profile) {
+    var p = RISK_P[profile] || RISK_P.safe, out = {}, g, k;
+    for (g in { swing: 1, trend: 1 }) {
+      var src = p[g] || {};
+      for (k in src) out[k] = src[k];
+    }
+    return out;
+  }
+  /* 프로필별 실효 파라미터 — 화면 문구가 실제 계산값과 어긋나지 않도록 UI 가 읽어 간다 */
+  function riskParams(profile) {
+    var o = riskOpts(profile);
+    var sw = swingOpts(o), tr = trendOpts(o);
+    return {
+      key: (RISK_P[profile] || RISK_P.safe).key,
+      swing: { coolLoss: sw.coolLoss, stopCap: sw.stopCap, stopAtr: sw.stopAtr, rsiEntry: sw.rsiEntry,
+        ma20Gate: sw.ma20Gate, ma20Confirm: sw.ma20Confirm, qqqMa: sw.qqqMa, mktRsiExc: sw.mktRsiExc },
+      trend: { entry: tr.entry, stopAtr: tr.stopAtr, trailAtr: tr.trailAtr, trailStartAtr: tr.trailStartAtr, minHold: tr.minHold }
+    };
+  }
+  /* 공격형 안내 숫자 — 10년 계좌(10슬롯) 검증 결과. 화면 표시 전용(계산에 쓰지 않음). 수익률은 배수 표기(21.652 = +2,165.2%) */
+  var RISK_GUIDE = {
+    swing: { coolLoss: 0, stopCap: 0.15,
+      ret5: 1.5726, oos: 0.6787, ret10: 3.2491, win10: 0.632, pf10: 1.93 },
+    trend: { c2: 50, mom: 50, rebalance: '월간', years: 10,
+      ret5: 5.0880, oos: 2.6270, ret10: 21.652, mdd10: -0.2790, sharpe10: 1.46, y2022: -0.0573,
+      phaseMin: 14.27, phaseMax: 28.32 }   /* 리밸런싱 시작일 0~20일 이동 시 10년 총수익 범위(위상 민감도) */
+  };
+
   var api = {
     sma: sma, ema: ema, rsi: rsi, macd: macd, atr: atr, stdev: stdev,
     bollinger: bollinger, obv: obv, parabolicSAR: parabolicSAR, envelope: envelope,
@@ -2848,7 +2904,8 @@
     triDetect: triDetect, TRI_P: TRI_P,
     divScan: divScan, DIV_P: DIV_P,
     bkScan: bkScan, BK_P: BK_P,
-    clamp: clamp, elliott: ewAnalyze
+    clamp: clamp, elliott: ewAnalyze,
+    riskOpts: riskOpts, riskParams: riskParams, RISK_P: RISK_P, RISK_GUIDE: RISK_GUIDE
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
