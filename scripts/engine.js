@@ -1999,9 +1999,10 @@
     var hiSide = up ? '고점' : '저점';
     var loSide = up ? '저점' : '고점';
     /* 다음 예상 방향 · 확인 가격 — 카드 상단 4단계 블록과 요약이 같은 값을 쓴다 */
+    var sideWord = function (v) { return v > price ? '돌파' : '이탈'; };
     var cf = function (v, text) {
       if (!isFinite(v) || v < FLOOR) return null;
-      return { price: v, side: v > price ? '돌파' : '이탈', text: text };
+      return { price: v, side: sideWord(v), text: String(text).replace(/\{w\}/g, sideWord(v)) };
     };
     plan.next = ''; plan.confirm = null;
 
@@ -2013,9 +2014,9 @@
       plan.inv = { price: P(3), name: 'C파 ' + loSide };
       plan.comment = 'A-B-C 조정이 ' + (cd.L.w3 / cd.L.w1).toFixed(2) + '배(A 대비 C) 비율로 마무리된 자리입니다. ' +
         '조정 폭의 0.5~0.618 회복 ' + ztxt(t1) + '이 1차 목표이며, C파 ' + loSide + ' ' + px(P(3)) +
-        ' 이탈 시 조정 연장(더블 지그재그)으로 봅니다.';
+        ' ' + sideWord(P(3)) + ' 시 조정 연장(더블 지그재그)으로 봅니다.';
       plan.next = '조정 완료 → 신규 ' + (up ? '하락' : '상승') + ' 1파 전개 (1차 목표 ' + ztxt(t1) + ')';
-      plan.confirm = cf(t1.hi, '조정 폭 0.5~0.618 회복 상단 ' + px(t1.hi) + ' ' + (up ? '이탈' : '돌파') + ' 시 신규 추세 확인');
+      plan.confirm = cf(t1.hi, '조정 폭 0.5~0.618 회복 상단 ' + px(t1.hi) + ' {w} 시 신규 추세 확인');
       plan.bias = up ? 'bear' : 'bull';
       return plan;
     }
@@ -2029,9 +2030,9 @@
         plan.targets.push(zone('3파 예상 목표 (2파 0.618 조정 가정)', r618 + dir * w1 * 1.382, r618 + dir * w1 * 1.618));
         plan.inv = { price: P(0), name: '1파 시작점' };
         plan.comment = '1파 ' + px(P(0)) + '→' + px(P(1)) + ' 완료 후 2파 조정 국면으로 봅니다. 0.5~0.618 되돌림 ' +
-          rtxt(r500, r618) + '이 분할 매수 참고 구간이며, 1파 시작점 ' + px(P(0)) + ' 이탈 시 카운트가 무효입니다.';
+          rtxt(r500, r618) + '이 분할 매수 참고 구간이며, 1파 시작점 ' + px(P(0)) + ' ' + sideWord(P(0)) + ' 시 카운트가 무효입니다.';
         plan.next = '2파 조정 후 3파 ' + dirWord + ' 재개 (1차 목표 ' + ztxt(plan.targets[0]) + ')';
-        plan.confirm = cf(P(1), '1파 ' + hiSide + ' ' + px(P(1)) + ' ' + (up ? '돌파' : '이탈') + ' 시 3파 진행 확인');
+        plan.confirm = cf(P(1), '1파 ' + hiSide + ' ' + px(P(1)) + ' {w} 시 3파 진행 확인');
       } else if (k === 2) {
         var t2 = zone('1차 목표 · 1파의 1.382~1.618배', P(2) + dir * w1 * 1.382, P(2) + dir * w1 * 1.618);
         plan.targets.push(t2);
@@ -2039,7 +2040,7 @@
         plan.supports.push({ name: '2파 ' + loSide, price: P(2) });
         plan.inv = { price: P(2), name: '2파 ' + loSide };
         plan.comment = '3파 진행 구간으로 파동 이론상 가장 힘 있는 자리입니다. 1차 목표 ' + ztxt(t2) +
-          ', 2차 목표는 1파의 2.618배 확장 구간입니다. 2파 ' + loSide + ' ' + px(P(2)) + ' 이탈 시 카운트가 무효화됩니다.';
+          ', 2차 목표는 1파의 2.618배 확장 구간입니다. 2파 ' + loSide + ' ' + px(P(2)) + ' ' + sideWord(P(2)) + ' 시 카운트가 무효화됩니다.';
         plan.next = '3파 ' + dirWord + ' 지속 → 1차 목표 ' + ztxt(t2) + ' 부근';
         plan.confirm = cf(t2.lo, '1차 목표 구간 ' + px(t2.lo) + ' 진입 시 3파 전개 유효');
       } else if (k === 3) {
@@ -2053,7 +2054,7 @@
           '4파가 1파 ' + hiSide + ' ' + px(P(1)) + '과 겹치면 절대 규칙 위반으로 카운트를 다시 봐야 합니다.' +
           (plan.targets.length ? ' 조정 후 5파 목표는 ' + ztxt(plan.targets[0]) + ' 구간입니다.' : '');
         plan.next = '4파 조정 완료 → 5파 ' + dirWord + ' 재개 (목표 ' + (plan.targets.length ? ztxt(plan.targets[0]) : '—') + ')';
-        plan.confirm = cf(P(3), '3파 ' + hiSide + ' ' + px(P(3)) + ' ' + (up ? '돌파' : '이탈') + ' 시 5파 진행 확인');
+        plan.confirm = cf(P(3), '3파 ' + hiSide + ' ' + px(P(3)) + ' {w} 시 5파 진행 확인');
       } else if (k === 4) {
         var t5 = zone('5파 목표 · 1파의 1.0배 ~ 3파의 0.618배',
           P(4) + dir * Math.min(w1, w3 * 0.618), P(4) + dir * Math.max(w1, w3 * 0.618));
@@ -2061,7 +2062,7 @@
         plan.supports.push({ name: '4파 ' + loSide, price: P(4) });
         plan.inv = { price: P(4), name: '4파 ' + loSide };
         plan.comment = '5파 진행 구간입니다. 목표 ' + ztxt(t5) + ' 부근에서 임펄스가 마무리될 수 있어 분할 익절이 유리하고, ' +
-          '4파 ' + loSide + ' ' + px(P(4)) + ' 이탈 시 5파 카운트가 무효입니다.';
+          '4파 ' + loSide + ' ' + px(P(4)) + ' ' + sideWord(P(4)) + ' 시 5파 카운트가 무효입니다.';
         plan.next = '5파 목표 ' + ztxt(t5) + ' 도달 후 임펄스 마무리 → ABC 조정';
         plan.confirm = cf(t5.lo, '5파 목표 하단 ' + px(t5.lo) + ' 진입 시 임펄스 완성 확인');
       }
@@ -2092,8 +2093,7 @@
           cWord + '합니다. ' + (up ? '5파 고점 ' : '5파 저점 ') + px(P(5)) +
           (up ? '을 다시 넘으면' : '을 다시 이탈하면') + ' 조정 카운트가 무효입니다.';
         plan.next = 'B파 ' + bWord + ' 마무리 → C파 ' + cWord + ' (목표 ≈ ' + pxsafe(cMid) + ')';
-        plan.confirm = cf(A0, 'C파 전개 확인 — A파 ' + loSide + ' ' + px(A0) + ' ' + (up ? '이탈' : '돌파') +
-          ' 시 B파 종료·C파 진행으로 판단');
+        plan.confirm = cf(A0, 'C파 전개 확인 — A파 ' + loSide + ' ' + px(A0) + ' {w} 시 B파 종료·C파 진행으로 판단');
       } else if (post.length === 2) {
         var A2 = post[0].p, B2 = post[1].p, aLen3 = Math.abs(A2 - P(5));
         var cz = zone('C파 목표 · A파의 1.0~1.618배', A2 - dir * aLen3 * 1.618, A2 - dir * aLen3 * 1.0);
@@ -2103,9 +2103,9 @@
         plan.comment = 'B파 반등 후 C파를 준비하는 자리입니다. ' +
           (cz.bad ? 'C파 목표는 A파 대비 하락폭이 커 $0 미만(계산 불가)입니다. '
                   : 'C파 목표 ' + ztxt(cz) + '까지 열려 있고, ') +
-          'B파 ' + hiSide + ' ' + px(B2) + ' 돌파 시 조정이 끝난 것으로 봅니다.';
+          'B파 ' + hiSide + ' ' + px(B2) + ' ' + sideWord(B2) + ' 시 조정이 끝난 것으로 봅니다.';
         plan.next = 'C파 ' + (up ? '하락' : '상승') + ' 진행 (목표 ' + ztxt(cz) + ')';
-        plan.confirm = cf(A2, 'A파 ' + loSide + ' ' + px(A2) + ' ' + (up ? '이탈' : '돌파') + ' 시 C파 확장 확인');
+        plan.confirm = cf(A2, 'A파 ' + loSide + ' ' + px(A2) + ' {w} 시 C파 확장 확인');
       } else if (post.length === 3) {
         var A3 = post[0].p, C3 = post[2].p, cw = Math.abs(A3 - P(5));
         var nz1 = zone('신규 ' + (up ? '상승' : '하락') + ' 1파 목표 · 조정 0.5~0.618 회복', C3 + dir * cw * 0.5, C3 + dir * cw * 0.618);
@@ -2113,16 +2113,16 @@
         plan.supports.push({ name: 'C파 ' + loSide + ' (조정 완료)', price: C3 });
         plan.inv = { price: C3, name: 'C파 ' + loSide };
         plan.comment = 'ABC 조정이 마무리되고 신규 임펄스 1파가 시작되는 자리로 봅니다. 1차 목표는 조정 폭의 0.5~0.618 회복 ' +
-          ztxt(nz1) + '이고, C파 ' + loSide + ' ' + px(C3) + ' 이탈 시 조정 연장입니다.';
+          ztxt(nz1) + '이고, C파 ' + loSide + ' ' + px(C3) + ' ' + sideWord(C3) + ' 시 조정 연장입니다.';
         plan.next = '신규 ' + dirWord + ' 1파 전개 (1차 목표 ' + ztxt(nz1) + ')';
-        plan.confirm = cf(nz1.hi, '조정 폭 0.5~0.618 회복 상단 ' + px(nz1.hi) + ' ' + (up ? '이탈' : '돌파') + ' 시 신규 추세 확인');
+        plan.confirm = cf(nz1.hi, '조정 폭 0.5~0.618 회복 상단 ' + px(nz1.hi) + ' {w} 시 신규 추세 확인');
       } else {
         var eP = post[post.length - 1].p, wide = Math.abs(post[1].p - post[0].p);
         var thrust = eP + dir * wide * 0.618;
         plan.targets.push(zone('삼각 스러스트 목표 · 0.618배', thrust - Math.abs(wide) * 0.12, thrust + Math.abs(wide) * 0.12));
         plan.inv = { price: eP, name: (post.length === 4 ? 'D파' : 'E파') + ' ' + (up ? '저점' : '고점') };
         plan.comment = 'A-B-C-D(-E) 삼각수렴이 진행 중입니다. 수렴 완료 후 삼각 최대 폭의 0.618배 스러스트 ' + px(thrust) +
-          '를 목표로 추세가 재개되는 패턴이고, 마지막 변곡점 ' + px(eP) + ' 이탈 시 무효입니다.';
+          '를 목표로 추세가 재개되는 패턴이고, 마지막 변곡점 ' + px(eP) + ' ' + sideWord(eP) + ' 시 무효입니다.';
         plan.next = '삼각 수렴 완료 → 스러스트 ' + dirWord + ' (목표 ' + px(thrust) + ')';
         plan.confirm = cf(thrust, '스러스트 ' + px(thrust) + ' 도달 시 추세 재개 확인');
       }

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" data-brand="v1a">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
@@ -37,7 +37,7 @@
     <span class="sig-with"><i class="wc-dot" aria-hidden="true"></i>with <b><span class="ck">C</span>ho<span class="ck">K</span>o</b></span>
   </div>
   <div class="market-badge"><i class="dot"></i><span id="asOf">—</span>&nbsp;장마감<span class="upd" id="asOfUpd"></span></div>
-  <button class="theme-btn" id="themeBtn" type="button" aria-pressed="false" title="다크(검은색) 모드 사용 중 — 누르면 화이트로 전환"><span class="th-ic" aria-hidden="true">☀️</span><span class="th-tx">화이트</span></button>
+  <button class="theme-btn" id="themeBtn" type="button" aria-pressed="false" aria-label="화이트 모드로 전환" title="화이트 모드로 전환"><span class="th-ic" aria-hidden="true">🌙</span><span class="th-tx">다크</span></button>
   <div class="search">
     <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
     <input id="globalSearch" type="text" placeholder="종목 검색 · 티커 또는 회사명" autocomplete="off" spellcheck="false">
@@ -243,9 +243,9 @@
       <div class="tc-grp tc-grp-slot">
         <span class="tc-lab"><span class="rp-n">2</span>투자방식</span>
         <div class="slot-seg" id="topSlotSeg" role="group" aria-label="투자 방식 — 집중 1 · 분산 3 · 분산 10">
-          <button type="button" data-slot="conc1" aria-pressed="false" title="🎯 집중 1 — 계좌 전부를 1종목에. 오를 때 가장 크게 벌고, 손절 1회가 계좌 −10%"><b>🎯 집중 1</b><span>(100%)</span><i class="sl-n">—</i></button>
-          <button type="button" data-slot="div3" aria-pressed="false" title="⚖️ 분산 3 — 1종목 최대 계좌 33% · 동일 섹터 1종목 · 손절 1회 = 계좌 −3.3%"><b>⚖️ 분산 3</b><span>(33%)</span><i class="sl-n">—</i></button>
-          <button type="button" data-slot="div10" aria-pressed="true" title="🌐 분산 10 (권장) — 1종목 최대 계좌 10% · 동일 섹터 3종목 · 손절 1회 = 계좌 −1.0%"><b>🌐 분산 10</b><span>(10%·권장)</span><i class="sl-n">—</i></button>
+          <button type="button" data-slot="conc1" aria-pressed="false" title="🎯 집중 1 — 계좌 전부를 1종목에 (손절 1회 충격은 아래 계좌 카드에 계산값으로 표시)"><b>🎯 집중 1</b><span>(100%)</span><i class="sl-n">—</i></button>
+          <button type="button" data-slot="div3" aria-pressed="false" title="⚖️ 분산 3 — 1종목 최대 계좌 33% · 동일 섹터 1종목"><b>⚖️ 분산 3</b><span>(33%)</span><i class="sl-n">—</i></button>
+          <button type="button" data-slot="div10" aria-pressed="true" title="🌐 분산 10 (권장) — 1종목 최대 계좌 10% · 동일 섹터 3종목"><b>🌐 분산 10</b><span>(10%·권장)</span><i class="sl-n">—</i></button>
         </div>
       </div>
       <span class="tc-sep" aria-hidden="true"></span>
@@ -257,6 +257,18 @@
         </div>
       </div>
       <span class="tc-now" id="tcNow" aria-live="polite"></span>
+      <!-- 4️⃣ 기간 — 차트 기간 버튼(#tf)·백테스트 기간(#btf)과 같은 값을 쓰는 네 번째 축 -->
+      <div class="tc-grp tc-grp-period">
+        <span class="tc-lab"><span class="rp-n">4</span>기간</span>
+        <div class="tf tc-per" id="topPeriod" role="group" aria-label="분석 기간 — 차트·백테스트·계좌 시뮬레이션이 함께 움직입니다">
+          <button type="button" data-n="64" title="최근 3개월 — 차트 표시 구간·백테스트·계좌 시뮬레이션이 함께 바뀝니다">3M</button>
+          <button type="button" data-n="128" class="on" title="최근 6개월 — 차트 표시 구간·백테스트·계좌 시뮬레이션이 함께 바뀝니다">6M</button>
+          <button type="button" data-n="252" title="최근 1년 — 차트 표시 구간·백테스트·계좌 시뮬레이션이 함께 바뀝니다">1Y</button>
+          <button type="button" data-n="501" title="최근 2년 — 차트 표시 구간·백테스트·계좌 시뮬레이션이 함께 바뀝니다">2Y</button>
+          <button type="button" data-n="1255" title="5년 전체 — 차트 표시 구간·백테스트·계좌 시뮬레이션이 함께 바뀝니다">5Y</button>
+        </div>
+        <span class="tc-per-now" id="tcPerNow">—</span>
+      </div>
     </section>
 
     <section class="strat-bar" id="stratBar" aria-label="전략 모드 전환">
@@ -289,6 +301,8 @@
       </div>
       <div class="ac-grid" id="acGrid"></div>
       <div class="ac-detail" id="acDetail"></div>
+      <!-- 폰에서도 툴팁 없이 바로 읽히는 1줄 고정 요약 (값은 모두 계산값) -->
+      <div class="ac-line" id="acLine" aria-live="polite">—</div>
     </section>
 
     <div class="today-strip" id="todayStrip" aria-live="polite">
@@ -742,9 +756,16 @@
       </div>
     </section>
 
-    <footer style="font-size:12px;color:var(--txt4);line-height:1.7;padding:2px 4px 10px">
-      ChoKo QUANT — 멀티팩터 기술적 분석 엔진 (추세·모멘텀·반전·거래량·가격구조 5축 스코어) ·
-      데이터 Yahoo Finance 일봉, <span id="footAsOf2">—</span> 종가 기준<span class="upd" id="footUpd2"></span> · 지표 이동평균 5·20·60·120·240일(단순) / 일목균형표(9·26·52) 선행스팬·구름대 / 볼린저 / RSI / MACD / ATR (표준 파라미터)
+    <footer class="site-foot">
+      <p class="foot-meta">
+        ChoKo QUANT — 멀티팩터 기술적 분석 엔진 (추세·모멘텀·반전·거래량·가격구조 5축 스코어) ·
+        데이터 Yahoo Finance 일봉, <span id="footAsOf2">—</span> 종가 기준<span class="upd" id="footUpd2"></span> · 지표 이동평균 5·20·60·120·240일(단순) / 일목균형표(9·26·52) 선행스팬·구름대 / 볼린저 / RSI / MACD / ATR (표준 파라미터)
+      </p>
+      <div class="foot-copy" aria-label="저작권">
+        <span>© 2026 <b><span class="ck">C</span>ho<span class="ck">K</span>o QUANT</b></span>
+        <i aria-hidden="true">·</i>
+        <span>Ji Hoon Park</span>
+      </div>
     </footer>
   </main>
 </div>
